@@ -123,6 +123,10 @@ recorded as `TO` (timeout) instead of being waited on. Tune with the `TIME_LIMIT
 > deep as the pattern size. The default heap is 1/4 of physical RAM; on a low-RAM machine,
 > or when mining the large graphs (`mico.lg`, `github.lg`) at low support, raise it via
 > `JAVA_OPTS`, e.g. `JAVA_OPTS="-Xmx8g" ./experiments.sh`.
+>
+> **Staying awake:** a full run can take hours. On macOS the script already wraps itself in
+> `caffeinate` so the machine will not idle-sleep mid-run (it is a no-op elsewhere); on
+> Linux, prefix the command with `nohup` and/or disable suspend if running unattended.
 
 The per-dataset support and weight thresholds (whose absolute scales differ across
 datasets) are configured at the top of `experiments.sh`; report them as ratios
