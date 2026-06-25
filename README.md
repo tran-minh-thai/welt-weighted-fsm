@@ -91,3 +91,13 @@ minSup = 500 / 400 / 300 → **must always be green**.
 - [x] **Milestone 3** — `WeLTStrategy` (k=2): lookup table, double filter P1/P2, weight check via G_{≥w}. Validated against the GraMi+weight-postfilter oracle (24/24 tests green + an independent Python cross-check).
 - [ ] **Milestone 4** — `OWGraMiStrategy` & `WEGMStrategy`, export a CSV comparison of all four algorithms.
 - [ ] **Milestone 5** — pivot voting + branch-and-bound (ablation); general k (gSpan DFS code); more datasets.
+
+## License
+
+Released under the [MIT License](LICENSE).
+
+The MNI support counter (`MniSupportCounter`) adapts the constraint-satisfaction
+approach of GraMi (Elseidy, Abdelhamid, Skiadopoulos & Kalnis, *GraMi: Frequent
+Subgraph and Pattern Mining in a Single Large Graph*, PVLDB 2014); please cite that
+work as well when building on this code. The `OWGraMi` and `WEGM` strategies are
+independent reimplementations from their respective papers.
