@@ -37,60 +37,94 @@ src/main/java/welt/
     LgGraphReader          reads .lg; separates the "structural matching label" from the "weight"
     WeightAssigner         weight-assignment function (default = edge-label value)
     EdgeLabelAssigner      structural-label-assignment function (default: edges unlabeled)
-    Pattern, CanonicalCode pattern + isomorphism-invariant canonical code (deduplication)
-    MniSupportCounter      MNI counter via CSP (adapted from GraMi) — SHARED
-    MiningEngine           pattern-generation + edge-extension loop
-    Metrics                CSV: candidateCount, isoCallCount, frequentCount, time, mem
-    WeightedCanonicalCode  O(1) dedup key + lookup table (bottleneck model ⇒ = structural code)
+    VertexWeightAssigner   vertex-weight derivation (for OWGraMi)
+    Pattern, CanonicalCode pattern + minimum-DFS-code canonical form (gSpan-style dedup, any size)
+    MniSupportCounter      MNI counter via CSP (adapted from GraMi) — SHARED; arc consistency,
+                           domain inheritance, search budget and time limit
+    PivotVoter             multi-criteria extension-point ordering (α·domain + β·degree + γ·weight)
+    MiningEngine           pattern-generation + edge-extension loop; anti-monotone closure pruning
+    Metrics                CSV metrics: candidates, iso-calls, MINEmni, frequent count, time, mem
+    WeightedCanonicalCode  O(1) dedup key for the lookup table (bottleneck model ⇒ = structural code)
     GraphIndex             shared index: frequent labels, edge triples, distinct weights
   strategy/
     MiningStrategy         plug-in point: prePrune / acceptFrequent / allowExtension
-    GraMiStrategy          baseline: prunes by MNI only
+    GraMiStrategy          unweighted baseline: prunes by MNI only
+    OWGraMiStrategy        vertex-weight bottleneck (different result set; efficiency comparison only)
+    WEGMStrategy           edge-weight bottleneck with a per-edge upper-bound filter
     WeightedLookupTable    F_2 lookup table + MaxW(p); double filter P1 (structure) + P2 (UB_k < τ_w)
     WeLTStrategy           proposed: double filter + exact evaluation W(S) ≥ τ_w via G_{≥w}
   runner/
-    ReadDatasetMain        Milestone 1: read + dataset statistics
-    MineMain               run one strategy (GraMi | WeLT)
+    MineMain               run one strategy on one dataset
+    CompareMain            run all four algorithms, print a CSV comparison
+    BenchmarkMain          rigorous timing: warmup + N runs (median) with a per-run time limit
+    ...                    plus ablation/probe runners (AblationMain, AcCompareMain, WeltSweepMain, ...)
 ```
 
 Run WeLT (4th argument = `minWeight`):
 ```bash
 ./run.sh datasets/citeseer.lg 300 WeLT 95
+
+# Four-way comparison (dataset, minSup, minWeight, [search budget]):
+java -cp target/classes welt.runner.CompareMain datasets/citeseer.lg 200 96 800
+
+# Rigorous benchmark (dataset, minSup, minWeight, budget, timeLimitMs, [warmup], [measured]):
+java -cp target/classes welt.runner.BenchmarkMain datasets/citeseer.lg 200 96 800 60000
 ```
 
-Pivot voting and branch-and-bound are toggled via flags (Milestone 5, ablation).
+The pivot voter, the early-pruning mechanisms, the decremental domain inheritance, and
+the search budget are all toggleable for ablation studies.
 
 ## Data (`datasets/`)
 
-| File | Vertices | Edges (undirected) | Edge weight |
-|---|---|---|---|
-| `citeseer.lg` | 3,312 | 4,536 | similarity ∈[0,100] |
-| `mico.lg` | 100,000 | 1,080,156 | co-authored-paper count (106 integer labels) |
-| `test1/2.lg` | — | — | GraMi toy graphs |
+| File | Vertices | Edges | Vertex labels | Edge weight | Source |
+|---|---|---|---|---|---|
+| `citeseer.lg` | 3,312 | 4,536 | 6 | publication similarity ∈[0,100] | native |
+| `email_eu.lg` | 677 | 2,462 | 42 | number of emails (≥25), right-skewed | native (SNAP email-Eu-core) |
+| `string_ecoli.lg` | 4,137 | 76,330 | 5 | STRING combined-score ∈[500,999] | native (STRING E. coli) |
+| `bitcoin_otc.lg` | 5,881 | 21,492 | 5 | trust rating shifted to [1,21] | native (SNAP Bitcoin-OTC) |
+| `lastfm.lg` | 7,624 | 27,806 | 18 | Jaccard of node features ×100 | derived (MUSAE LastFM) |
+| `test1/2.lg` | — | — | — | GraMi toy graphs | — |
 
-`datasets/raw/` holds the raw SNAP/MUSAE sources (Facebook ego, LastFM Asia, GitHub
-Social) — **not yet weighted**; the converters to `.lg` are run in the data-preparation milestone.
+Two large graphs are not committed (regenerate them with the converters): `mico.lg`
+(100K vertices, co-authored-paper edge labels) and `github.lg` (37,700 vertices, MUSAE
+GitHub with Jaccard weights). The conversion scripts live in `datasets/`
+(`convert_musae.py`, `convert_string.py`, `convert_bitcoin.py`, `convert_email.py`); each
+prints the resulting size and weight statistics. Raw downloads go under `datasets/raw/`.
 
 > **CiteSeer note:** the edge label is a near-unique real value (similarity). The original
 > GraMi treats it as an *edge label*, so plain FSM returns 0 patterns. Here we treat edges
 > as **unlabeled** (structural) and keep the real value as the **weight** — true to the
 > spirit of weighted mining.
+>
+> **Where WeLT helps:** the lookup-table filter is most effective when the weight
+> distribution is *selective* (high-weight subgraphs are rare) on a *sparse* graph — e.g.
+> CiteSeer, email-Eu-core, LastFM. On graphs with a dense high-weight core (Bitcoin-OTC,
+> high-confidence STRING) the filter engages less, which the comparison reports honestly.
 
 ## Correctness testing
 
-`reference/GraMi/` is the original GraMi code (cloned, built) used as an **oracle**.
-`reference/oracle/unlab_s*.txt` are the FSM outputs of the original GraMi on CiteSeer
-(unlabeled edges). The regression test `GraMiOracleTest` asserts that `GraMiStrategy`
-produces EXACTLY the same set of patterns (compared by canonical code) at
-minSup = 500 / 400 / 300 → **must always be green**.
+The full suite (run with `./test.sh`) is **56 tests, all green**. Highlights:
 
-## Milestone status
+- `GraMiOracleTest` — `GraMiStrategy` reproduces EXACTLY the pattern set of the original
+  GraMi at minSup = 500 / 400 / 300 (oracle outputs in `reference/oracle/unlab_s*.txt`,
+  generated by the original GraMi on unlabeled CiteSeer).
+- `WeLTOracleTest`, `WEGMOracleTest`, `OWGraMiOracleTest` — each strategy's result set
+  equals the GraMi-frequent set post-filtered by the corresponding weight condition.
+- `CanonicalCodeGSpanTest` — the minimum-DFS-code canonical form induces the same
+  isomorphism classes as a brute-force check, and lifts the small-pattern size cap.
+- `PivotInvarianceTest`, `PruneMechanismInvarianceTest` — the ordering and the early-pruning
+  optimizations change performance only, never the result set.
 
-- [x] **Milestone 1** — data reading (`LgGraphReader`, statistics).
-- [x] **Milestone 2** — shared engine + `GraMiStrategy`, validated against the original GraMi oracle.
-- [x] **Milestone 3** — `WeLTStrategy` (k=2): lookup table, double filter P1/P2, weight check via G_{≥w}. Validated against the GraMi+weight-postfilter oracle (24/24 tests green + an independent Python cross-check).
-- [ ] **Milestone 4** — `OWGraMiStrategy` & `WEGMStrategy`, export a CSV comparison of all four algorithms.
-- [ ] **Milestone 5** — pivot voting + branch-and-bound (ablation); general k (gSpan DFS code); more datasets.
+## Implemented features
+
+- [x] Shared MNI engine + `GraMiStrategy`, validated against the original GraMi oracle.
+- [x] `WeLTStrategy`: F_2 lookup table, double filter P1/P2, exact bottleneck check via G_{≥w}.
+- [x] `OWGraMiStrategy` (vertex weights) & `WEGMStrategy` (edge weights); `CompareMain` CSV export.
+- [x] `PivotVoter` multi-criteria extension ordering; early-pruning mechanisms; ablation runners.
+- [x] gSpan minimum-DFS-code canonical form (no small-pattern size cap).
+- [x] MNI optimizations: arc consistency, domain-restricted backtracking, parent→child domain
+      inheritance, hub-aware candidate enumeration.
+- [x] Search-budget approximation + per-run time limit; `BenchmarkMain` (median over repeated runs).
 
 ## License
 
