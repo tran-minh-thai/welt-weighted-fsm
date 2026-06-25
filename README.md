@@ -101,6 +101,28 @@ prints the resulting size and weight statistics. Raw downloads go under `dataset
 > CiteSeer, email-Eu-core, LastFM. On graphs with a dense high-weight core (Bitcoin-OTC,
 > high-confidence STRING) the filter engages less, which the comparison reports honestly.
 
+## Running the full experiment
+
+`experiments.sh` runs all four algorithms on every dataset across a descending sweep of
+support thresholds and aggregates the results into `results/experiments.csv`:
+
+```bash
+./experiments.sh                          # default: 60 s per-run time limit
+TIME_LIMIT_MS=3600000 ./experiments.sh    # 1 hour limit per run
+```
+
+Each `(dataset, minSup, algorithm)` cell is timed with `BenchmarkMain`: warmup runs are
+discarded and the **median** of `MEASURED` runs (default 5) is reported, because a single
+timed run is unreliable (JIT/GC noise). The deterministic counting metrics (candidate
+count, MNI iso-calls) come from one run. A run that exceeds the per-run wall-clock limit is
+recorded as `TO` (timeout) instead of being waited on. Tune with the `TIME_LIMIT_MS`,
+`WARMUP`, and `MEASURED` environment variables.
+
+The per-dataset support and weight thresholds (whose absolute scales differ across
+datasets) are configured at the top of `experiments.sh`; report them as ratios
+(σ_s = minSup / |V|, and ρ_w within each dataset's weight range) for cross-dataset
+comparability.
+
 ## Correctness testing
 
 The full suite (run with `./test.sh`) is **56 tests, all green**. Highlights:
