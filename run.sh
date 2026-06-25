@@ -9,4 +9,5 @@ MINSUP="${2:-500}"
 ALGO="${3:-GraMi}"
 
 if [ ! -d target/classes ]; then ./build.sh; fi
-java -cp target/classes welt.runner.MineMain "$DATASET" "$MINSUP" "$ALGO"
+# JAVA_OPTS lets you pass extra JVM flags, e.g. JAVA_OPTS="-Xmx8g" for large graphs.
+java ${JAVA_OPTS:-} -cp target/classes welt.runner.MineMain "$DATASET" "$MINSUP" "$ALGO"

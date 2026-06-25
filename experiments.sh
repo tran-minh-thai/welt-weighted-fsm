@@ -11,6 +11,9 @@
 #   TIME_LIMIT_MS  per-run wall-clock limit (default 60000 = 60s; use 3600000 for 1 hour)
 #   WARMUP         warmup runs to discard (default 1)
 #   MEASURED       measured runs for the median (default 5)
+#   JAVA_OPTS      extra JVM flags, e.g. JAVA_OPTS="-Xmx8g" for large graphs / low-RAM machines
+#                  (the default heap is 1/4 of physical RAM; the recursion depth equals the
+#                  pattern size, so the default thread stack is always sufficient — no -Xss needed)
 #
 # Each row of CONFIGS is:  <dataset> <minWeight τ_w> <search budget> <minSup values...>
 # The minWeight and minSup values are chosen per dataset (their absolute scales differ);
@@ -41,7 +44,7 @@ for cfg in "${CONFIGS[@]}"; do
     for s in $sups; do
         echo ">>> $ds  minSup=$s  tau_w=$tw  budget=$budget  limit=${LIMIT}ms"
         tmp=$(mktemp)
-        BENCH_CSV=1 java -cp target/classes welt.runner.BenchmarkMain \
+        BENCH_CSV=1 java ${JAVA_OPTS:-} -cp target/classes welt.runner.BenchmarkMain \
             "$ds" "$s" "$tw" "$budget" "$LIMIT" "$WARMUP" "$MEASURED" > "$tmp" 2>&1 || true
         cat "$tmp"
         grep '^CSV,' "$tmp" | grep -v 'CSV,dataset' | sed 's/^CSV,//' >> "$OUT" || true
