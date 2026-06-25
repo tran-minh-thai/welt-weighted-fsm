@@ -21,6 +21,13 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+# Keep the machine awake for the whole (possibly multi-hour) run. On macOS, caffeinate
+# holds an idle-sleep assertion and exits automatically when this script (PID $$) ends.
+# No-op on systems without caffeinate (e.g. Linux).
+if command -v caffeinate >/dev/null 2>&1; then
+    caffeinate -i -w $$ &
+fi
+
 [ -d target/classes ] || ./build.sh
 
 LIMIT="${TIME_LIMIT_MS:-60000}"
