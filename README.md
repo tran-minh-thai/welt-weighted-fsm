@@ -60,16 +60,21 @@ src/main/java/welt/
     ...                    plus ablation/probe runners (AblationMain, AcCompareMain, WeltSweepMain, ...)
 ```
 
-Run WeLT (4th argument = `minWeight`):
+`welt.sh` launches any runner from **any working directory** (it switches to the project
+root first, so `datasets/...` paths and `target/classes` always resolve — you do not need
+to `cd` in or build by hand). Run it with no arguments to list the available runners.
+
 ```bash
-./run.sh datasets/citeseer.lg 300 WeLT 95
-
-# Four-way comparison (dataset, minSup, minWeight, [search budget]):
-java -cp target/classes welt.runner.CompareMain datasets/citeseer.lg 200 96 800
-
-# Rigorous benchmark (dataset, minSup, minWeight, budget, timeLimitMs, [warmup], [measured]):
-java -cp target/classes welt.runner.BenchmarkMain datasets/citeseer.lg 200 96 800 60000
+./welt.sh MineMain      datasets/citeseer.lg 300 WeLT 95     # mine one strategy
+./welt.sh CompareMain   datasets/citeseer.lg 200 96 800      # four-way comparison (+ CSV)
+./welt.sh BenchmarkMain datasets/email_eu.lg  10 336 400 60000  # median timing + time limit
 ```
+
+Argument order: `MineMain <dataset> <minSup> <algorithm> [minWeight]`,
+`CompareMain <dataset> <minSup> <minWeight> [budget]`,
+`BenchmarkMain <dataset> <minSup> <minWeight> <budget> <limitMs> [warmup] [measured]`.
+Dataset paths are relative to the project root (e.g. `datasets/citeseer.lg`).
+The `./run.sh` and `./experiments.sh` wrappers likewise work from any directory.
 
 The pivot voter, the early-pruning mechanisms, the decremental domain inheritance, and
 the search budget are all toggleable for ablation studies.
