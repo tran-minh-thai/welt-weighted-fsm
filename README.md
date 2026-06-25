@@ -132,6 +132,13 @@ recorded as `TO` (timeout) instead of being waited on. Tune with the `TIME_LIMIT
 > **Staying awake:** a full run can take hours. On macOS the script already wraps itself in
 > `caffeinate` so the machine will not idle-sleep mid-run (it is a no-op elsewhere); on
 > Linux, prefix the command with `nohup` and/or disable suspend if running unattended.
+>
+> **On a laptop:** keep it on AC power with the lid open — `caffeinate` prevents idle sleep
+> but cannot override a lid-close suspend. Sustained load also thermal-throttles a laptop,
+> which makes wall-clock *times* noisier; the deterministic *count* metrics (candidates, MNI
+> iso-calls) are unaffected, and `BenchmarkMain` runs all four algorithms back-to-back per
+> configuration so their relative comparison stays fair under the same thermal state. For
+> the cleanest absolute timings, use a well-cooled machine or run one dataset at a time.
 
 The per-dataset support and weight thresholds (whose absolute scales differ across
 datasets) are configured at the top of `experiments.sh`; report them as ratios
