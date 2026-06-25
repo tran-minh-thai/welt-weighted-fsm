@@ -118,6 +118,12 @@ count, MNI iso-calls) come from one run. A run that exceeds the per-run wall-clo
 recorded as `TO` (timeout) instead of being waited on. Tune with the `TIME_LIMIT_MS`,
 `WARMUP`, and `MEASURED` environment variables.
 
+> **JVM memory:** no special flags are required for the committed datasets (all under
+> 100K vertices), and **no `-Xss` is ever needed** — the backtracking recursion is only as
+> deep as the pattern size. The default heap is 1/4 of physical RAM; on a low-RAM machine,
+> or when mining the large graphs (`mico.lg`, `github.lg`) at low support, raise it via
+> `JAVA_OPTS`, e.g. `JAVA_OPTS="-Xmx8g" ./experiments.sh`.
+
 The per-dataset support and weight thresholds (whose absolute scales differ across
 datasets) are configured at the top of `experiments.sh`; report them as ratios
 (σ_s = minSup / |V|, and ρ_w within each dataset's weight range) for cross-dataset
