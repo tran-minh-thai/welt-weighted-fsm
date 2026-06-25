@@ -1,0 +1,21 @@
+# Build artifacts
+target/
+*.class
+
+# JUnit standalone jar (download from Maven Central; see build.sh)
+tools/*.jar
+
+# Raw downloaded datasets and large generated graphs (regenerate via datasets/*.py)
+datasets/raw/
+datasets/mico.lg
+datasets/github.lg
+
+# Third-party GraMi clone (used only to regenerate the oracle; keep reference/oracle/)
+reference/GraMi/
+
+# OS / editor / IDE cruft
+.DS_Store
+*.swp
+*~
+.idea/
+*.iml
