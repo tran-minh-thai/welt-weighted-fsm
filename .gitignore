@@ -20,3 +20,7 @@ reference/GraMi/
 .idea/
 *.iml
 results/
+
+# Run logs and calibration scratch output
+*.log
+calibrate.*.out
