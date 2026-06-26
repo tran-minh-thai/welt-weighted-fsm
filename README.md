@@ -108,26 +108,43 @@ prints the resulting size and weight statistics. Raw downloads go under `dataset
 
 ## Running the full experiment
 
-`experiments.sh` runs all four algorithms on every dataset across a descending sweep of
-support thresholds and aggregates the results into `results/experiments.csv`:
+The comparison is split into independent **scenarios** so it can be run in parts instead of
+one long unattended session. Each scenario writes its own timestamped CSV under `results/`
+(`SC<n>_<YYYYMMDD_HHMMSS>_<name>.csv`):
+
+| Scenario | Algorithms | Datasets | Purpose |
+|---|---|---|---|
+| `sc1` sparse_efficiency | GraMi, WEGM, WeLT | citeseer, email_eu, lastfm | main efficiency comparison (fast) |
+| `sc2` dense_stress | GraMi, WEGM, WeLT | string_ecoli, bitcoin_otc | honest stress test on dense graphs (slow; run overnight) |
+| `sc3` vertex_generality | OWGraMi | citeseer, email_eu | framework generality — a **different** (vertex-weight) result set with OWGraMi's **own** τ_w (≈ vertex-weight median), kept separate |
 
 ```bash
-./experiments.sh                          # default: 60 s per-run time limit
-TIME_LIMIT_MS=3600000 ./experiments.sh    # 1 hour limit per run
+./experiments.sh list            # describe the scenarios
+./experiments.sh sc1             # run scenario 1 -> results/SC1_<datetime>_sparse_efficiency.csv
+./experiments.sh sc2 bitcoin     # run scenario 2, only datasets whose path matches "bitcoin"
+./experiments.sh all             # run sc1, sc2, sc3 sequentially
 ```
 
-Each `(dataset, minSup, algorithm)` cell is timed with `BenchmarkMain`: warmup runs are
-discarded and the **median** of `MEASURED` runs (default 5) is reported, because a single
-timed run is unreliable (JIT/GC noise). The deterministic counting metrics (candidate
-count, MNI iso-calls) come from one run. A run that exceeds the per-run wall-clock limit is
-recorded as `TO` (timeout) instead of being waited on. Tune with the `TIME_LIMIT_MS`,
-`WARMUP`, and `MEASURED` environment variables.
+Each `(dataset, minSup)` cell is timed with `BenchmarkMain`: warmup runs are discarded and the
+**median** of `MEASURED` runs (default 5) is reported, because a single timed run is unreliable
+(JIT/GC noise). The deterministic counting metrics (candidate count, MNI iso-calls) come from
+one run. The default per-run limit is **60 minutes** (`TIME_LIMIT_MS`); a run that exceeds it is
+recorded as `TO`. Tune with `TIME_LIMIT_MS`, `WARMUP`, and `MEASURED`.
+
+**Reading the results — the `weightModel` column.** Every CSV row carries a `weightModel` of
+`none`/`edge`/`vertex` so non-comparable result sets are never mixed up when aggregating:
+
+- `none` — GraMi: unweighted; its `#FWS` is the structural superset (an upper reference).
+- `edge` — WEGM and WeLT: the **same** edge-bottleneck result set, so their `#FWS` must be
+  **identical** (a built-in correctness cross-check); the speedup claim is **WeLT vs WEGM**.
+- `vertex` — OWGraMi: a **different** vertex-bottleneck set; read only its performance metrics,
+  never compare its `#FWS` with the others.
 
 > **JVM memory:** no special flags are required for the committed datasets (all under
 > 100K vertices), and **no `-Xss` is ever needed** — the backtracking recursion is only as
 > deep as the pattern size. The default heap is 1/4 of physical RAM; on a low-RAM machine,
 > or when mining the large graphs (`mico.lg`, `github.lg`) at low support, raise it via
-> `JAVA_OPTS`, e.g. `JAVA_OPTS="-Xmx8g" ./experiments.sh`.
+> `JAVA_OPTS`, e.g. `JAVA_OPTS="-Xmx8g" ./experiments.sh sc2`.
 >
 > **Staying awake:** a full run can take hours. On macOS the script already wraps itself in
 > `caffeinate` so the machine will not idle-sleep mid-run (it is a no-op elsewhere); on
@@ -136,13 +153,14 @@ recorded as `TO` (timeout) instead of being waited on. Tune with the `TIME_LIMIT
 > **On a laptop:** keep it on AC power with the lid open — `caffeinate` prevents idle sleep
 > but cannot override a lid-close suspend. Sustained load also thermal-throttles a laptop,
 > which makes wall-clock *times* noisier; the deterministic *count* metrics (candidates, MNI
-> iso-calls) are unaffected, and `BenchmarkMain` runs all four algorithms back-to-back per
-> configuration so their relative comparison stays fair under the same thermal state. For
-> the cleanest absolute timings, use a well-cooled machine or run one dataset at a time.
+> iso-calls) are unaffected, and `BenchmarkMain` runs each scenario's algorithms back-to-back
+> per configuration so their relative comparison stays fair under the same thermal state. For
+> the cleanest absolute timings, use a well-cooled machine or run one scenario (or one dataset
+> via the filter argument) at a time.
 
 The per-dataset support and weight thresholds (whose absolute scales differ across
-datasets) are configured at the top of `experiments.sh`; report them as ratios
-(σ_s = minSup / |V|, and ρ_w within each dataset's weight range) for cross-dataset
+datasets) are configured in the scenario definitions inside `experiments.sh`; report them as
+ratios (σ_s = minSup / |V|, and ρ_w within each dataset's weight range) for cross-dataset
 comparability.
 
 ## Correctness testing
