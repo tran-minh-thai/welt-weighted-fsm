@@ -40,11 +40,30 @@ public final class BenchmarkMain {
      *  (prefixed "CSV,") so a driver script can aggregate results across many runs. */
     private static final boolean CSV = System.getenv("BENCH_CSV") != null;
 
+    /**
+     * Weight semantics of each strategy, recorded as a CSV column so result aggregation never
+     * confuses non-comparable result sets:
+     * <ul>
+     *   <li>{@code none}   — GraMi: unweighted; its #FWS is the structural superset (reference).</li>
+     *   <li>{@code edge}   — WEGM and WeLT: the SAME edge-bottleneck FWS, so their #FWS MUST be
+     *       identical (a built-in correctness cross-check); their efficiency is what differs.</li>
+     *   <li>{@code vertex} — OWGraMi: a DIFFERENT, vertex-bottleneck set; never compare its #FWS
+     *       with the others — read its performance metrics only.</li>
+     * </ul>
+     */
+    private static String weightModel(String algo) {
+        switch (algo) {
+            case "WEGM": case "WeLT": return "edge";
+            case "OWGraMi":           return "vertex";
+            default:                  return "none";
+        }
+    }
+
     private static void emitCsv(String ds, String algo, int minSup, double minWeight, long budget,
                                 long limitMs, int freq, long cand, long mineMni, String time, String to) {
         if (CSV) {
-            System.out.printf("CSV,%s,%s,%d,%.1f,%d,%d,%d,%d,%d,%s,%s%n",
-                    ds, algo, minSup, minWeight, budget, limitMs, freq, cand, mineMni, time, to);
+            System.out.printf("CSV,%s,%s,%s,%d,%.1f,%d,%d,%d,%d,%d,%s,%s%n",
+                    ds, algo, weightModel(algo), minSup, minWeight, budget, limitMs, freq, cand, mineMni, time, to);
         }
     }
 
@@ -62,11 +81,18 @@ public final class BenchmarkMain {
         System.out.printf("== Benchmark | %s | minSup=%d minWeight=%.1f budget=%s | limit=%s | warmup=%d measured=%d ==%n",
                 ds, minSup, minWeight, budget == 0 ? "∞" : ("" + budget),
                 limitMs == 0 ? "∞" : (limitMs + "ms"), WARMUP, MEASURED);
-        System.out.printf("%-9s %6s %8s %10s %12s %6s%n",
-                "algo", "#FWS", "candMNI", "MINEmni", "time(ms)", "T.O.");
-        if (CSV) System.out.println("CSV,dataset,algorithm,minSup,minWeight,budget,limitMs,freq,candMNI,mineMNI,medianMs,timedOut");
+        System.out.printf("%-9s %-7s %6s %8s %10s %12s %6s%n",
+                "algo", "model", "#FWS", "candMNI", "MINEmni", "time(ms)", "T.O.");
+        if (CSV) System.out.println("CSV,dataset,algorithm,weightModel,minSup,minWeight,budget,limitMs,freq,candMNI,mineMNI,medianMs,timedOut");
 
-        for (String algo : new String[]{"GraMi", "WEGM", "WeLT", "OWGraMi"}) {
+        // Which strategies to run: BENCH_ALGOS (comma/space separated) overrides the default,
+        // letting a scenario run just the comparable edge-weight set (GraMi,WEGM,WeLT) or only
+        // the vertex-weight generality strategy (OWGraMi).
+        String algosEnv = System.getenv("BENCH_ALGOS");
+        String[] algos = (algosEnv == null || algosEnv.isBlank())
+                ? new String[]{"GraMi", "WEGM", "WeLT", "OWGraMi"}
+                : algosEnv.trim().split("[,\\s]+");
+        for (String algo : algos) {
             benchmark(algo, g, ds, minSup, minWeight, budget, limitMs);
         }
     }
@@ -77,8 +103,8 @@ public final class BenchmarkMain {
         Run probe = runOnce(algo, g, minSup, minWeight, budget, limitMs);
         if (probe.timedOut) {
             long pmni = probe.m.mniIsoCalls - probe.m.tableBuildMniIsoCalls;
-            System.out.printf("%-9s %6d %8d %10d %12s %6s%n",
-                    algo, probe.fps, probe.m.candidateCount, pmni, "T.O.(>" + limitMs + ")", "1/1");
+            System.out.printf("%-9s %-7s %6d %8d %10d %12s %6s%n",
+                    algo, weightModel(algo), probe.fps, probe.m.candidateCount, pmni, "T.O.(>" + limitMs + ")", "1/1");
             emitCsv(ds, algo, minSup, minWeight, budget, limitMs, probe.fps, probe.m.candidateCount, pmni, "TO", "1/1");
             return;
         }
@@ -102,8 +128,8 @@ public final class BenchmarkMain {
             timeStr = String.valueOf(times.get(times.size() / 2)); // median
         }
         String toStr = toCount > 0 ? (toCount + "/" + MEASURED) : "-";
-        System.out.printf("%-9s %6d %8d %10d %12s %6s%n",
-                algo, last.fps, last.m.candidateCount, mineMni, timeStr, toStr);
+        System.out.printf("%-9s %-7s %6d %8d %10d %12s %6s%n",
+                algo, weightModel(algo), last.fps, last.m.candidateCount, mineMni, timeStr, toStr);
         emitCsv(ds, algo, minSup, minWeight, budget, limitMs, last.fps, last.m.candidateCount, mineMni, timeStr, toStr);
     }
 
