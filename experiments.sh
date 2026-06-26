@@ -6,10 +6,10 @@
 #       results/SC<n>_<YYYYMMDD_HHMMSS>_<scenario-name>.csv
 #
 # Scenarios:
-#   sc1  sparse_efficiency   GraMi,WEGM,WeLT   citeseer, email_eu, lastfm
-#                            -> main efficiency comparison on sparse/favorable graphs (fast).
-#   sc2  dense_stress        GraMi,WEGM,WeLT   string_ecoli, bitcoin_otc
-#                            -> honest stress test on dense graphs (slow; run overnight).
+#   sc1  efficiency          GraMi,WEGM,WeLT   citeseer, email_eu, lastfm
+#                            -> the advantage: at low support WeLT completes while baselines T.O.
+#   sc2  scalability         GraMi,WEGM,WeLT   mico, github, string_ecoli
+#                            -> WeLT scales to large/dense graphs (per-candidate MNI cost dominates).
 #   sc3  vertex_generality   OWGraMi           citeseer, email_eu
 #                            -> framework-generality run with OWGraMi's OWN tau_w (~ vertex-weight
 #                               median); a DIFFERENT (vertex-weight) result set kept in its own
@@ -48,7 +48,7 @@ MEASURED="${MEASURED:-5}"
 scenario_def() {
     case "$1" in
         sc1)
-            SC_NUM=1; SC_NAME="sparse_efficiency"; SC_ALGOS="GraMi,WEGM,WeLT"
+            SC_NUM=1; SC_NAME="efficiency"; SC_ALGOS="GraMi,WEGM,WeLT"
             # The WeLT/WEGM gap is negligible at high support (both finish in ms) and explodes at
             # low support (WeLT's candidate set stays bounded by tau_w selectivity while WEGM's
             # grows with the lattice). The sweep therefore spans a high "no-overhead" anchor down
@@ -59,10 +59,16 @@ scenario_def() {
                 "datasets/lastfm.lg    40   400  600 500 400 300 200"
             ) ;;
         sc2)
-            SC_NUM=2; SC_NAME="dense_stress"; SC_ALGOS="GraMi,WEGM,WeLT"
+            SC_NUM=2; SC_NAME="scalability"; SC_ALGOS="GraMi,WEGM,WeLT"
+            # Large / dense graphs. Here the per-candidate MNI cost on the big graph dominates, so
+            # at a completable support all methods converge (WeLT's candidate-pruning advantage only
+            # shows in the candidate-bound regime of sc1). These runs demonstrate WeLT SCALES to a
+            # 100K-vertex graph (mico ~24s), a 2-label 37K-vertex graph (github) and a dense graph
+            # (string_ecoli). mico and github need a large heap: run with JAVA_OPTS="-Xmx20g".
             SC_CONFIGS=(
-                "datasets/string_ecoli.lg 900  200  600 500 400"
-                "datasets/bitcoin_otc.lg  17   200  1100 1000 900"
+                "datasets/mico.lg          100  2000  16000 15000 14000"
+                "datasets/github.lg        30   2000  26000 25000 24000"
+                "datasets/string_ecoli.lg  750  400   2000 1900 1850"
             ) ;;
         sc3)
             SC_NUM=3; SC_NAME="vertex_generality"; SC_ALGOS="OWGraMi"
@@ -84,10 +90,10 @@ print_list() {
     cat <<'EOF'
 Scenarios (each writes results/SC<n>_<YYYYMMDD_HHMMSS>_<name>.csv):
 
-  sc1  sparse_efficiency    GraMi,WEGM,WeLT   citeseer, email_eu, lastfm
-                            main efficiency comparison on sparse graphs (fast).
-  sc2  dense_stress         GraMi,WEGM,WeLT   string_ecoli, bitcoin_otc
-                            honest stress test on dense graphs (slow; run overnight).
+  sc1  efficiency           GraMi,WEGM,WeLT   citeseer, email_eu, lastfm
+                            the advantage: at low support WeLT completes while baselines time out.
+  sc2  scalability          GraMi,WEGM,WeLT   mico, github, string_ecoli
+                            WeLT scales to large/dense graphs (needs JAVA_OPTS="-Xmx20g").
   sc3  vertex_generality    OWGraMi           citeseer, email_eu
                             framework generality; DIFFERENT (vertex-weight) result set with its
                             OWN tau_w (~ vertex-weight median); kept separate -- do NOT read its

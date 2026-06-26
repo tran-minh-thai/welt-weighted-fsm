@@ -1,0 +1,18 @@
+# t 0
+# Running example for the WeLT paper (synthetic, 6 vertices / 8 edges).
+# Vertex labels: 0=A, 1=B, 2=C.  Edge weight = collaboration/co-occurrence strength.
+#   A1=0 A2=1 | B1=2 B2=3 | C1=4 C2=5
+v 0 0
+v 1 0
+v 2 1
+v 3 1
+v 4 2
+v 5 2
+e 0 2 7
+e 1 3 6
+e 2 4 8
+e 3 5 5
+e 0 3 4
+e 2 5 3
+e 0 4 2
+e 1 5 1
