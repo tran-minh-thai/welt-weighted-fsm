@@ -30,6 +30,7 @@ public final class WeLTStrategy implements MiningStrategy {
     private final MniSupportCounter counter;
     private final WeightedLookupTable table;
     private final Metrics metrics;
+    private boolean doubleFilter = true; // ablation toggle: when false, skip the P1/P2 pre-filter
 
     public WeLTStrategy(LabeledWeightedGraph g, double minWeight,
                         MniSupportCounter counter, WeightedLookupTable table, Metrics metrics) {
@@ -39,14 +40,21 @@ public final class WeLTStrategy implements MiningStrategy {
         this.metrics = metrics;
     }
 
+    /** Ablation hook (RQ4): turn the lookup-table double filter on/off. The result set is
+     *  unchanged because the exact accept check still runs; only performance differs. */
+    public void setDoubleFilter(boolean on) {
+        this.doubleFilter = on;
+    }
+
     @Override
     public String name() {
         return "WeLT";
     }
 
-    /** Double filter P1/P2 before the MNI count. */
+    /** Double filter P1/P2 before the MNI count (skipped when the ablation toggle is off). */
     @Override
     public boolean prePrune(Pattern candidate) {
+        if (!doubleFilter) return false;
         return table.prune(candidate, minWeight, metrics);
     }
 

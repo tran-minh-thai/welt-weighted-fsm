@@ -99,8 +99,10 @@ Scenarios (each writes results/SC<n>_<YYYYMMDD_HHMMSS>_<name>.csv):
                             OWN tau_w (~ vertex-weight median); kept separate -- do NOT read its
                             #FWS as a speedup baseline. (lastfm omitted: no clean operating point.)
   all                       run sc1, sc2, sc3 sequentially.
+  ablation                  RQ4 per-component ablation (table / voting / weight-order) -> SC4 csv.
+  memory                    RQ3 peak-memory comparison at completable supports -> SC5 csv.
 
-Usage: ./experiments.sh <sc1|sc2|sc3|all> [dataset-filter]
+Usage: ./experiments.sh <sc1|sc2|sc3|all|ablation|memory> [dataset-filter]
 Env:   TIME_LIMIT_MS (default 3600000 = 60 min), WARMUP, MEASURED, JAVA_OPTS
 EOF
 }
@@ -112,7 +114,7 @@ run_scenario() {
     stamp=$(date +%Y%m%d_%H%M%S)
     out="results/SC${SC_NUM}_${stamp}_${SC_NAME}.csv"
     mkdir -p results
-    echo "dataset,algorithm,weightModel,minSup,minWeight,budget,limitMs,freq,candMNI,mineMNI,medianMs,timedOut" > "$out"
+    echo "dataset,algorithm,weightModel,minSup,minWeight,budget,limitMs,freq,candMNI,mineMNI,medianMs,timedOut,peakMemMB" > "$out"
     echo "=== Scenario SC${SC_NUM} (${SC_NAME}) | algos=${SC_ALGOS} | limit=${LIMIT}ms ==="
     echo "    -> $out"
     for cfg in "${SC_CONFIGS[@]}"; do
@@ -130,6 +132,63 @@ run_scenario() {
     done
     echo "--- SC${SC_NUM} done -> $out ---"
     echo
+}
+
+# Ablation study (RQ4): per-component contribution of WeLT, via AblationMain. Each config is
+# chosen so that removing the lookup table ('no-table') is slow-but-completable, exposing the
+# table's contribution. Writes results/SC4_<datetime>_ablation.csv.
+run_ablation() {
+    local stamp out; stamp=$(date +%Y%m%d_%H%M%S)
+    out="results/SC4_${stamp}_ablation.csv"
+    mkdir -p results
+    echo "dataset,variant,minSup,minWeight,freq,candMNI,mineMNI,backtrack,timeMs,peakMemMB,timedOut" > "$out"
+    echo "=== Ablation (RQ4) | limit=${LIMIT}ms ==="
+    echo "    -> $out"
+    # <dataset> <minWeight tau_w> <minSup>
+    local CFG=(
+        "datasets/citeseer.lg  96   250"
+        "datasets/citeseer.lg  96   200"
+        "datasets/email_eu.lg  336  12"
+    )
+    for c in "${CFG[@]}"; do
+        read -r ds tw s <<< "$c"
+        echo ">>> ablation $ds  minSup=$s  tau_w=$tw"
+        tmp=$(mktemp)
+        ABLATION_CSV=1 java ${JAVA_OPTS:-} -cp target/classes welt.runner.AblationMain \
+            "$ds" "$s" "$tw" "$LIMIT" > "$tmp" 2>&1 || true
+        cat "$tmp"
+        grep '^CSV,' "$tmp" | grep -v 'CSV,dataset' | sed 's/^CSV,//' >> "$out" || true
+        rm -f "$tmp"
+    done
+    echo "--- ablation done -> $out ---"
+}
+
+# Peak-memory comparison (RQ3): GraMi/WEGM/WeLT at COMPLETABLE supports (all three finish, so
+# the peak heap is comparable). Writes results/SC5_<datetime>_memory.csv (peakMemMB column).
+run_memory() {
+    local stamp out; stamp=$(date +%Y%m%d_%H%M%S)
+    out="results/SC5_${stamp}_memory.csv"
+    mkdir -p results
+    echo "dataset,algorithm,weightModel,minSup,minWeight,budget,limitMs,freq,candMNI,mineMNI,medianMs,timedOut,peakMemMB" > "$out"
+    echo "=== Memory (RQ3) | limit=${LIMIT}ms ==="
+    echo "    -> $out"
+    local CFG=(
+        "datasets/citeseer.lg  96   800  250 200"
+        "datasets/email_eu.lg  336  400  12 10"
+    )
+    for cfg in "${CFG[@]}"; do
+        read -r ds tw budget sups <<< "$cfg"
+        for s in $sups; do
+            echo ">>> memory $ds  minSup=$s"
+            tmp=$(mktemp)
+            BENCH_CSV=1 BENCH_ALGOS="GraMi,WEGM,WeLT" java ${JAVA_OPTS:-} -cp target/classes \
+                welt.runner.BenchmarkMain "$ds" "$s" "$tw" "$budget" "$LIMIT" 0 1 > "$tmp" 2>&1 || true
+            cat "$tmp"
+            grep '^CSV,' "$tmp" | grep -v 'CSV,dataset' | sed 's/^CSV,//' >> "$out" || true
+            rm -f "$tmp"
+        done
+    done
+    echo "--- memory done -> $out ---"
 }
 
 CMD="${1:-list}"
@@ -150,6 +209,8 @@ fi
 case "$CMD" in
     all) for sc in sc1 sc2 sc3; do run_scenario "$sc" "${2:-}"; done ;;
     sc1|sc2|sc3) run_scenario "$CMD" "${2:-}" ;;
+    ablation|sc4) run_ablation ;;
+    memory|sc5) run_memory ;;
     *) echo "Unknown command: $CMD" >&2; print_list; exit 1 ;;
 esac
 

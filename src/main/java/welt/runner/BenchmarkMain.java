@@ -18,6 +18,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryType;
+
 /**
  * Experimentally rigorous BENCHMARK HARNESS:
  * <ul>
@@ -59,11 +63,26 @@ public final class BenchmarkMain {
         }
     }
 
+    /** Reset the peak heap usage of every heap pool — call right before a timed run. */
+    private static void resetPeakHeap() {
+        for (MemoryPoolMXBean p : ManagementFactory.getMemoryPoolMXBeans())
+            if (p.getType() == MemoryType.HEAP) p.resetPeakUsage();
+    }
+
+    /** Peak heap used (MB) since the last reset, summed over the heap pools. */
+    private static double peakHeapMB() {
+        long peak = 0;
+        for (MemoryPoolMXBean p : ManagementFactory.getMemoryPoolMXBeans())
+            if (p.getType() == MemoryType.HEAP && p.getPeakUsage() != null)
+                peak += p.getPeakUsage().getUsed();
+        return peak / (1024.0 * 1024.0);
+    }
+
     private static void emitCsv(String ds, String algo, int minSup, double minWeight, long budget,
-                                long limitMs, int freq, long cand, long mineMni, String time, String to) {
+                                long limitMs, int freq, long cand, long mineMni, String time, String to, double peakMem) {
         if (CSV) {
-            System.out.printf("CSV,%s,%s,%s,%d,%.1f,%d,%d,%d,%d,%d,%s,%s%n",
-                    ds, algo, weightModel(algo), minSup, minWeight, budget, limitMs, freq, cand, mineMni, time, to);
+            System.out.printf("CSV,%s,%s,%s,%d,%.1f,%d,%d,%d,%d,%d,%s,%s,%.1f%n",
+                    ds, algo, weightModel(algo), minSup, minWeight, budget, limitMs, freq, cand, mineMni, time, to, peakMem);
         }
     }
 
@@ -81,9 +100,9 @@ public final class BenchmarkMain {
         System.out.printf("== Benchmark | %s | minSup=%d minWeight=%.1f budget=%s | limit=%s | warmup=%d measured=%d ==%n",
                 ds, minSup, minWeight, budget == 0 ? "∞" : ("" + budget),
                 limitMs == 0 ? "∞" : (limitMs + "ms"), WARMUP, MEASURED);
-        System.out.printf("%-9s %-7s %6s %8s %10s %12s %6s%n",
-                "algo", "model", "#FWS", "candMNI", "MINEmni", "time(ms)", "T.O.");
-        if (CSV) System.out.println("CSV,dataset,algorithm,weightModel,minSup,minWeight,budget,limitMs,freq,candMNI,mineMNI,medianMs,timedOut");
+        System.out.printf("%-9s %-7s %6s %8s %10s %12s %6s %8s%n",
+                "algo", "model", "#FWS", "candMNI", "MINEmni", "time(ms)", "T.O.", "memMB");
+        if (CSV) System.out.println("CSV,dataset,algorithm,weightModel,minSup,minWeight,budget,limitMs,freq,candMNI,mineMNI,medianMs,timedOut,peakMemMB");
 
         // Which strategies to run: BENCH_ALGOS (comma/space separated) overrides the default,
         // letting a scenario run just the comparable edge-weight set (GraMi,WEGM,WeLT) or only
@@ -103,9 +122,9 @@ public final class BenchmarkMain {
         Run probe = runOnce(algo, g, minSup, minWeight, budget, limitMs);
         if (probe.timedOut) {
             long pmni = probe.m.mniIsoCalls - probe.m.tableBuildMniIsoCalls;
-            System.out.printf("%-9s %-7s %6d %8d %10d %12s %6s%n",
-                    algo, weightModel(algo), probe.fps, probe.m.candidateCount, pmni, "T.O.(>" + limitMs + ")", "1/1");
-            emitCsv(ds, algo, minSup, minWeight, budget, limitMs, probe.fps, probe.m.candidateCount, pmni, "TO", "1/1");
+            System.out.printf("%-9s %-7s %6d %8d %10d %12s %6s %8.1f%n",
+                    algo, weightModel(algo), probe.fps, probe.m.candidateCount, pmni, "T.O.(>" + limitMs + ")", "1/1", probe.peakMB);
+            emitCsv(ds, algo, minSup, minWeight, budget, limitMs, probe.fps, probe.m.candidateCount, pmni, "TO", "1/1", probe.peakMB);
             return;
         }
         for (int i = 1; i < WARMUP; i++) runOnce(algo, g, minSup, minWeight, budget, limitMs);
@@ -128,9 +147,9 @@ public final class BenchmarkMain {
             timeStr = String.valueOf(times.get(times.size() / 2)); // median
         }
         String toStr = toCount > 0 ? (toCount + "/" + MEASURED) : "-";
-        System.out.printf("%-9s %-7s %6d %8d %10d %12s %6s%n",
-                algo, weightModel(algo), last.fps, last.m.candidateCount, mineMni, timeStr, toStr);
-        emitCsv(ds, algo, minSup, minWeight, budget, limitMs, last.fps, last.m.candidateCount, mineMni, timeStr, toStr);
+        System.out.printf("%-9s %-7s %6d %8d %10d %12s %6s %8.1f%n",
+                algo, weightModel(algo), last.fps, last.m.candidateCount, mineMni, timeStr, toStr, last.peakMB);
+        emitCsv(ds, algo, minSup, minWeight, budget, limitMs, last.fps, last.m.candidateCount, mineMni, timeStr, toStr, last.peakMB);
     }
 
     private static final class Run {
@@ -138,8 +157,9 @@ public final class BenchmarkMain {
         final long timeMs;
         final boolean timedOut;
         final int fps;
-        Run(Metrics m, long timeMs, boolean timedOut, int fps) {
-            this.m = m; this.timeMs = timeMs; this.timedOut = timedOut; this.fps = fps;
+        final double peakMB;
+        Run(Metrics m, long timeMs, boolean timedOut, int fps, double peakMB) {
+            this.m = m; this.timeMs = timeMs; this.timedOut = timedOut; this.fps = fps; this.peakMB = peakMB;
         }
     }
 
@@ -166,10 +186,12 @@ public final class BenchmarkMain {
         MiningEngine engine = new MiningEngine(g, m);
         engine.setSearchBudget(budget);
         engine.setDeadline(deadline);
+        resetPeakHeap();
         long t0 = System.nanoTime();
         List<MiningEngine.FrequentPattern> fps = engine.mine(minSup, strategy);
         long ms = (System.nanoTime() - t0) / 1_000_000;
+        double peakMB = peakHeapMB();
         boolean to = engine.isTimedOut() || counter.isTimedOut() || (limitMs > 0 && ms > limitMs);
-        return new Run(m, ms, to, fps.size());
+        return new Run(m, ms, to, fps.size(), peakMB);
     }
 }
