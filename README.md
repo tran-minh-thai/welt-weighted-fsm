@@ -257,13 +257,7 @@ If you use this code or build on it, please cite the WeLT paper. A machine-reada
 button automatically). A BibTeX entry:
 
 ```bibtex
-@article{welt2026,
-  title   = {{WeLT}: Weighted Frequent Subgraph Mining in a Single Large Graph
-             via a Lookup-Table Double Filter},
-  author  = {Vo, Tan-Dung and Huynh, Bao and Tran, Thai},
-  year    = {2026},
-  note    = {Manuscript submitted for publication}
-}
+
 ```
 
 When relying on the MNI counter, also cite the original GraMi paper (Elseidy,
