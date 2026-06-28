@@ -1,0 +1,40 @@
+cff-version: 1.2.0
+title: "WeLT: Weighted Frequent Subgraph Mining in a Single Large Graph via a Lookup-Table Double Filter"
+message: "If you use this software, please cite the accompanying paper."
+type: software
+authors:
+  - family-names: "Vo"
+    given-names: "Tan-Dung"
+    affiliation: "HUTECH University, Vietnam"
+    orcid: "https://orcid.org/0009-0001-8183-9726"
+  - family-names: "Huynh"
+    given-names: "Bao"
+    affiliation: "HUTECH University, Vietnam"
+    orcid: "https://orcid.org/0000-0002-1882-6877"
+  - family-names: "Tran"
+    given-names: "Thai"
+    affiliation: "Ho Chi Minh City University of Foreign Languages -- Information Technology, Vietnam"
+    orcid: "https://orcid.org/0000-0002-7671-4785"
+repository-code: "https://github.com/tran-minh-thai/welt-weighted-fsm"
+license: MIT
+keywords:
+  - frequent subgraph mining
+  - weighted graph mining
+  - single large graph
+  - subgraph isomorphism
+  - bottleneck weight
+  - lookup table
+  - branch and bound
+  - MNI support
+preferred-citation:
+  type: article
+  title: "WeLT: Weighted Frequent Subgraph Mining in a Single Large Graph via a Lookup-Table Double Filter"
+  authors:
+    - family-names: "Vo"
+      given-names: "Tan-Dung"
+    - family-names: "Huynh"
+      given-names: "Bao"
+    - family-names: "Tran"
+      given-names: "Thai"
+  year: 2026
+  notes: "Manuscript submitted for publication."

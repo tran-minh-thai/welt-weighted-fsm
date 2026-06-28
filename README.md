@@ -1,9 +1,14 @@
 # WeLT — Weighted Frequent Subgraph Mining via a Lookup-Table Double Filter
 
+[![tests](https://github.com/tran-minh-thai/welt-weighted-fsm/actions/workflows/test.yml/badge.svg)](https://github.com/tran-minh-thai/welt-weighted-fsm/actions/workflows/test.yml)
+[![Java](https://img.shields.io/badge/Java-17%2B-blue)](https://adoptium.net/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Reference implementation and experiment suite for the paper:
 
 > **WeLT: Weighted Frequent Subgraph Mining in a Single Large Graph via a
-> Lookup-Table Double Filter.**
+> Lookup-Table Double Filter.** Tan-Dung Vo, Bao Huynh, Thai Tran.
+> *Manuscript submitted for publication, 2026.*
 
 A shared mining engine plus pluggable strategies for a **fair** comparison of four
 subgraph-mining algorithms on a single large graph:
@@ -18,6 +23,28 @@ subgraph-mining algorithms on a single large graph:
 > Every algorithm shares ONE engine (`core/`) and a single MNI counter, so any
 > difference in candidate count / runtime reflects the algorithm itself, not an
 > implementation difference.
+
+## What WeLT proposes (1-minute version)
+
+Subgraph isomorphism is NP-complete and dominates the cost of frequent-subgraph
+mining. Existing weighted methods (WEGM, WeFreS, OWGraMi) prune branches by
+**weight value** but still send every survivor through the (expensive) iso check.
+WeLT inserts a **lookup-table double filter** *before* the iso check:
+
+1. **(P1) Structural filter** — a precomputed table `F_k` of frequent k-edge
+   patterns (default k=2). If any k-edge subpattern of a candidate is missing
+   from `F_k`, the whole subtree is pruned in O(1).
+2. **(P2) Weight filter** — each table entry also stores `MaxW(p)`. The bound
+   `UB_k(S) = min MaxW(p)` dominates `W(S)` and every weight in the descendant
+   subtree, so `UB_k(S) < τ_w` prunes the subtree by *anti-monotonicity of the
+   bottleneck weight*.
+
+The full algorithm adds two more pieces: a multi-criteria *matching-order
+voting* that brings the weight signal into the matching variable order, and a
+*weight branch-and-bound* inside backtracking that cuts partial embeddings
+whose running bottleneck has already dropped below τ_w. A single
+anti-monotonicity property of the bottleneck weight proves the whole pipeline
+both **complete** and **correct**.
 
 ## Requirements & Build
 
@@ -185,6 +212,19 @@ datasets) are configured in the scenario definitions inside `experiments.sh`; re
 ratios (σ_s = minSup / |V|, and ρ_w within each dataset's weight range) for cross-dataset
 comparability.
 
+## Reproducing the paper figures
+
+The script `tools/make_paper_figures.py` regenerates the four data figures of the paper
+(`Fig2_efficiency_comparison.pdf`, `Fig3_memory_comparison.pdf`, `Fig4_ablation_study.pdf`,
+`Fig5_scalability_comparison.pdf`) from the consolidated CSVs in `results/`. It needs
+Python 3 + `matplotlib` + `numpy`:
+
+```bash
+python tools/make_paper_figures.py
+```
+
+The example graph used as Figure 1 of the paper is drawn inline with TikZ, not from data.
+
 ## Correctness testing
 
 The full suite (run with `./test.sh`) is **56 tests, all green**. Highlights:
@@ -210,12 +250,38 @@ The full suite (run with `./test.sh`) is **56 tests, all green**. Highlights:
       inheritance, hub-aware candidate enumeration.
 - [x] Search-budget approximation + per-run time limit; `BenchmarkMain` (median over repeated runs).
 
+## Cite this work
+
+If you use this code or build on it, please cite the WeLT paper. A machine-readable
+[`CITATION.cff`](CITATION.cff) is provided (GitHub renders a "Cite this repository"
+button automatically). A BibTeX entry:
+
+```bibtex
+@article{welt2026,
+  title   = {{WeLT}: Weighted Frequent Subgraph Mining in a Single Large Graph
+             via a Lookup-Table Double Filter},
+  author  = {Vo, Tan-Dung and Huynh, Bao and Tran, Thai},
+  year    = {2026},
+  note    = {Manuscript submitted for publication}
+}
+```
+
+When relying on the MNI counter, also cite the original GraMi paper (Elseidy,
+Abdelhamid, Skiadopoulos & Kalnis, *GraMi: Frequent Subgraph and Pattern Mining in a
+Single Large Graph*, PVLDB 2014), whose constraint-satisfaction approach is adapted in
+`MniSupportCounter`. The `OWGraMi` and `WEGM` strategies are independent
+reimplementations from their respective papers.
+
+## Repository topics
+
+For discoverability on GitHub, suggested topics (add via *Settings → Topics* or the
+gear icon next to *About*):
+
+```
+frequent-subgraph-mining graph-mining weighted-graphs subgraph-isomorphism
+mni-support graph-algorithms data-mining bottleneck-weight java research-code
+```
+
 ## License
 
 Released under the [MIT License](LICENSE).
-
-The MNI support counter (`MniSupportCounter`) adapts the constraint-satisfaction
-approach of GraMi (Elseidy, Abdelhamid, Skiadopoulos & Kalnis, *GraMi: Frequent
-Subgraph and Pattern Mining in a Single Large Graph*, PVLDB 2014); please cite that
-work as well when building on this code. The `OWGraMi` and `WEGM` strategies are
-independent reimplementations from their respective papers.
