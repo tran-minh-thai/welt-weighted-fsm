@@ -258,13 +258,9 @@ The full suite (run with `./test.sh`) is **56 tests, all green**. Highlights:
 
 ## Cite this work
 
-If you use this code or build on it, please cite the WeLT paper. A machine-readable
-[`CITATION.cff`](CITATION.cff) is provided (GitHub renders a "Cite this repository"
-button automatically). A BibTeX entry:
-
-```bibtex
-
-```
+A machine-readable [`CITATION.cff`](CITATION.cff) is provided; GitHub renders a "Cite
+this repository" button on the sidebar from it. A BibTeX entry will be added here once
+the accompanying paper appears in print.
 
 When relying on the MNI counter, also cite the original GraMi paper (Elseidy,
 Abdelhamid, Skiadopoulos & Kalnis, *GraMi: Frequent Subgraph and Pattern Mining in a

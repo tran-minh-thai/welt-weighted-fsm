@@ -1,6 +1,6 @@
 cff-version: 1.2.0
-title: "WeLT: Weighted Frequent Subgraph Mining in a Single Large Graph via a Lookup-Table Double Filter"
-message: "If you use this software, please cite the accompanying paper."
+title: "WeLT: Weighted Frequent Subgraph Mining via a Lookup-Table Double Filter (software)"
+message: "If you use this software, please cite it using the metadata below."
 type: software
 authors:
   - family-names: "Vo"
@@ -26,15 +26,3 @@ keywords:
   - lookup table
   - branch and bound
   - MNI support
-preferred-citation:
-  type: article
-  title: "WeLT: Weighted Frequent Subgraph Mining in a Single Large Graph via a Lookup-Table Double Filter"
-  authors:
-    - family-names: "Vo"
-      given-names: "Tan-Dung"
-    - family-names: "Huynh"
-      given-names: "Bao"
-    - family-names: "Tran"
-      given-names: "Thai"
-  year: 2026
-  notes: "Manuscript submitted for publication."
