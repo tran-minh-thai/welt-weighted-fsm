@@ -216,14 +216,20 @@ comparability.
 
 The script `tools/make_paper_figures.py` regenerates the four data figures of the paper
 (`Fig2_efficiency_comparison.pdf`, `Fig3_memory_comparison.pdf`, `Fig4_ablation_study.pdf`,
-`Fig5_scalability_comparison.pdf`) from the consolidated CSVs in `results/`. It needs
-Python 3 + `matplotlib` + `numpy`:
+`Fig5_scalability_comparison.pdf`) from the values embedded at the top of the script
+(which match `results/SC1`..`SC5_*.csv`). It needs Python 3 + `matplotlib` + `numpy`:
 
 ```bash
 python tools/make_paper_figures.py
 ```
 
-The example graph used as Figure 1 of the paper is drawn inline with TikZ, not from data.
+The companion notebook `tools/make_paper_figures.ipynb` runs the same script on Google
+Colab without any local setup. Open it directly via:
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/tran-minh-thai/welt-weighted-fsm/blob/main/tools/make_paper_figures.ipynb)
+
+The example graph used as Figure 1 of the paper is drawn with TikZ (source in
+`Fig1_example_graph.tex` next to the manuscript), not from data.
 
 ## Correctness testing
 
