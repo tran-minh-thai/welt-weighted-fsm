@@ -40,6 +40,14 @@ awk -F, 'FNR>1 && $12!="-" && $12!="" {k=$1"|"$4"|"$5"|"$6; a[k]=a[k]","$2}
          END{for(k in a) print k" "substr(a[k],2)}' "${SRC[@]}" | sort > "$cfgfile"
 if [ -n "$FILTER" ]; then grep "$FILTER" "$cfgfile" > "$cfgfile.f" || true; mv "$cfgfile.f" "$cfgfile"; fi
 
+# Continue mode: skip TO configs already re-run in a previous RERUN_*.csv (matched by dataset|minSup).
+prevcsv=$(ls results/RERUN_*.csv 2>/dev/null || true)
+if [ -n "$prevcsv" ]; then
+    awk -F, 'FNR>1{print $1"|"$4}' $prevcsv | sort -u > "$cfgfile.done"
+    awk -F'|' 'NR==FNR{d[$1"|"$2]=1;next} !(($1"|"$2) in d)' "$cfgfile.done" "$cfgfile" > "$cfgfile.keep"
+    mv "$cfgfile.keep" "$cfgfile"; rm -f "$cfgfile.done"
+fi
+
 n=$(grep -c . "$cfgfile" || true)
 if [ "$n" -eq 0 ]; then echo "No timed-out cells found (filter='${FILTER}')."; rm -f "$cfgfile"; exit 0; fi
 echo "=== $n timed-out configuration(s) to re-run at $((LIMIT/60000)) min/run -> $out ==="
@@ -47,9 +55,12 @@ sed 's/^/  /' "$cfgfile"
 
 while read -r cfg algos; do
     IFS='|' read -r ds minSup minWeight budget <<< "$cfg"
-    echo ">>> datasets/$ds  minSup=$minSup  tau_w=$minWeight  algos=$algos  limit=${LIMIT}ms"
+    # Run WeLT FIRST, then the timed-out baselines, so WeLT's result lands before the long T.O.s.
+    base=$(echo "$algos" | tr ',' '\n' | grep -vx 'WeLT' | paste -sd, -)
+    runalgos="WeLT${base:+,$base}"
+    echo ">>> datasets/$ds  minSup=$minSup  tau_w=$minWeight  algos=$runalgos  limit=${LIMIT}ms"
     tmp=$(mktemp)
-    BENCH_CSV=1 BENCH_ALGOS="$algos" java ${JAVA_OPTS:-} -cp target/classes \
+    BENCH_CSV=1 BENCH_ALGOS="$runalgos" java ${JAVA_OPTS:-} -cp target/classes \
         welt.runner.BenchmarkMain "datasets/$ds" "$minSup" "$minWeight" "$budget" "$LIMIT" 0 1 > "$tmp" 2>&1 || true
     cat "$tmp"
     grep '^CSV,' "$tmp" | grep -v 'CSV,dataset' | sed 's/^CSV,//' >> "$out" || true

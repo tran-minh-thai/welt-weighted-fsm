@@ -1,0 +1,13 @@
+dataset,algorithm,weightModel,minSup,minWeight,budget,limitMs,freq,candMNI,mineMNI,medianMs,timedOut,peakMemMB
+citeseer.lg,GraMi,none,250,96.0,800,120000,20,53,20198,84,-,83.1
+citeseer.lg,WEGM,edge,250,96.0,800,120000,5,43,19870,68,-,255.1
+citeseer.lg,WeLT,edge,250,96.0,800,120000,5,19,2900,2,-,199.0
+citeseer.lg,GraMi,none,200,96.0,800,120000,462,549,695754,29287,-,594.7
+citeseer.lg,WEGM,edge,200,96.0,800,120000,6,535,695500,27729,-,602.6
+citeseer.lg,WeLT,edge,200,96.0,800,120000,6,29,3100,2,-,425.8
+email_eu.lg,GraMi,none,12,336.0,400,120000,305,831,10327,448,-,976.2
+email_eu.lg,WEGM,edge,12,336.0,400,120000,25,610,9627,308,-,970.8
+email_eu.lg,WeLT,edge,12,336.0,400,120000,25,212,814,5,-,869.3
+email_eu.lg,GraMi,none,10,336.0,400,120000,2975,4835,98472,8374,-,1314.3
+email_eu.lg,WEGM,edge,10,336.0,400,120000,43,3775,82570,6203,-,1488.7
+email_eu.lg,WeLT,edge,10,336.0,400,120000,43,327,1422,10,-,928.9

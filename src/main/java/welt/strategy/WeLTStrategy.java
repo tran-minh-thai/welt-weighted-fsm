@@ -6,23 +6,27 @@ import welt.core.MniSupportCounter;
 import welt.core.Pattern;
 
 /**
- * WeLT (proposed) — edge bottleneck weight + double filter.
+ * WeLT (proposed) — edge bottleneck weight with a double filter.
  *
- * <p>FWS: {@code MNI(S) ≥ minSup} AND {@code W(S) ≥ minWeight}, with
- * {@code W(S)=max} over occurrences of the {@code min} edge weight.
+ * <p>A frequent weighted subgraph (FWS) satisfies {@code MNI(S) ≥ minSup} AND
+ * {@code W(S) ≥ minWeight}, with {@code W(S)=max} over occurrences of the
+ * {@code min} edge weight (the bottleneck model of the paper).
  *
  * <p>Plugs into the shared engine through three hooks:
  * <ul>
- *   <li>{@link #prePrune} — DOUBLE FILTER (structural P1 + weight P2) via
- *       {@link WeightedLookupTable}, run BEFORE the (expensive) MNI count.</li>
- *   <li>{@link #acceptFrequent} — EXACT evaluation of {@code W(S) ≥ minWeight}
- *       by embedding into G_{≥w} (weight branch-and-bound lemma).</li>
- *   <li>{@link #allowExtension} — always extend frequent patterns (per the paper's
- *       algorithm); weak subtrees are pruned by P2 at the child nodes.</li>
+ *   <li>{@link #prePrune} — double filter P1 (structural) + P2 (weight) via
+ *       {@link WeightedLookupTable}, applied BEFORE the (expensive) MNI count.</li>
+ *   <li>{@link #acceptFrequent} — exact evaluation of {@code W(S) ≥ minWeight}
+ *       by embedding into G_{≥minWeight} with weight branch-and-bound.</li>
+ *   <li>{@link #allowExtension} — extend only patterns with W(S) ≥ minWeight.
+ *       By anti-monotonicity of the bottleneck weight, every descendant of a
+ *       pattern with W(p) &lt; minWeight has W(descendant) &lt; minWeight, so
+ *       the whole subtree is safely pruned.</li>
  * </ul>
  *
- * All MNI counting and weight checks SHARE the same {@link MniSupportCounter} +
- * {@link Metrics} with the engine ⇒ a fair aggregate {@code isoCallCount}.
+ * <p>MNI counting and weight checks SHARE the same {@link MniSupportCounter} and
+ * {@link Metrics} as the engine, so the aggregate iso-call count is comparable
+ * across strategies.
  */
 public final class WeLTStrategy implements MiningStrategy {
 

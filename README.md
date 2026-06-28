@@ -1,14 +1,19 @@
-# SubWeightedGraphMiner (WeLT)
+# WeLT — Weighted Frequent Subgraph Mining via a Lookup-Table Double Filter
 
-A shared engine plus pluggable strategies for a **fair** comparison of four popular
-subgraph mining algorithms on a single large graph:
+Reference implementation and experiment suite for the paper:
+
+> **WeLT: Weighted Frequent Subgraph Mining in a Single Large Graph via a
+> Lookup-Table Double Filter.**
+
+A shared mining engine plus pluggable strategies for a **fair** comparison of four
+subgraph-mining algorithms on a single large graph:
 
 | Algorithm | Role | Code provenance |
 |---|---|---|
 | **GraMi** | unweighted baseline | *adapted* from the open-source code of Elseidy & Abdelhamid (PVLDB 2014) |
-| **OWGraMi** | vertex weights | *reimplementation* from the paper (original code may not be public) |
+| **OWGraMi** | vertex weights | *reimplementation* from the paper |
 | **WEGM** | edge weights, Max/Min operators | *reimplementation* from the paper |
-| **WeLT** | **proposed** — bottleneck edge weights + double filter | new |
+| **WeLT** | **proposed** — bottleneck edge weights + double filter (P1+P2) + bnb | new |
 
 > Every algorithm shares ONE engine (`core/`) and a single MNI counter, so any
 > difference in candidate count / runtime reflects the algorithm itself, not an
@@ -39,11 +44,15 @@ src/main/java/welt/
     EdgeLabelAssigner      structural-label-assignment function (default: edges unlabeled)
     VertexWeightAssigner   vertex-weight derivation (for OWGraMi)
     Pattern, CanonicalCode pattern + minimum-DFS-code canonical form (gSpan-style dedup, any size)
-    MniSupportCounter      MNI counter via CSP (adapted from GraMi) — SHARED; arc consistency,
-                           domain inheritance, search budget and time limit
-    PivotVoter             multi-criteria extension-point ordering (α·domain + β·degree + γ·weight)
-    MiningEngine           pattern-generation + edge-extension loop; anti-monotone closure pruning
-    Metrics                CSV metrics: candidates, iso-calls, MINEmni, frequent count, time, mem
+    MniSupportCounter      MNI counter via CSP (adapted from GraMi) — SHARED across strategies;
+                           arc consistency (AC-3), parent→child domain inheritance, multi-criteria
+                           variable ordering, search budget and time limit
+    PivotVoter             multi-criteria matching-order voting (α·domain + β·degree + γ·weight);
+                           drives both the variable order in MNI counting and the start vertex
+                           in the weight-embedding search
+    MiningEngine           BFS pattern lattice + edge-extension loop (leaf and chord); full
+                           anti-monotone closure pruning (P3) at level (k-1)
+    Metrics                CSV metrics: candidates, iso-calls, MNI iso-calls, frequent count, time, mem
     WeightedCanonicalCode  O(1) dedup key for the lookup table (bottleneck model ⇒ = structural code)
     GraphIndex             shared index: frequent labels, edge triples, distinct weights
   strategy/
@@ -51,8 +60,10 @@ src/main/java/welt/
     GraMiStrategy          unweighted baseline: prunes by MNI only
     OWGraMiStrategy        vertex-weight bottleneck (different result set; efficiency comparison only)
     WEGMStrategy           edge-weight bottleneck with a per-edge upper-bound filter
-    WeightedLookupTable    F_2 lookup table + MaxW(p); double filter P1 (structure) + P2 (UB_k < τ_w)
-    WeLTStrategy           proposed: double filter + exact evaluation W(S) ≥ τ_w via G_{≥w}
+    WeightedLookupTable    F_k lookup table (k=2) with MaxW(p) computed exactly; double filter
+                           P1 (structural — some k-edge subpattern not in F_k) + P2 (UB_k < τ_w)
+    WeLTStrategy           proposed: double filter + exact weight check W(S) ≥ τ_w by embedding
+                           into G_{≥τ_w} with weight branch-and-bound (Lemma "bnb" in the paper)
   runner/
     MineMain               run one strategy on one dataset
     CompareMain            run all four algorithms, print a CSV comparison
@@ -109,20 +120,26 @@ prints the resulting size and weight statistics. Raw downloads go under `dataset
 ## Running the full experiment
 
 The comparison is split into independent **scenarios** so it can be run in parts instead of
-one long unattended session. Each scenario writes its own timestamped CSV under `results/`
-(`SC<n>_<YYYYMMDD_HHMMSS>_<name>.csv`):
+one long unattended session. The consolidated, paper-final results live under `results/`
+with the stable names below; each new run writes its own timestamped CSV first
+(`SC<n>_<YYYYMMDD_HHMMSS>_<name>.csv`, gitignored) and is merged into the canonical file
+afterwards.
 
-| Scenario | Algorithms | Datasets | Purpose |
-|---|---|---|---|
-| `sc1` sparse_efficiency | GraMi, WEGM, WeLT | citeseer, email_eu, lastfm | main efficiency comparison (fast) |
-| `sc2` dense_stress | GraMi, WEGM, WeLT | string_ecoli, bitcoin_otc | honest stress test on dense graphs (slow; run overnight) |
-| `sc3` vertex_generality | OWGraMi | citeseer, email_eu | framework generality — a **different** (vertex-weight) result set with OWGraMi's **own** τ_w (≈ vertex-weight median), kept separate |
+| Scenario | Algorithms | Datasets | Final CSV | Purpose |
+|---|---|---|---|---|
+| `sc1` efficiency | GraMi, WEGM, WeLT | citeseer, email_eu, lastfm | `results/SC1_efficiency.csv` | RQ1+RQ2 — at low support WeLT completes while baselines T.O. |
+| `sc2` scalability | GraMi, WEGM, WeLT | mico, github, string_ecoli | `results/SC2_scalability.csv` | scales to large/dense graphs (per-candidate MNI dominates) |
+| `sc3` vertex_generality | OWGraMi | citeseer, email_eu | `results/SC3_vertex_generality.csv` | framework generality — **different** (vertex-weight) result set with OWGraMi's **own** τ_w (≈ vertex-weight median); kept separate |
+| `sc4` ablation | WeLT variants | citeseer, email_eu | `results/SC4_ablation.csv` | RQ4 — per-component contribution (lookup table / voting / weight-order) |
+| `sc5` memory | GraMi, WEGM, WeLT | citeseer, email_eu | `results/SC5_memory.csv` | RQ3 — peak heap at completable supports |
 
 ```bash
 ./experiments.sh list            # describe the scenarios
-./experiments.sh sc1             # run scenario 1 -> results/SC1_<datetime>_sparse_efficiency.csv
-./experiments.sh sc2 bitcoin     # run scenario 2, only datasets whose path matches "bitcoin"
+./experiments.sh sc1             # run scenario 1 -> results/SC1_<datetime>_efficiency.csv
+./experiments.sh sc2 mico        # run scenario 2, only datasets whose path matches "mico"
 ./experiments.sh all             # run sc1, sc2, sc3 sequentially
+./experiments.sh ablation        # RQ4 ablation -> SC4 CSV
+./experiments.sh memory          # RQ3 peak memory -> SC5 CSV
 ```
 
 Each `(dataset, minSup)` cell is timed with `BenchmarkMain`: warmup runs are discarded and the
@@ -130,6 +147,11 @@ Each `(dataset, minSup)` cell is timed with `BenchmarkMain`: warmup runs are dis
 (JIT/GC noise). The deterministic counting metrics (candidate count, MNI iso-calls) come from
 one run. The default per-run limit is **60 minutes** (`TIME_LIMIT_MS`); a run that exceeds it is
 recorded as `TO`. Tune with `TIME_LIMIT_MS`, `WARMUP`, and `MEASURED`.
+
+When a baseline times out at the default 30-minute budget, `rerun_to.sh` re-runs the timed-out
+cells at an extended limit (e.g. 60 minutes) and writes a `RERUN_*.csv`; those rows have already
+been merged into the canonical `SC1_efficiency.csv` and `SC2_scalability.csv` and are
+distinguished by their `limitMs` column.
 
 **Reading the results — the `weightModel` column.** Every CSV row carries a `weightModel` of
 `none`/`edge`/`vertex` so non-comparable result sets are never mixed up when aggregating:

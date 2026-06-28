@@ -1,0 +1,13 @@
+dataset,variant,minSup,minWeight,freq,candMNI,mineMNI,backtrack,timeMs,peakMemMB,timedOut
+citeseer.lg,WeLT-full,250,96.0,5,19,2900,20848,15,14.2,-
+citeseer.lg,no-table,250,96.0,5,22,3766,24293,25,22.2,-
+citeseer.lg,no-vote,250,96.0,5,19,2900,20848,3,6.7,-
+citeseer.lg,no-worder,250,96.0,5,19,2900,20848,3,14.7,-
+citeseer.lg,WeLT-full,200,96.0,6,29,3100,22743,11,14.3,-
+citeseer.lg,no-table,200,96.0,6,31,3789,25657,11,26.9,-
+citeseer.lg,no-vote,200,96.0,6,29,3100,22743,6,10.9,-
+citeseer.lg,no-worder,200,96.0,6,29,3100,22743,4,22.9,-
+email_eu.lg,WeLT-full,12,336.0,25,212,798,12204,15,26.5,-
+email_eu.lg,no-table,12,336.0,25,375,1345,15780,11,26.5,-
+email_eu.lg,no-vote,12,336.0,25,212,774,11066,8,22.4,-
+email_eu.lg,no-worder,12,336.0,25,212,798,12302,8,26.3,-

@@ -7,6 +7,12 @@ cd "$(dirname "$0")"
 JUNIT="tools/junit-console.jar"
 RELEASE="${JAVA_RELEASE:-17}"
 
+# Classpath separator: ';' on Windows (Git Bash / MSYS / Cygwin), ':' elsewhere.
+case "$(uname -s 2>/dev/null)" in
+    MINGW*|MSYS*|CYGWIN*) CPSEP=';' ;;
+    *)                    CPSEP=':' ;;
+esac
+
 # Fetch the standalone JUnit 5 console launcher on first run (not committed to git).
 JUNIT_VERSION="1.10.2"
 JUNIT_URL="https://repo1.maven.org/maven2/org/junit/platform/junit-platform-console-standalone/${JUNIT_VERSION}/junit-platform-console-standalone-${JUNIT_VERSION}.jar"
@@ -23,7 +29,7 @@ javac --release "$RELEASE" -encoding UTF-8 -d target/classes \
 
 echo "[build] compiling tests ..."
 rm -rf target/test-classes && mkdir -p target/test-classes
-javac --release "$RELEASE" -encoding UTF-8 -cp "target/classes:$JUNIT" -d target/test-classes \
+javac --release "$RELEASE" -encoding UTF-8 -cp "target/classes${CPSEP}${JUNIT}" -d target/test-classes \
     $(find src/test/java -name "*.java")
 
 echo "[build] OK"
