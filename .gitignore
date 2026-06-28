@@ -19,8 +19,11 @@ reference/GraMi/
 *~
 .idea/
 *.iml
-results/
 
-# Run logs and calibration scratch output
+# Run logs and calibration scratch output (timestamped raw outputs;
+# the consolidated final results stay under results/ and ARE tracked)
 *.log
 calibrate.*.out
+results/RERUN_*.csv
+results/SC?_2*.csv
+results/SC?_..._*.csv

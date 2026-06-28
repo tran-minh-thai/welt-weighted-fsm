@@ -1,0 +1,7 @@
+dataset,algorithm,weightModel,minSup,minWeight,budget,limitMs,freq,candMNI,mineMNI,medianMs,timedOut
+citeseer.lg,OWGraMi,vertex,400,78.0,400,1800000,5,20,2796,4,-
+citeseer.lg,OWGraMi,vertex,300,78.0,400,1800000,9,30,6330,7,-
+citeseer.lg,OWGraMi,vertex,200,78.0,400,1800000,287,377,394244,11667,-
+email_eu.lg,OWGraMi,vertex,20,75.0,400,1800000,7,83,192,4,-
+email_eu.lg,OWGraMi,vertex,15,75.0,400,1800000,29,229,884,13,-
+email_eu.lg,OWGraMi,vertex,10,75.0,400,1800000,2974,4801,98472,8165,-

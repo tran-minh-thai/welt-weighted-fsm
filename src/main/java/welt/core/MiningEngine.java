@@ -13,23 +13,31 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Frequent subgraph mining engine (FSM over a single large graph) SHARED by all
- * algorithms. The differing parts (pruning, weight conditions) live in
- * {@link MiningStrategy}; the shared part consists of:
+ * Frequent subgraph mining engine (FSM over a single large graph) shared by every
+ * algorithm. The differing parts (pruning, weight conditions) live in
+ * {@link MiningStrategy}; the shared part performs:
  * <ol>
- *   <li>finding frequent vertex labels (the MNI of a single vertex = number of vertices
+ *   <li>finding frequent vertex labels (the MNI of a single vertex = the count of vertices
  *       with that label),</li>
- *   <li>generating single-edge patterns from the triples (labelA, edgeLabel, labelB)
- *       ACTUALLY present in G,</li>
- *   <li>extending each frequent pattern by one edge (leaf or chord), deduplicating via
- *       {@link CanonicalCode},</li>
- *   <li>counting support via the shared {@link MniSupportCounter}.</li>
+ *   <li>generating single-edge patterns from the triples {@code (labelA, edgeLabel, labelB)}
+ *       actually present in G,</li>
+ *   <li>extending each pattern by one edge (leaf or chord), deduplicating via
+ *       {@link CanonicalCode}, using level-wise (BFS) traversal so smaller patterns are
+ *       always evaluated before larger ones,</li>
+ *   <li>counting support via the shared {@link MniSupportCounter} (CSP + AC-3 + parent
+ *       domain inheritance).</li>
  * </ol>
+ *
+ * <p>The BFS traversal additionally enables the (P3) full anti-monotone closure check:
+ * before invoking MNI on a (k+1)-edge pattern, verify that every connected k-edge
+ * subpattern (obtained by deleting one edge) is already in the frequent memo. If any is
+ * missing, MNI must be below {@code minSup} by anti-monotonicity and the pattern is
+ * pruned without an iso-call.
  *
  * <p>Completeness: MNI is anti-monotone, so extending only frequent patterns suffices;
  * every frequent (k+1)-edge pattern arises from some connected frequent k-edge
- * subpattern (by removing one leaf edge or one chord). The result MATCHES the frequent
- * subgraph set of the original GraMi (verified against the citeseer_unlabeled oracle).
+ * subpattern (by removing one leaf edge or one chord). The result matches the frequent
+ * subgraph set of the original GraMi (verified against the unlabeled-CiteSeer oracle).
  */
 public final class MiningEngine {
 

@@ -1,35 +1,37 @@
 package welt.core;
 
 /**
- * MULTI-CRITERIA VOTING for choosing the extension point / matching start vertex
- * (Section~\ref{sec:pivot} of the paper) — contribution (ii) of WeLT.
+ * Multi-criteria voting for the matching order, used at two places in the same
+ * embedding framework (Section 4.5 of the paper): (i) the start pattern vertex in
+ * the weight-embedding search ({@link MniSupportCounter#embedsWithMinWeight}) and
+ * (ii) the variable order in MNI counting ({@link MniSupportCounter#supportWithDomains}).
  *
- * <p>For each candidate pattern vertex {@code v} as an extension point:
+ * <p>For each candidate pattern vertex {@code v}:
  * <pre>
- *   score(v) = α·r̂_dom(v) + β·r̂_deg(v) + γ·r̂_w(v)
+ *   score(v) = α · r̂_dom(v) + β · r̂_deg(v) + γ · r̂_w(v)
  * </pre>
- * where (each component NORMALIZED to [0,1], higher = more preferred):
+ * with each component normalized to {@code [0,1]} (higher is more preferred):
  * <ul>
- *   <li>{@code r̂_dom}: prefers a SMALL candidate DOMAIN (high structural pruning
+ *   <li>{@code r̂_dom}: prefers a small candidate domain (high structural pruning
  *       potential). The raw signal is the domain size — the smaller, the higher the score.</li>
- *   <li>{@code r̂_deg}: prefers a HIGH pattern DEGREE (tighter connectivity constraint).</li>
- *   <li>{@code r̂_w}: prefers the vertex with the TIGHTEST WEIGHT UPPER BOUND around it
+ *   <li>{@code r̂_deg}: prefers a high pattern degree (tighter connectivity constraint).</li>
+ *   <li>{@code r̂_w}: prefers the vertex with the tightest weight upper bound around it
  *       (most likely to violate τ_w early). The raw signal is the weight UB — the smaller,
- *       the higher the score. This is the first time a weight signal participates in the
- *       matching-order decision for Weighted FSM.</li>
+ *       the higher the score.</li>
  * </ul>
  *
- * <p><b>Correctness invariant.</b> The voting rule ONLY changes the traversal order
- * (performance), NOT the result set: accepting a pattern is still decided by the exact
- * {@code MNI_G} and {@code W}. Hence ablation over (α,β,γ) is safe for measuring the
- * contribution of each signal.
+ * <p><b>Correctness invariant.</b> The voting rule only changes the traversal order
+ * (performance), not the result set: accepting a pattern is decided by the exact
+ * {@code MNI_G} and {@code W}. Hence ablation over {@code (α,β,γ)} is safe for measuring
+ * the contribution of each signal.
  *
  * <p><b>Ablation.</b> Degenerate configurations reproduce classic heuristics:
- * {@code (1,0,0)}=smallest domain (GraMi's default MNI); {@code (0,1,0)}=highest degree;
- * {@code (0,0,1)}=tightest weight. {@link #WELT_DEFAULT} balances all three.
+ * {@code (1,0,0)} = smallest domain (GraMi's default MNI); {@code (0,1,0)} = highest
+ * degree; {@code (0,0,1)} = tightest weight. {@link #WELT_DEFAULT} balances all three.
  *
- * <p>This class is PURE: it takes precomputed feature arrays and does not depend on the
- * graph — easy to unit-test. The caller (e.g. {@link MniSupportCounter}) computes the features.
+ * <p>This class is pure: it takes precomputed feature arrays and does not depend on the
+ * graph, making it easy to unit-test. The caller (e.g. {@link MniSupportCounter})
+ * computes the features.
  */
 public final class PivotVoter {
 

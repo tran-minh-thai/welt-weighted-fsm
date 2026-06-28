@@ -17,19 +17,23 @@ import java.util.Set;
 /**
  * Weighted extension lookup table (Section 4.4 of the paper). During preprocessing,
  * compute the set {@code F_k} of all connected FREQUENT {@code k}-edge patterns
- * (default k=2 ⇒ a 2-edge subgraph = a 3-vertex path) and store {@code MaxW(p)=W(p)}
- * for each, indexed by {@link WeightedCanonicalCode}.
+ * (default k=2: each entry is a 3-vertex path) and store {@code MaxW(p)=W(p)}
+ * for each, indexed by {@link WeightedCanonicalCode}. {@code MaxW(p)} is computed
+ * exactly via binary search over the distinct edge-weight set of G
+ * ({@link MniSupportCounter#maxBottleneckWeight}).
  *
- * <p>Serves the DOUBLE FILTER before the (expensive) MNI count:
+ * <p>Serves the double filter before the (expensive) MNI count:
  * <ul>
  *   <li><b>P1</b> (structural filter): if some k-edge subpattern of S is not in the
- *       table (not frequent) ⇒ S is not frequent ⇒ prune.</li>
- *   <li><b>P2</b> (weight filter): {@code UB_k(S)=min MaxW(p)} &lt; minWeight ⇒ every
- *       extension of S has W &lt; minWeight ⇒ prune (dominance corollary + anti-monotonicity).</li>
+ *       table (not frequent) then S is not frequent and the whole subtree is pruned.</li>
+ *   <li><b>P2</b> (weight filter): {@code UB_k(S) = min MaxW(p)} &lt; minWeight implies
+ *       every extension of S has W &lt; minWeight (dominance corollary + anti-monotonicity),
+ *       so the whole subtree is pruned.</li>
  * </ul>
  *
- * <p>The table is computed once per {@code minSup} (independent of minWeight, since it
- * stores the continuous {@code MaxW}), so it is reusable when sweeping minWeight.
+ * <p>The table is built once per {@code minSup} (independent of {@code minWeight},
+ * since it stores the continuous {@code MaxW}), so it is reusable when sweeping
+ * {@code minWeight}.
  */
 public final class WeightedLookupTable {
 
