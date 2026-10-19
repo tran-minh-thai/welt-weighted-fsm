@@ -1,0 +1,5 @@
+{
+  "voter": "1,1,1",
+  "worder": "on",
+  "source": "fixed in advance (the WeLT default); b2grid is a sensitivity analysis, no weight is chosen from data"
+}
