@@ -1,0 +1,9 @@
+# Same bytes on every platform: scripts keep LF (bash under Git for Windows fails on CRLF),
+# data and result files are never converted (their SHA-256 is checked).
+* text=auto eol=lf
+*.lg -text
+*.csv -text
+*.tsv -text
+*.json -text
+*.jar binary
+*.zip binary
