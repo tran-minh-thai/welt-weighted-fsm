@@ -9,6 +9,7 @@ tools/*.jar
 datasets/raw/
 datasets/mico.lg
 datasets/github.lg
+datasets/derived/
 
 # Third-party GraMi clone (used only to regenerate the oracle; keep reference/oracle/)
 reference/GraMi/

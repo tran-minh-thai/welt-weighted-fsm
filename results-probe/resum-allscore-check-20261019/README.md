@@ -26,3 +26,5 @@ completed cells are deterministic.
 
 ReSuM-ALL equals the ALL definition in the 9 completed cells (4 of them with a non-empty set) and is contained in
 the WeLT result set in all 9.
+
+On cyclic patterns the released code and the ALL definition differ: see `../resum-cycle-check-20261019/`.

@@ -173,6 +173,19 @@ run_resum_cell() {
     checkpoint "ReSuM-ALL $(basename "$ds") minSup=$s tau_w=$tw: $(last_status "$out")"
 }
 
+# run_all_exact_cell <out.csv> <dataset.lg> <minSup> <minWeight> <limitMs> <warmup> <measured> <patternsDir>
+# The ALL score of ReSuM computed exactly: GraMi on the graph of the edges weighing at least
+# minWeight (tools/heavy_subgraph.py writes it to datasets/derived/<name>_heavy_<minWeight>.lg,
+# outside the clock), one run_cell with the same protocol as every algorithm.
+run_all_exact_cell() {
+    local out="$1" ds="$2" s="$3" tw="$4" lim="$5" wu="$6" me="$7" pdir="$8" py name heavy
+    py=$(find_python)
+    name=$(basename "$ds" .lg)
+    heavy="datasets/derived/${name}_heavy_${tw}.lg"
+    "$py" tools/heavy_subgraph.py "$ds" "$tw" "$heavy" || { echo "ERROR: heavy_subgraph.py failed on $ds tau_w=$tw" >&2; exit 1; }
+    DUMP_PATTERNS="$pdir" run_cell "$out" "$heavy" "$s" "$tw" GraMi "$lim" "$wu" "$me"
+}
+
 # append_failure_row <out.csv> <dataset> <algorithm> <minSup> <minWeight> <limitMs> <budget> <status>
 # Writes a row with the runner's own header (BenchmarkMain --header): identifying columns
 # and status filled, partial=1, every measurement empty.

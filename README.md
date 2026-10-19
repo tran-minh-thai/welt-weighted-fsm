@@ -17,7 +17,7 @@ subgraph-mining algorithms on a single large graph:
 |---|---|---|---|
 | **GraMi** | frequent subgraphs, no weights | unweighted reference (the τ_w → 0 limit) | *adapted* from the open-source code of Elseidy & Abdelhamid (PVLDB 2014); reproduces the pattern sets of the original GraMi (`GraMiOracleTest`) |
 | **GraMiFilter** | the same problem as WeLT (edge-bottleneck weight) | **baseline**: identical result set | GraMi's search, then an exact weight check of every frequent pattern (the two-step design of ReSuM) |
-| **ReSuM-ALL** | MNI over the appearances whose edges all weigh more than α | closest published model; result set contained in WeLT's when α is just below τ_w | original code of Preti et al. (GPL-3.0), fetched and compiled by `tools/build_resum.py`, not part of this repository |
+| **ALL-exact** | ReSuM's ALL score: MNI over the appearances whose edges all weigh more than α | closest published model, computed exactly; result set contained in WeLT's | GraMi on the graph of the edges weighing at least τ_w (`tools/heavy_subgraph.py`, campaign step `allexact`) |
 | **WEGM** | edge weights are pattern labels (Max method) | published edge-weight method; **different result set** | *reimplementation* of Nguyen et al., J. Inf. Telecommun. 9(4):543-558, 2025 |
 | **OWGraMi** | vertex-bottleneck weight | vertex-weight method; **different result set** | *reimplementation* from the paper |
 | **WeLT** | edge-bottleneck weight | **proposed** — lookup-table filters P1+P2, voting, bnb | new |
@@ -36,7 +36,13 @@ subgraph-mining algorithms on a single large graph:
 > when minSup images exist inside G restricted to edges of weight ≥ τ_w, while WeLT needs MNI ≥
 > minSup in G and one appearance inside that subgraph; so every ALL pattern is a WeLT pattern.
 > `ExportResumMain` writes a dataset in ReSuM's input format, `ResumMain` imports its pattern
-> files and computes the ALL result set from that definition.
+> files and computes the ALL result set from that definition. Since an appearance counted by ALL is
+> an appearance in that subgraph, the ALL score of a pattern equals its MNI support in the subgraph,
+> so GraMi on the subgraph computes ALL exactly (`ALL-exact`). The released code of ReSuM (fetched
+> and compiled by `tools/build_resum.py`, not part of this repository) checks one edge weight per
+> newly matched vertex and the first embedding found from each root vertex, so on cyclic patterns its
+> output differs from the ALL definition (`results-probe/resum-cycle-check-20261019`); it is used in
+> probes only.
 
 > Every algorithm shares ONE engine (`core/`) and a single MNI counter, so any
 > difference in candidate count / runtime reflects the algorithm itself, not an
@@ -282,12 +288,13 @@ metrics of the last two.
 `prepare` (campaign directory, JDK and `JAVA_OPTS` lock, dataset check, self-tests), `voting`
 (WeLT voting weights fixed in advance at (1,1,1) with the weight-aware order), `b2grid` (voting
 sensitivity over the 21-point simplex grid and (1,1,1)),
-`b4` (ablation), `b1` per dataset (efficiency) followed by `resum` for the same dataset
-(ReSuM's ALL score on the b1 cells, through `tools/run_resum.py`), `b2hard` and `b4hard` (the same two analyses at
+`b4` (ablation), `b1` per dataset (efficiency) followed by `allexact` for the same dataset
+(ReSuM's ALL score computed exactly on the b1 cells), `b2hard` and `b4hard` (the same two analyses at
 the smallest B1 support where WeLT completes within 60 s), `b5` per dataset (τ_w sweep at the smallest
 support where GraMi completes, a shared-table WeLT sweep, and a WeLT-only sweep at the smallest
 support where WeLT completes) and `b7` (on every completed cell: GraMiFilter = WeLT,
-EdgeTypeBound = WeLT, ReSuM-ALL = the ALL set by definition, ReSuM-ALL contained in WeLT). Running
+EdgeTypeBound = WeLT, the exact ALL result equal to the ALL set computed from its definition and
+contained in WeLT). Running
 it again continues: finished steps and cells are skipped. With `CHECKPOINT=1` every cell is
 committed, pushed to the branch `campaign-revision-r1b` and reported to a status repository.
 `./revision.sh list` describes each step. The git tree of `src/` is locked at the first step of a

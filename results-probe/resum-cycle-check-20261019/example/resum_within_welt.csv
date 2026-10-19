@@ -1,0 +1,3 @@
+dataset,minSup,minWeight,algoA,algoB,R_A,R_B,onlyA,onlyB,sameSet,avgVertices_A,maxVertices_A,avgEdges_A,maxEdges_A,avgVertices_B,maxVertices_B,avgEdges_B,maxEdges_B
+example,2,5.0,ReSuM-ALL,WeLT,4,3,1,0,0,2.500,3,1.750,3,2.333,3,1.333,2
+example,2,7.0,ReSuM-ALL,WeLT,0,3,0,3,0,,,,,2.333,3,1.333,2

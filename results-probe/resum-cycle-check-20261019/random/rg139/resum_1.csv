@@ -1,0 +1,2 @@
+dataset,algorithm,minSup,minWeight,relevance,limitMs,warmup,runs,status,nonOkRuns,R,deterministic,resumMs,resumMinMs,resumMaxMs,resumSdMs,wallMs,wallMinMs,wallMaxMs,wallSdMs,javaOpts,resumCommit,graphSha256,weightSha256
+rg139.lg,ReSuM-ALL,1,5.000,4.999999999999999,60000,1,1,OK,0,15,1,169.000,169.000,169.000,0.000,266.309,266.309,266.309,0.000,-Xmx1g,38307b26df471d261660e4b652782483163f748b,6433edcef729b8192eba386d450258ea1f6585ed305f62bcc7588bfc03f08a9b,f8818a597bed0e64f27af03555ceed9384983046e2bcd83765c84d698d69deae
