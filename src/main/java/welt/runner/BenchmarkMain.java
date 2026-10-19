@@ -80,7 +80,7 @@ public final class BenchmarkMain {
      */
     static String weightModel(String algo) {
         switch (algo) {
-            case "EdgeTypeBound": case "EdgeTypeBound-ungated": case "WeLT": return "edge";
+            case "EdgeTypeBound": case "EdgeTypeBound-ungated": case "GraMiFilter": case "WeLT": return "edge";
             case "WEGM":    return "edge-label";
             case "OWGraMi": return "vertex";
             default:        return "none";

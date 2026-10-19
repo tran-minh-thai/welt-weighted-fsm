@@ -110,4 +110,28 @@ class RunHarnessTest {
             // ok
         }
     }
+
+    private static java.util.Set<String> codes(RunHarness.Result r) {
+        java.util.Set<String> s = new java.util.TreeSet<>();
+        for (welt.core.MiningEngine.FrequentPattern fp : r.patterns) s.add(welt.core.CanonicalCode.of(fp.pattern));
+        return s;
+    }
+
+    /** The harness applies the branch-and-bound switch and GraMiFilter: same answer as WeLT, the cost differs. */
+    @Test
+    void bnbSwitchAndGraMiFilterReachTheCounter() throws IOException {
+        LabeledWeightedGraph g = citeseer();
+        RunHarness.Result on = run(g, "WeLT");
+        RunHarness.Config c = new RunHarness.Config("WeLT", 300, 96);
+        c.bnb = false;
+        RunHarness.Result off = RunHarness.runOnce(g, c);
+        RunHarness.Result filter = run(g, "GraMiFilter");
+        assertEquals(codes(on), codes(off));
+        assertEquals(codes(on), codes(filter));
+        assertTrue(!codes(on).isEmpty());
+        assertTrue(off.m.backtrackWeight > on.m.backtrackWeight,
+                "bnb off must search more in the weight check: " + off.m.backtrackWeight + " vs " + on.m.backtrackWeight);
+        assertEquals(0, filter.m.prunedByStrategy, "GraMiFilter prunes nothing by weight");
+        assertEquals(0, filter.tableSize, "GraMiFilter builds no lookup table");
+    }
 }

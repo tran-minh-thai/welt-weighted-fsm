@@ -7,6 +7,7 @@ import welt.core.MiningEngine;
 import welt.core.MniSupportCounter;
 import welt.core.PivotVoter;
 import welt.strategy.EdgeTypeBoundStrategy;
+import welt.strategy.GraMiFilterStrategy;
 import welt.strategy.GraMiStrategy;
 import welt.strategy.MiningStrategy;
 import welt.strategy.OWGraMiStrategy;
@@ -65,6 +66,8 @@ public final class RunHarness {
         public boolean p1 = true, p2 = true, wext = true;
         /** The k = 1 part of P2 (heaviest edge per edge type); acts only when p2 is on. */
         public boolean p2single = true;
+        /** Weight branch-and-bound inside the weight check (off = test complete embeddings only). */
+        public boolean bnb = true;
         /** Ablation flags (every algorithm): P3 closure, and P3 against R instead of F. */
         public boolean p3 = true, p3AgainstResults = false;
         /** Record per-phase times of the mining phase (ablation runs only). */
@@ -169,6 +172,7 @@ public final class RunHarness {
         counter.setDeadline(deadline);
         counter.setVoter(cfg.voter);
         counter.setWeightAwareOrdering(cfg.weightOrder);
+        counter.setWeightBranchAndBound(cfg.bnb);
         MiningEngine engine = new MiningEngine(g, m);    // engine counter (MNI of the mining phase)
         engine.setSearchBudget(cfg.budget);
         engine.setDeadline(deadline);
@@ -183,6 +187,7 @@ public final class RunHarness {
         MiningStrategy strategy;
         switch (cfg.algo) {
             case "GraMi": strategy = new GraMiStrategy(); break;
+            case "GraMiFilter": strategy = new GraMiFilterStrategy(cfg.minWeight, counter); break;
             case "EdgeTypeBound": strategy = new EdgeTypeBoundStrategy(g, cfg.minWeight, counter, m, true); break;
             case "EdgeTypeBound-ungated": strategy = new EdgeTypeBoundStrategy(g, cfg.minWeight, counter, m, false); break;
             case "WEGM": strategy = new WEGMStrategy(cfg.minWeight, m); break;

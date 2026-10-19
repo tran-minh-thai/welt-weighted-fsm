@@ -140,6 +140,23 @@ public final class MniSupportCounter {
     private boolean searchAborted = false;
     private boolean inMniSearch = false; // true only inside an MNI embedding search (budget applies)
 
+    /**
+     * Weight branch-and-bound in the weight check ({@link #embedsWithMinWeight}): when on (default),
+     * a partial embedding is abandoned as soon as one matched edge weighs less than the threshold.
+     * When off (ablation), the search ignores weights and tests the bottleneck only on complete
+     * embeddings, continuing the search when it fails. The answer is identical; only the cost differs.
+     */
+    private boolean weightBranchAndBound = true;
+    private double leafMinWeight = Double.NEGATIVE_INFINITY; // threshold tested on complete embeddings
+
+    public void setWeightBranchAndBound(boolean on) {
+        this.weightBranchAndBound = on;
+    }
+
+    public boolean weightBranchAndBound() {
+        return weightBranchAndBound;
+    }
+
     public void setSearchBudget(long maxBacktrackPerSearch) {
         this.searchBudget = maxBacktrackPerSearch <= 0 ? Long.MAX_VALUE : maxBacktrackPerSearch;
     }
@@ -583,7 +600,7 @@ public final class MniSupportCounter {
         if (inMniSearch && ++searchNodes > searchBudget) { searchAborted = true; return false; } // MNI budget
         if (deadlineExceeded()) return false; // time limit: the run is reported as TO, results are partial
         int n = p.nodeCount();
-        if (pos == n) return true;
+        if (pos == n) return leafMinWeight == Double.NEGATIVE_INFINITY || bottleneckAtLeast(p, assign, leafMinWeight);
 
         int patNode = matchOrder[pos];
         int targetLabel = p.nodeLabel(patNode);
@@ -666,6 +683,15 @@ public final class MniSupportCounter {
         return true;
     }
 
+    /** Every pattern edge of the complete embedding {@code assign} weighs at least {@code minW}. */
+    private boolean bottleneckAtLeast(Pattern p, int[] assign, double minW) {
+        for (int[] e : p.edges()) {
+            LabeledWeightedGraph.Adjacency a = g.edge(assign[e[0]], assign[e[1]]);
+            if (a == null || a.weight < minW) return false;
+        }
+        return true;
+    }
+
     private boolean graphHasEdge(int a, int b, int edgeLabel, double minW) {
         LabeledWeightedGraph.Adjacency e = g.edge(a, b);
         return e != null && e.edgeLabel == edgeLabel && e.weight >= minW;
@@ -705,7 +731,16 @@ public final class MniSupportCounter {
             newSearch();
             assign[start] = v;
             usedStamp[v] = usedGen;
-            if (backtrack(p, order, 1, assign, minEdgeWeight)) return true;
+            if (weightBranchAndBound) {
+                if (backtrack(p, order, 1, assign, minEdgeWeight)) return true;
+            } else {
+                leafMinWeight = minEdgeWeight; // no pruning by weight: test complete embeddings only
+                try {
+                    if (backtrack(p, order, 1, assign, Double.NEGATIVE_INFINITY)) return true;
+                } finally {
+                    leafMinWeight = Double.NEGATIVE_INFINITY;
+                }
+            }
         }
         return false;
     }

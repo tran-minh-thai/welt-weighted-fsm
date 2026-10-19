@@ -23,7 +23,8 @@ import java.util.function.Consumer;
  *   noP1      p1 off            noP2     p2 off (k = 1 and k = 2 parts)   noP3     p3 off
  *   noP2single  the k = 1 part of P2 off
  *   p3R       P3 against R      noWext   wext off          voteDeg  voter = degree only
- *   noWorder  worder off        noTable  p1 off and p2 off
+ *   noWorder  worder off        noBnb    weight branch-and-bound off
+ *   noTable   p1 off and p2 off
  * </pre>
  * Every variant is measured with the same protocol as BenchmarkMain (probe, warmup, median of
  * the measured runs). Phase timers (canonical codes, filters, MNI, weight checks) are switched
@@ -72,6 +73,7 @@ public final class AblationMain {
             new Variant("noWext", "wext=off", c -> c.wext = false),
             new Variant("voteDeg", "voter=DEGREE_ONLY", c -> c.voter = PivotVoter.DEGREE_ONLY),
             new Variant("noWorder", "worder=off", c -> c.weightOrder = false),
+            new Variant("noBnb", "bnb=off", c -> c.bnb = false),
             new Variant("noTable", "p1=off+p2=off (combination)", c -> { c.p1 = false; c.p2 = false; }));
 
     /** The full WeLT configuration: voter from WELT_VOTER (see BenchmarkMain), every mechanism on. */
@@ -175,6 +177,7 @@ public final class AblationMain {
                     .put("wext", cfg.wext ? "on" : "off")
                     .put("voter", cfg.voter.label())
                     .put("worder", cfg.weightOrder ? "on" : "off")
+                    .put("bnb", cfg.bnb ? "on" : "off")
                     .put("voterSource", BenchmarkMain.voterSource("WeLT"))
                     .put("status", cell.status)
                     .put("partial", ok ? 0 : 1)
