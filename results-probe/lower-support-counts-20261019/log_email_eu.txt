@@ -1,0 +1,33 @@
+>>> EdgeTypeBound  datasets/email_eu.lg  minSup=4  tau_w=336  limit=600000ms  budget=0
+== Benchmark | email_eu.lg | minSup=4 minWeight=336.0 mode=exact budget=0 | limit=600000ms | warmup=0 measured=1 ==
+algo      model     #FWS  candMNI    MINEmni    table(ms)    total(ms)   T.O.    memMB
+EdgeTypeBound edge       601     9390      61726          0.0       1560.4     OK    662.8
+CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,warmup,runs,status,partial,nonOkRuns,N,prunedStrategy,prunedP1,prunedP2,prunedP2Single,prunedEdgeType,prunedP3,M,Mtotal,Mprime,R,extended,visitedSize,frequentSize,frontierPeak,mniIsoCallsMine,mniIsoCallsTotal,weightIsoCalls,tableSize,tableBuildCandidates,tableBuildMniIsoCalls,tableBuildWeightIsoCalls,budgetExceeded,voter,worder,voterSource,backtrack,backtrackMni,backtrackWeight,voteMs,deterministic,indexMs,prepMs,tableBuildMs,mineMs,totalMs,totalMinMs,totalMaxMs,totalSdMs,peakMemMB,peakMemMaxMB
+CSV,email_eu.lg,EdgeTypeBound,edge,4,336.000,exact,0,600000,0,1,OK,0,0,84339,46707,0,0,0,46707,28242,9390,9390,7763,601,601,84339,7763,141,61726,61726,7763,0,0,0,0,0,0;1;0,off,baseline,807161,417776,389385,3.883,1,1.687,0.946,0.000,1557.789,1560.422,1560.422,1560.422,0.000,662.813,662.813
+patterns: 601 -> results-probe/lower-support-counts-20261019/patterns/email_eu_EdgeTypeBound_4_336.0.tsv
+[checkpoint] EdgeTypeBound email_eu.lg minSup=4 tau_w=336: OK
+>>> WeLT  datasets/email_eu.lg  minSup=4  tau_w=336  limit=600000ms  budget=0
+== Benchmark | email_eu.lg | minSup=4 minWeight=336.0 mode=exact budget=0 | limit=600000ms | warmup=0 measured=1 ==
+algo      model     #FWS  candMNI    MINEmni    table(ms)    total(ms)   T.O.    memMB
+WeLT      edge       601     2750      19973         79.9       1846.7     OK   1035.2
+CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,warmup,runs,status,partial,nonOkRuns,N,prunedStrategy,prunedP1,prunedP2,prunedP2Single,prunedEdgeType,prunedP3,M,Mtotal,Mprime,R,extended,visitedSize,frequentSize,frontierPeak,mniIsoCallsMine,mniIsoCallsTotal,weightIsoCalls,tableSize,tableBuildCandidates,tableBuildMniIsoCalls,tableBuildWeightIsoCalls,budgetExceeded,voter,worder,voterSource,backtrack,backtrackMni,backtrackWeight,voteMs,deterministic,indexMs,prepMs,tableBuildMs,mineMs,totalMs,totalMinMs,totalMaxMs,totalSdMs,peakMemMB,peakMemMaxMB
+CSV,email_eu.lg,WeLT,edge,4,336.000,exact,0,600000,0,1,OK,0,0,84339,78532,53230,25302,298,0,3057,2750,9751,2436,601,601,84339,2436,141,19973,24838,9476,810,7001,4865,7040,0,1;1;1,on,default,414019,151582,262437,2.061,1,1.377,79.922,79.911,1765.362,1846.661,1846.661,1846.661,0.000,1035.217,1035.217
+patterns: 601 -> results-probe/lower-support-counts-20261019/patterns/email_eu_WeLT_4_336.0.tsv
+[checkpoint] WeLT email_eu.lg minSup=4 tau_w=336: OK
+>>> EdgeTypeBound  datasets/email_eu.lg  minSup=3  tau_w=336  limit=600000ms  budget=0
+== Benchmark | email_eu.lg | minSup=3 minWeight=336.0 mode=exact budget=0 | limit=600000ms | warmup=0 measured=1 ==
+algo      model     #FWS  candMNI    MINEmni    table(ms)    total(ms)   T.O.    memMB
+EdgeTypeBound edge      3089    75910     543398          0.0      15191.6     OK   1055.3
+CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,warmup,runs,status,partial,nonOkRuns,N,prunedStrategy,prunedP1,prunedP2,prunedP2Single,prunedEdgeType,prunedP3,M,Mtotal,Mprime,R,extended,visitedSize,frequentSize,frontierPeak,mniIsoCallsMine,mniIsoCallsTotal,weightIsoCalls,tableSize,tableBuildCandidates,tableBuildMniIsoCalls,tableBuildWeightIsoCalls,budgetExceeded,voter,worder,voterSource,backtrack,backtrackMni,backtrackWeight,voteMs,deterministic,indexMs,prepMs,tableBuildMs,mineMs,totalMs,totalMinMs,totalMaxMs,totalSdMs,peakMemMB,peakMemMaxMB
+CSV,email_eu.lg,EdgeTypeBound,edge,3,336.000,exact,0,600000,0,1,OK,0,0,644815,374176,0,0,0,374176,194729,75910,75910,73094,3089,3089,644815,73094,700,543398,543398,73094,0,0,0,0,0,0;1;0,off,baseline,8738911,5003702,3735209,35.052,1,1.388,1.021,0.000,15189.227,15191.636,15191.636,15191.636,0.000,1055.283,1055.283
+patterns: 3089 -> results-probe/lower-support-counts-20261019/patterns/email_eu_EdgeTypeBound_3_336.0.tsv
+[checkpoint] EdgeTypeBound email_eu.lg minSup=3 tau_w=336: OK
+>>> WeLT  datasets/email_eu.lg  minSup=3  tau_w=336  limit=600000ms  budget=0
+== Benchmark | email_eu.lg | minSup=3 minWeight=336.0 mode=exact budget=0 | limit=600000ms | warmup=0 measured=1 ==
+algo      model     #FWS  candMNI    MINEmni    table(ms)    total(ms)   T.O.    memMB
+WeLT      edge      3089    25692     194750        111.7      17936.0     OK   1060.4
+CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,warmup,runs,status,partial,nonOkRuns,N,prunedStrategy,prunedP1,prunedP2,prunedP2Single,prunedEdgeType,prunedP3,M,Mtotal,Mprime,R,extended,visitedSize,frequentSize,frontierPeak,mniIsoCallsMine,mniIsoCallsTotal,weightIsoCalls,tableSize,tableBuildCandidates,tableBuildMniIsoCalls,tableBuildWeightIsoCalls,budgetExceeded,voter,worder,voterSource,backtrack,backtrackMni,backtrackWeight,voteMs,deterministic,indexMs,prepMs,tableBuildMs,mineMs,totalMs,totalMinMs,totalMaxMs,totalSdMs,peakMemMB,peakMemMaxMB
+CSV,email_eu.lg,WeLT,edge,3,336.000,exact,0,600000,0,1,OK,0,0,644815,590725,355633,235092,336,0,28398,25692,34555,25119,3089,3089,644815,25119,700,194750,201216,38428,1534,8863,6466,13309,0,1;1;1,on,default,2836594,1933559,903035,16.810,1,1.397,111.696,111.680,17822.949,17936.041,17936.041,17936.041,0.000,1060.433,1060.433
+patterns: 3089 -> results-probe/lower-support-counts-20261019/patterns/email_eu_WeLT_3_336.0.tsv
+[checkpoint] WeLT email_eu.lg minSup=3 tau_w=336: OK
+stream email_eu done

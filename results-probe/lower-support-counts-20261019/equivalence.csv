@@ -1,0 +1,7 @@
+dataset,minSup,minWeight,algoA,algoB,R_A,R_B,onlyA,onlyB,sameSet,avgVertices_A,maxVertices_A,avgEdges_A,maxEdges_A,avgVertices_B,maxVertices_B,avgEdges_B,maxEdges_B
+citeseer,20,96.0,EdgeTypeBound,WeLT,14,14,0,0,1,2.714,5,1.714,4,2.714,5,1.714,4
+citeseer,50,96.0,EdgeTypeBound,WeLT,12,12,0,0,1,2.583,5,1.583,4,2.583,5,1.583,4
+email_eu,3,336.0,EdgeTypeBound,WeLT,3089,3089,0,0,1,6.421,12,5.581,11,6.421,12,5.581,11
+email_eu,4,336.0,EdgeTypeBound,WeLT,601,601,0,0,1,4.760,10,3.767,9,4.760,10,3.767,9
+lastfm,50,40.0,EdgeTypeBound,WeLT,150,150,0,0,1,5.540,9,4.633,9,5.540,9,4.633,9
+lastfm,100,40.0,EdgeTypeBound,WeLT,69,69,0,0,1,4.464,8,3.536,7,4.464,8,3.536,7
