@@ -60,6 +60,12 @@ public final class RunHarness {
         public PivotVoter voter = PivotVoter.DEGREE_ONLY;
         /** Weight-aware matching order inside the edge-weight check. */
         public boolean weightOrder = false;
+        /** Ablation flags (WeLT): lookup-table filters P1, P2 and weight-gated extension. */
+        public boolean p1 = true, p2 = true, wext = true;
+        /** Ablation flags (every algorithm): P3 closure, and P3 against R instead of F. */
+        public boolean p3 = true, p3AgainstResults = false;
+        /** Record per-phase times of the mining phase (ablation runs only). */
+        public boolean phaseTiming = false;
 
         public Config(String algo, int minSup, double minWeight) {
             this.algo = algo;
@@ -145,6 +151,7 @@ public final class RunHarness {
 
     private static void mineTimed(LabeledWeightedGraph g, Config cfg, Result r, long t0) {
         Metrics m = r.m;
+        m.phaseTiming = cfg.phaseTiming;
         long deadline = cfg.limitMs > 0 ? t0 + cfg.limitMs * 1_000_000L : Long.MAX_VALUE;
         MniSupportCounter counter = new MniSupportCounter(g, m); // strategy counter (table / weight checks)
         counter.setSearchBudget(cfg.budget);
@@ -155,6 +162,8 @@ public final class RunHarness {
         engine.setSearchBudget(cfg.budget);
         engine.setDeadline(deadline);
         engine.setVoter(cfg.voter);
+        engine.setAprioriPruning(cfg.p3);
+        engine.setP3AgainstResults(cfg.p3AgainstResults);
 
         GraphIndex index = new GraphIndex(g, cfg.minSup);
         long t1 = System.nanoTime();
@@ -169,7 +178,10 @@ public final class RunHarness {
                 WeightedLookupTable table = WeightedLookupTable.build(g, index, cfg.minSup, counter, m);
                 r.tableBuildMs = ms(System.nanoTime() - tb);
                 r.tableSize = table.size();
-                strategy = new WeLTStrategy(g, cfg.minWeight, counter, table, m);
+                WeLTStrategy welt = new WeLTStrategy(g, cfg.minWeight, counter, table, m);
+                welt.setFilters(cfg.p1, cfg.p2);
+                welt.setWeightExtension(cfg.wext);
+                strategy = welt;
                 break;
             }
             default: throw new IllegalArgumentException("unknown algorithm: " + cfg.algo);

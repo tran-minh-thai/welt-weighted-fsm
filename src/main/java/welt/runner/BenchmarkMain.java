@@ -133,45 +133,71 @@ public final class BenchmarkMain {
         if (anyOom) System.exit(EXIT_OOM);
     }
 
-    private static RunHarness.Result run(String algo, LabeledWeightedGraph g, String ds,
-                                         int minSup, double minWeight, long budget, long limitMs) {
-        RunHarness.Config cfg = configure(new RunHarness.Config(algo, minSup, minWeight));
-        cfg.budget = budget;
-        cfg.limitMs = limitMs;
+    /** The measured runs of one cell, its status (OK, TO or OOM) and how many runs were not OK. */
+    static final class Cell {
+        final List<RunHarness.Result> runs;
+        final String status;
+        final int nonOk;
+
+        Cell(List<RunHarness.Result> runs, String status, int nonOk) {
+            this.runs = runs;
+            this.status = status;
+            this.nonOk = nonOk;
+        }
+    }
+
+    private static RunHarness.Result runChecked(LabeledWeightedGraph g, RunHarness.Config cfg, String ds) {
         RunHarness.Result r = RunHarness.runOnce(g, cfg);
-        String violation = exactModeViolation(budget, r.m.budgetExceeded);
+        String violation = exactModeViolation(cfg.budget, r.m.budgetExceeded);
         if (violation != null) {
-            System.err.println("ERROR: " + algo + " " + ds + " minSup=" + minSup + ": " + violation);
+            System.err.println("ERROR: " + cfg.algo + " " + ds + " minSup=" + cfg.minSup + ": " + violation);
             System.exit(EXIT_EXACT_VIOLATION);
         }
         return r;
     }
 
-    private static void benchmark(String algo, LabeledWeightedGraph g, String ds,
-                                  int minSup, double minWeight, long budget, long limitMs) {
-        RunHarness.Result probe = run(algo, g, ds, minSup, minWeight, budget, limitMs);
-        List<RunHarness.Result> measured = new ArrayList<>();
+    /**
+     * The measurement protocol of one cell, shared by BenchmarkMain and AblationMain: a probe
+     * run (the first warmup); a TO or OOM probe is reported alone; otherwise {@code warmup - 1}
+     * further discarded runs and {@code measured} reported runs.
+     */
+    static Cell measureCell(LabeledWeightedGraph g, RunHarness.Config cfg, String ds, int warmup, int measured) {
+        RunHarness.Result probe = runChecked(g, cfg, ds);
+        List<RunHarness.Result> runs = new ArrayList<>();
         String status = probe.status;
         int nonOk = 0;
         if (probe.partial()) {
-            measured.add(probe); // a TO or OOM cell is a single probe run
+            runs.add(probe); // a TO or OOM cell is a single probe run
             nonOk = 1;
         } else {
-            for (int i = 1; i < WARMUP && status.equals("OK"); i++) {
-                RunHarness.Result w = run(algo, g, ds, minSup, minWeight, budget, limitMs);
+            for (int i = 1; i < warmup && status.equals("OK"); i++) {
+                RunHarness.Result w = runChecked(g, cfg, ds);
                 if (w.partial()) status = w.status;
             }
-            for (int i = 0; i < MEASURED; i++) {
-                RunHarness.Result r = run(algo, g, ds, minSup, minWeight, budget, limitMs);
+            for (int i = 0; i < measured; i++) {
+                RunHarness.Result r = runChecked(g, cfg, ds);
                 if (r.partial()) {
                     nonOk++;
                     if (!status.equals("OOM")) status = r.status; // OOM outranks TO
                 }
-                measured.add(r);
+                runs.add(r);
             }
         }
         if (status.equals("OOM")) anyOom = true;
-        report(algo, ds, minSup, minWeight, budget, limitMs, measured, status, nonOk);
+        return new Cell(runs, status, nonOk);
+    }
+
+    static boolean anyOom() {
+        return anyOom;
+    }
+
+    private static void benchmark(String algo, LabeledWeightedGraph g, String ds,
+                                  int minSup, double minWeight, long budget, long limitMs) {
+        RunHarness.Config cfg = configure(new RunHarness.Config(algo, minSup, minWeight));
+        cfg.budget = budget;
+        cfg.limitMs = limitMs;
+        Cell cell = measureCell(g, cfg, ds, WARMUP, MEASURED);
+        report(algo, ds, minSup, minWeight, budget, limitMs, cell.runs, cell.status, cell.nonOk);
     }
 
     private static void report(String algo, String ds, int minSup, double minWeight, long budget, long limitMs,

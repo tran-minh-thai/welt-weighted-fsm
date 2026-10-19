@@ -54,6 +54,33 @@ run_cell() {
     rm -f "$tmp"
 }
 
+# run_ablation_cell <out.csv> <dataset.lg> <minSup> <minWeight> <limitMs> <warmup> <measured>
+# Runs every ablation variant of one cell, each in its own JVM (ABLATION_VARIANT), and appends
+# the rows. An invariant violation (exit 5) is reported and the campaign continues; a JVM that
+# dies without a row is written to <out.csv>.failures.
+run_ablation_cell() {
+    local out="$1" ds="$2" s="$3" tw="$4" lim="$5" wu="$6" me="$7" v tmp code
+    for v in $(java -cp target/classes welt.runner.AblationMain --variants); do
+        tmp=$(mktemp); code=0
+        echo ">>> ablation $v  $ds  minSup=$s  tau_w=$tw  limit=${lim}ms"
+        ABLATION_CSV=1 ABLATION_VARIANT="$v" java ${JAVA_OPTS:-} -cp target/classes welt.runner.AblationMain \
+            "$ds" "$s" "$tw" "$lim" "$wu" "$me" > "$tmp" 2>&1 || code=$?
+        cat "$tmp"
+        if [ "$code" -eq 5 ]; then
+            echo "!!! INVARIANT VIOLATION: ablation variant $v on $ds minSup=$s differs from full" >&2
+        fi
+        if [ "$(grep -c '^CSV,' "$tmp" || true)" -ge 2 ]; then
+            append_csv "$tmp" "$out"
+        else
+            local status=CRASH
+            if grep -q 'OutOfMemoryError' "$tmp"; then status=OOM; fi
+            echo "$(basename "$ds"),$v,$s,$tw,$status,exit=$code" >> "$out.failures"
+            echo "!!! ablation $v $ds minSup=$s: no row (exit $code) -> $status, see $out.failures" >&2
+        fi
+        rm -f "$tmp"
+    done
+}
+
 # append_failure_row <out.csv> <dataset> <algorithm> <minSup> <minWeight> <limitMs> <budget> <status>
 # Writes a row with the runner's own header (BenchmarkMain --header): identifying columns
 # and status filled, partial=1, every measurement empty.

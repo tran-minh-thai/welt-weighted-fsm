@@ -97,6 +97,20 @@ public final class MiningEngine {
     private boolean aprioriPruning = true;
     private final Set<String> frequentCodes = new HashSet<>(); // memoized canonical codes of FREQUENT patterns
 
+    /**
+     * Which set P3 checks the (k-1)-edge subpatterns against: {@code false} = the MNI-frequent
+     * memo (default), {@code true} = the result set R (frequent AND accepted by the strategy).
+     * Sound for R: a subpattern q outside R has MNI(q) < minSup or W(q) < tau_w, and both
+     * bounds are anti-monotone, so no superpattern of q is in R. The set of accepted codes is
+     * kept only when this option is on.
+     */
+    private boolean p3AgainstResults = false;
+    private final Set<String> acceptedCodes = new HashSet<>();
+
+    public void setP3AgainstResults(boolean on) {
+        this.p3AgainstResults = on;
+    }
+
     // Performance profiling: print SLOW candidates to stderr (enabled via env DEBUG_PROFILE_MS=<ms>)
     private static final boolean PROFILE = System.getenv("DEBUG_PROFILE_MS") != null;
     private static final long PROFILE_MS = PROFILE ? Long.parseLong(System.getenv("DEBUG_PROFILE_MS")) : 0;
@@ -141,6 +155,7 @@ public final class MiningEngine {
         }
         this.index = prebuilt != null ? prebuilt : new GraphIndex(g, minSup);
         frequentCodes.clear();
+        acceptedCodes.clear();
         mineStart = System.nanoTime();
         timedOut = false;
 
@@ -185,17 +200,23 @@ public final class MiningEngine {
     private void considerCandidate(Pattern p, int[][] parentDomains, int minSup, MiningStrategy strategy,
                                    List<FrequentPattern> result, Set<String> seen,
                                    Deque<FrontierItem> frontier) {
+        final boolean timing = metrics.phaseTiming;
+        long tc = timing ? System.nanoTime() : 0;
         String code = CanonicalCode.of(p);
-        if (!seen.add(code)) return; // isomorphic pattern already considered
+        boolean fresh = seen.add(code);
+        if (timing) metrics.canonNanos += System.nanoTime() - tc;
+        if (!fresh) return; // isomorphic pattern already considered
         metrics.generated++;
 
-        if (strategy.prePrune(p)) {
-            return;
-        }
+        long tf = timing ? System.nanoTime() : 0;
+        boolean pruned = strategy.prePrune(p);
         // Mechanism #1 — FULL ANTI-MONOTONE CLOSURE: every connected (k-1)-edge subpattern
         // must already be frequent (memoized in BFS order). If one is missing ⇒ MNI(p) <
         // minSup for certain ⇒ prune BEFORE calling MNI (expensive). Anti-monotone ⇒ no FWS missed.
-        if (aprioriPruning && p.edgeCount() >= 2 && !allSubpatternsFrequent(p)) {
+        boolean p3 = !pruned && aprioriPruning && p.edgeCount() >= 2 && !allSubpatternsFrequent(p);
+        if (timing) metrics.filterNanos += System.nanoTime() - tf;
+        if (pruned) return;
+        if (p3) {
             metrics.prunedByApriori++;
             return;
         }
@@ -206,8 +227,10 @@ public final class MiningEngine {
         long _t0 = PROFILE ? System.nanoTime() : 0;
         long _iso0 = PROFILE ? metrics.mniIsoCalls : 0;
         long _bt0 = PROFILE ? metrics.backtrackNodes : 0;
+        long tm = timing ? System.nanoTime() : 0;
         MniSupportCounter.SupportResult r =
                 counter.supportWithDomains(p, minSup, domainInheritance ? parentDomains : null);
+        if (timing) metrics.mniNanos += System.nanoTime() - tm;
         if (PROFILE) {
             long ms = (System.nanoTime() - _t0) / 1_000_000;
             if (ms >= PROFILE_MS) {
@@ -227,22 +250,27 @@ public final class MiningEngine {
         metrics.mniFrequent++;
         metrics.frequentMemoSize = frequentCodes.size();
         // MNI-frequent ⇒ extendable (if the strategy allows); pass domains to children
-        if (strategy.allowExtension(p, r.mni)) {
+        long tw = timing ? System.nanoTime() : 0;
+        boolean extend = strategy.allowExtension(p, r.mni);
+        boolean accept = strategy.acceptFrequent(p, r.mni); // accept as FWS (GraMi: always)
+        if (timing) metrics.weightNanos += System.nanoTime() - tw;
+        if (extend) {
             frontier.add(new FrontierItem(p, r.domains));
             metrics.extended++;
             if (frontier.size() > metrics.frontierPeak) metrics.frontierPeak = frontier.size();
         }
-        // accept as FWS if the strategy accepts it (GraMi: always accepts)
-        if (strategy.acceptFrequent(p, r.mni)) {
+        if (accept) {
             result.add(new FrequentPattern(p, r.mni));
             metrics.resultCount++;
+            if (p3AgainstResults) acceptedCodes.add(code);
         }
     }
 
     /** Are all connected (k-1)-edge subpatterns of p present in the frequent memo? */
     private boolean allSubpatternsFrequent(Pattern p) {
+        Set<String> reference = p3AgainstResults ? acceptedCodes : frequentCodes;
         for (Pattern sub : p.connectedEdgeDeletedSubpatterns()) {
-            if (!frequentCodes.contains(CanonicalCode.of(sub))) return false;
+            if (!reference.contains(CanonicalCode.of(sub))) return false;
         }
         return true;
     }

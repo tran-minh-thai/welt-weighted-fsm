@@ -123,6 +123,16 @@ public final class WeightedLookupTable {
      * Applied only when {@code |E(S)| ≥ k}. Updates the pruning counters.
      */
     public boolean prune(Pattern s, double minWeight, Metrics metrics) {
+        return prune(s, minWeight, metrics, true, true);
+    }
+
+    /**
+     * Ablation form: {@code p1} and {@code p2} switch the two filters independently. With P1
+     * off, a k-edge subpattern missing from the table is SKIPPED when computing UB_k (it does
+     * not prune), so P2 then uses only the subpatterns present in the table.
+     */
+    public boolean prune(Pattern s, double minWeight, Metrics metrics, boolean p1, boolean p2) {
+        if (!p1 && !p2) return false;
         if (s.edgeCount() < k) return false; // UB_k = +∞, no k-edge subpattern exists
 
         double ub = Double.POSITIVE_INFINITY;
@@ -130,13 +140,14 @@ public final class WeightedLookupTable {
             String code = WeightedCanonicalCode.of(sub);
             Double w = maxW.get(code);
             if (w == null) {            // P1: k-edge subpattern not frequent
+                if (!p1) continue;      // P1 off: skip this subpattern in UB_k
                 metrics.prunedByP1++;
                 metrics.prunedByStrategy++;
                 return true;
             }
             if (w < ub) ub = w;
         }
-        if (ub < minWeight) {           // P2: UB_k(S) < minWeight
+        if (p2 && ub < minWeight) {     // P2: UB_k(S) < minWeight
             metrics.prunedByP2++;
             metrics.prunedByStrategy++;
             return true;

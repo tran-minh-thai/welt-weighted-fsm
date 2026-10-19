@@ -150,13 +150,7 @@ run_ablation() {
     )
     for c in "${CFG[@]}"; do
         read -r ds tw s <<< "$c"
-        echo ">>> ablation $ds  minSup=$s  tau_w=$tw"
-        tmp=$(mktemp)
-        ABLATION_CSV=1 java ${JAVA_OPTS:-} -cp target/classes welt.runner.AblationMain \
-            "$ds" "$s" "$tw" "$LIMIT" > "$tmp" 2>&1 || true
-        cat "$tmp"
-        append_csv "$tmp" "$out"
-        rm -f "$tmp"
+        run_ablation_cell "$out" "$ds" "$s" "$tw" "$LIMIT" "$WARMUP" "$MEASURED"
     done
     echo "--- ablation done -> $out ---"
 }

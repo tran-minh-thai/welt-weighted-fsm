@@ -19,6 +19,14 @@ public final class Metrics {
     public long backtrackMni = 0;     // backtracking nodes inside MNI embedding searches
     public long backtrackWeight = 0;  // backtracking nodes inside weight checks (edge or vertex)
     public long voteNanos = 0;        // time spent in PivotVoter (variable order + pivot choice)
+
+    // Phase timers of the mining phase, recorded only when phaseTiming is true (ablation runs);
+    // the main benchmark leaves them off so they add no clock reads to its measurements.
+    public boolean phaseTiming = false;
+    public long canonNanos = 0;       // canonical code of each generated pattern (deduplication)
+    public long filterNanos = 0;      // strategy pre-filter (P1/P2 or edge type) and the P3 closure check
+    public long mniNanos = 0;         // MNI counting of candidates
+    public long weightNanos = 0;      // weight condition (allowExtension + acceptFrequent)
     public long budgetExceeded = 0;   // MNI embedding searches ABORTED by the budget (approximate mode only; 0 in exact mode)
     public long frequentCount = 0;    // FWS patterns found (set when mining completes)
     public long resultCount = 0;      // FWS patterns accepted so far (incremental: valid after TO/OOM too)

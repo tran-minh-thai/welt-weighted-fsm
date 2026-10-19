@@ -34,7 +34,9 @@ public final class WeLTStrategy implements MiningStrategy {
     private final MniSupportCounter counter;
     private final WeightedLookupTable table;
     private final Metrics metrics;
-    private boolean doubleFilter = true; // ablation toggle: when false, skip the P1/P2 pre-filter
+    private boolean p1 = true;   // ablation: structural filter of the lookup table
+    private boolean p2 = true;   // ablation: weight upper-bound filter of the lookup table
+    private boolean wext = true; // ablation: extend only patterns that satisfy the weight threshold
 
     public WeLTStrategy(LabeledWeightedGraph g, double minWeight,
                         MniSupportCounter counter, WeightedLookupTable table, Metrics metrics) {
@@ -47,7 +49,19 @@ public final class WeLTStrategy implements MiningStrategy {
     /** Ablation hook (RQ4): turn the lookup-table double filter on/off. The result set is
      *  unchanged because the exact accept check still runs; only performance differs. */
     public void setDoubleFilter(boolean on) {
-        this.doubleFilter = on;
+        this.p1 = on;
+        this.p2 = on;
+    }
+
+    /** Ablation: switch the structural filter P1 and the weight filter P2 independently. */
+    public void setFilters(boolean p1, boolean p2) {
+        this.p1 = p1;
+        this.p2 = p2;
+    }
+
+    /** Ablation: when off, every MNI-frequent pattern is extended (no weight condition). */
+    public void setWeightExtension(boolean on) {
+        this.wext = on;
     }
 
     @Override
@@ -58,8 +72,7 @@ public final class WeLTStrategy implements MiningStrategy {
     /** Double filter P1/P2 before the MNI count (skipped when the ablation toggle is off). */
     @Override
     public boolean prePrune(Pattern candidate) {
-        if (!doubleFilter) return false;
-        return table.prune(candidate, minWeight, metrics);
+        return table.prune(candidate, minWeight, metrics, p1, p2);
     }
 
     // Cache the exact weight-check result for the pattern just evaluated
@@ -91,7 +104,7 @@ public final class WeLTStrategy implements MiningStrategy {
      */
     @Override
     public boolean allowExtension(Pattern p, int support) {
-        return weightOk(p);
+        return !wext || weightOk(p);
     }
 
     public double minWeight() {
