@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Helpers shared by the experiment scripts. Source it: . "$(dirname "$0")/tools/common.sh"
+#
+# On Windows, Java and Python end their output lines with CR LF. Every value read back from
+# them goes through `tr -d '\r'`, and result files are written with LF only.
 
 # append_csv <runner-output-file> <csv-file>
 # Copies the "CSV," lines printed by a runner into <csv-file>. The header is taken from the
@@ -8,7 +11,7 @@
 # column layouts.
 append_csv() {
     local tmp="$1" out="$2" hdr
-    hdr=$(grep -m1 '^CSV,dataset,' "$tmp" | sed 's/^CSV,//' || true)
+    hdr=$(grep -m1 '^CSV,dataset,' "$tmp" | sed 's/^CSV,//' | tr -d '\r' || true)
     if [ -z "$hdr" ]; then
         echo "WARNING: no CSV header in the runner output; nothing appended to $out" >&2
         return 0
@@ -21,7 +24,7 @@ append_csv() {
         echo "  file:   $(head -1 "$out")" >&2
         exit 1
     fi
-    grep '^CSV,' "$tmp" | grep -v '^CSV,dataset,' | sed 's/^CSV,//' >> "$out" || true
+    grep '^CSV,' "$tmp" | grep -v '^CSV,dataset,' | sed 's/^CSV,//' | tr -d '\r' >> "$out" || true
 }
 
 # run_cell <out.csv> <dataset.lg> <minSup> <minWeight> <algorithm> <limitMs> <warmup> <measured> [budget]
@@ -78,7 +81,7 @@ last_status() {
     local py
     py=$(find_python)
     [ -n "$py" ] && [ -s "$1" ] || { echo "?"; return 0; }
-    $py -c 'import csv,sys; r=list(csv.DictReader(open(sys.argv[1]))); print(r[-1].get("status","?") if r else "?")' "$1" || echo "?"
+    $py -c 'import csv,sys; r=list(csv.DictReader(open(sys.argv[1]))); print(r[-1].get("status","?") if r else "?")' "$1" | tr -d '\r' || echo "?"
 }
 
 # report_status <message>: with CHECKPOINT=1, one line in the private status repository (same
@@ -126,7 +129,7 @@ checkpoint() {
 # dies without a row is written to <out.csv>.failures.
 run_ablation_cell() {
     local out="$1" ds="$2" s="$3" tw="$4" lim="$5" wu="$6" me="$7" v tmp code
-    for v in $(java -cp target/classes welt.runner.AblationMain --variants); do
+    for v in $(java -cp target/classes welt.runner.AblationMain --variants | tr -d '\r'); do
         if cell_done "$out" "dataset=$(basename "$ds")" "variant=$v" "minSup=$s" "minWeight=$tw" \
             || grep -q "^$(basename "$ds"),$v,$s,$tw," "$out.failures" 2>/dev/null; then
             echo "--- skip (already recorded): ablation $v $ds minSup=$s"
@@ -159,7 +162,7 @@ run_ablation_cell() {
 append_failure_row() {
     local out="$1" hdrtmp
     hdrtmp=$(mktemp)
-    java -cp target/classes welt.runner.BenchmarkMain --header > "$hdrtmp"
+    java -cp target/classes welt.runner.BenchmarkMain --header | tr -d '\r' > "$hdrtmp"
     if [ ! -s "$out" ]; then sed 's/^CSV,//' "$hdrtmp" > "$out"; fi
     sed 's/^CSV,//' "$hdrtmp" | awk -F, -v ds="$2" -v algo="$3" -v s="$4" -v tw="$5" -v lim="$6" \
         -v budget="$7" -v status="$8" -v voter="$(expected_voter "$3" | tr ',' ';')" '

@@ -83,7 +83,7 @@ PY=$(find_python)
 if [ -z "$PY" ]; then echo "ERROR: Python 3 is required (standard library only)" >&2; exit 1; fi
 
 jdk_identity() {
-    java -XshowSettings:properties -version 2>&1 | grep -E '^ *(java\.vendor|java\.runtime\.version) =' | sed 's/^ *//' | sort
+    java -XshowSettings:properties -version 2>&1 | tr -d '\r' | grep -E '^ *(java\.vendor|java\.runtime\.version) =' | sed 's/^ *//' | sort
     echo "JAVA_OPTS = ${JAVA_OPTS:-}"
 }
 
@@ -103,9 +103,9 @@ else
         echo "ERROR: no campaign directory (run ./revision.sh prepare first, or set RUN_DIR)" >&2
         exit 1
     fi
-    if ! diff <(jdk_identity) "$RUN_DIR/environment.lock" > /dev/null; then
+    if ! diff <(jdk_identity) <(tr -d '\r' < "$RUN_DIR/environment.lock") > /dev/null; then
         echo "ERROR: the JDK or JAVA_OPTS differs from the campaign lock $RUN_DIR/environment.lock:" >&2
-        diff <(jdk_identity) "$RUN_DIR/environment.lock" >&2 || true
+        diff <(jdk_identity) <(tr -d '\r' < "$RUN_DIR/environment.lock") >&2 || true
         exit 1
     fi
 fi
@@ -153,8 +153,8 @@ voter_grid() {
 require_voting_choice() {
     local f="$RUN_DIR/voting_choice.json"
     if [ ! -f "$f" ]; then echo "ERROR: $f is missing; run ./revision.sh b2dev first" >&2; exit 1; fi
-    WELT_VOTER=$($PY -c 'import json,sys; print(json.load(open(sys.argv[1]))["voter"])' "$f")
-    WELT_WORDER=$($PY -c 'import json,sys; print(json.load(open(sys.argv[1]))["worder"])' "$f")
+    WELT_VOTER=$($PY -c 'import json,sys; print(json.load(open(sys.argv[1]))["voter"])' "$f" | tr -d '\r')
+    WELT_WORDER=$($PY -c 'import json,sys; print(json.load(open(sys.argv[1]))["worder"])' "$f" | tr -d '\r')
     export WELT_VOTER WELT_WORDER
     echo "=== WeLT voting from $f: WELT_VOTER=$WELT_VOTER WELT_WORDER=$WELT_WORDER"
 }
@@ -181,12 +181,12 @@ b2dev)
     DEVDS="${B2DEV_DATASET:-bitcoin_otc}"
     MIN_MS="${B2DEV_MIN_MS:-1000}"
     MAX_MS="${B2DEV_MAX_MS:-600000}"
-    TW=$($PY -c 'import csv,sys; print([r for r in csv.DictReader(open(sys.argv[1])) if r["dataset"]==sys.argv[2]][0]["weightMedian"])' "$RUN_DIR/topology.csv" "$DEVDS.lg")
+    TW=$($PY -c 'import csv,sys; print([r for r in csv.DictReader(open(sys.argv[1])) if r["dataset"]==sys.argv[2]][0]["weightMedian"])' "$RUN_DIR/topology.csv" "$DEVDS.lg" | tr -d '\r')
     CAL="$RUN_DIR/B2_dev_calibration.csv"
     CHOSEN=()
     for s in ${B2DEV_SUPS:-1150 1100 1050 1000 950 900 850 800 750 700}; do
         WELT_VOTER="0,1,0" WELT_WORDER=on run_cell "$CAL" "datasets/$DEVDS.lg" "$s" "$TW" WeLT "$MAX_MS" 0 1
-        verdict=$($PY - "$CAL" "$s" "$MIN_MS" "$MAX_MS" <<'PY'
+        verdict=$($PY - "$CAL" "$s" "$MIN_MS" "$MAX_MS" <<'PY' | tr -d '\r'
 import csv, sys
 rows = [r for r in csv.DictReader(open(sys.argv[1])) if r["minSup"] == sys.argv[2]]
 r = rows[-1]
@@ -272,12 +272,12 @@ b5)
         if [ -n "${2:-}" ] && [ "$ds" != "$2" ]; then continue; fi
         tw=$(tau_w_of "$ds")
         for v in $sups; do
-            if [ "$($PY tools/b5_choose.py status "$B1" "$ds.lg" GraMi "$v")" = "none" ]; then
+            if [ "$($PY tools/b5_choose.py status "$B1" "$ds.lg" GraMi "$v" | tr -d '\r')" = "none" ]; then
                 echo "ERROR: B1 has no GraMi row for $ds minSup=$v; run ./revision.sh b1 $ds first" >&2
                 exit 1
             fi
         done
-        s=$($PY tools/b5_choose.py smallest-ok "$B1" "$ds.lg" GraMi)
+        s=$($PY tools/b5_choose.py smallest-ok "$B1" "$ds.lg" GraMi | tr -d '\r')
         how="smallest B1 support at which GraMi completed"
         if [ -z "$s" ]; then
             case "$ds" in
@@ -285,7 +285,7 @@ b5)
             esac
             for v in $ext; do
                 run_cell "$PROBE" "datasets/$ds.lg" "$v" "$tw" GraMi 60000 0 1
-                if [ "$($PY tools/b5_choose.py status "$PROBE" "$ds.lg" GraMi "$v")" = "OK" ]; then s="$v"; break; fi
+                if [ "$($PY tools/b5_choose.py status "$PROBE" "$ds.lg" GraMi "$v" | tr -d '\r')" = "OK" ]; then s="$v"; break; fi
             done
             how="first support of the extension list ($ext) at which a GraMi probe completed within 60 s"
             if [ -z "$s" ]; then
@@ -294,9 +294,9 @@ b5)
                 exit 1
             fi
         fi
-        sw=$($PY tools/b5_choose.py smallest-ok "$B1" "$ds.lg" WeLT)
+        sw=$($PY tools/b5_choose.py smallest-ok "$B1" "$ds.lg" WeLT | tr -d '\r')
         taus=$(java -cp target/classes welt.runner.SharedTableSweepMain --grid "datasets/$ds.lg" \
-            0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9 "$tw" | paste -sd, -)
+            0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9 "$tw" | tr -d '\r' | paste -sd, -)
         grep -q "^$ds " "$CHOICES" 2>/dev/null || {
             echo "$ds comparison minSup=$s ($how)"
             echo "$ds WeLT-only minSup=${sw:-none} (smallest B1 support at which WeLT completed)"

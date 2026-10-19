@@ -5,6 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 . tools/common.sh
+export CHECKPOINT=0   # the checks below set CHECKPOINT=1 only against temporary repositories
 [ -d target/classes ] || ./build.sh
 T=$(mktemp -d)
 fails=0
@@ -28,7 +29,7 @@ run_ablation_cell "$ABL" datasets/citeseer.lg 300 96 0 0 1 > /dev/null
 first=$(rows "$ABL")
 run_ablation_cell "$ABL" datasets/citeseer.lg 300 96 0 0 1 > /dev/null
 check "a second ablation pass adds no row" "$(rows "$ABL")" "$first"
-check "the first ablation pass wrote every variant" "$first" "$(java -cp target/classes welt.runner.AblationMain --variants | wc -l | tr -d ' ')"
+check "the first ablation pass wrote every variant" "$first" "$(java -cp target/classes welt.runner.AblationMain --variants | tr -d '\r' | grep -c .)"
 
 # --- checkpoint and status line, against temporary repositories
 git init -q --bare "$T/origin.git"
