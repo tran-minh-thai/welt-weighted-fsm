@@ -132,6 +132,7 @@ prepare)
     ./test.sh > "$RUN_DIR/tests.log" 2>&1 || { echo "ERROR: unit tests failed, see $RUN_DIR/tests.log" >&2; exit 1; }
     grep -E 'tests (successful|failed)' "$RUN_DIR/tests.log"
     tools/check_run_cell.sh
+    tools/check_resume.sh
     $PY tools/topology.py datasets "$RUN_DIR/topology.csv"
     java ${JAVA_OPTS:-} -cp target/classes welt.runner.RunMetaMain machine results/MEASUREMENT_MACHINE.txt
     echo "=== results/MEASUREMENT_MACHINE.txt written: commit and push it with the results"
