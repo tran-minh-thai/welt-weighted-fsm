@@ -31,6 +31,7 @@ class SearchSpaceCountersTest {
             assertEquals(m.prunedByP1 + m.prunedByP2 + m.prunedByEdgeType, m.prunedByStrategy,
                     at + ": strategy prunes = P1 + P2 + edge type");
             assertTrue(m.candidateCount >= m.mniFrequent && m.mniFrequent >= m.resultCount, at + ": M >= M' >= R");
+            assertTrue(m.prunedByP2Single <= m.prunedByP2, at + ": the k = 1 part is included in P2");
             assertTrue(m.mniFrequent >= m.extended && m.extended >= m.frontierPeak, at + ": M' >= extended >= frontier peak");
             assertEquals(m.mniFrequent, m.frequentMemoSize, at + ": the P3 memo holds every MNI-frequent pattern");
             assertEquals(r.patterns.size(), m.resultCount, at);

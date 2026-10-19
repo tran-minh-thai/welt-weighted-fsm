@@ -279,6 +279,7 @@ public final class BenchmarkMain {
                 .put("prunedStrategy", none ? "" : last.m.prunedByStrategy)
                 .put("prunedP1", none ? "" : last.m.prunedByP1)
                 .put("prunedP2", none ? "" : last.m.prunedByP2)
+                .put("prunedP2Single", none ? "" : last.m.prunedByP2Single)
                 .put("prunedEdgeType", none ? "" : last.m.prunedByEdgeType)
                 .put("prunedP3", none ? "" : last.m.prunedByApriori)
                 .put("M", none ? "" : last.m.candidateCount)

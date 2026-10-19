@@ -32,7 +32,8 @@ public final class Metrics {
     public long resultCount = 0;      // FWS patterns accepted so far (incremental: valid after TO/OOM too)
     public long prunedByStrategy = 0; // candidates pruned by the strategy before MNI counting (sum of the next three)
     public long prunedByP1 = 0;       // WeLT table: structural filter (a 2-edge subpattern not in F_k)
-    public long prunedByP2 = 0;       // WeLT table: weight filter (UB_k < minWeight)
+    public long prunedByP2 = 0;       // WeLT table: weight filter (UB_k < minWeight), including the next one
+    public long prunedByP2Single = 0; // WeLT table: P2 on 1-edge patterns (heaviest edge of the type < minWeight)
     public long prunedByEdgeType = 0; // WEGM/OWGraMi: an edge type that cannot reach the weight threshold
     public long prunedByApriori = 0;  // P3: full anti-monotone closure (a (k-1)-edge subpattern not frequent)
 

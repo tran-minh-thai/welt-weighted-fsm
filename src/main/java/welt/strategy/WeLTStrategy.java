@@ -37,6 +37,7 @@ public final class WeLTStrategy implements MiningStrategy {
     private boolean p1 = true;   // ablation: structural filter of the lookup table
     private boolean p2 = true;   // ablation: weight upper-bound filter of the lookup table
     private boolean wext = true; // ablation: extend only patterns that satisfy the weight threshold
+    private boolean p2single = true; // ablation: the k = 1 part of P2 (heaviest edge per type)
 
     public WeLTStrategy(LabeledWeightedGraph g, double minWeight,
                         MniSupportCounter counter, WeightedLookupTable table, Metrics metrics) {
@@ -59,6 +60,11 @@ public final class WeLTStrategy implements MiningStrategy {
         this.p2 = p2;
     }
 
+    /** Ablation: switch the k = 1 part of P2 (it acts only when P2 is on). */
+    public void setSingleEdgeBound(boolean on) {
+        this.p2single = on;
+    }
+
     /** Ablation: when off, every MNI-frequent pattern is extended (no weight condition). */
     public void setWeightExtension(boolean on) {
         this.wext = on;
@@ -72,7 +78,7 @@ public final class WeLTStrategy implements MiningStrategy {
     /** Double filter P1/P2 before the MNI count (skipped when the ablation toggle is off). */
     @Override
     public boolean prePrune(Pattern candidate) {
-        return table.prune(candidate, minWeight, metrics, p1, p2);
+        return table.prune(candidate, minWeight, metrics, p1, p2, p2single);
     }
 
     // Cache the exact weight-check result for the pattern just evaluated

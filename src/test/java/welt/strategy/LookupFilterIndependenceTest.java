@@ -60,4 +60,21 @@ class LookupFilterIndependenceTest {
         assertFalse(table().prune(S, 5.0, m, false, false), "both filters off");
         assertEquals(0, m.prunedByP1 + m.prunedByP2);
     }
+
+    @Test
+    void singleEdgeBoundPrunesLightEdgeTypes() {
+        WeightedLookupTable t = table();
+        Pattern ab = Pattern.of(new int[]{0, 1}, new int[][]{{0, 1, 0}}); // heaviest A-B edge: 1
+        Pattern cd = Pattern.of(new int[]{2, 3}, new int[][]{{0, 1, 0}}); // heaviest C-D edge: 9
+        Metrics m = new Metrics();
+        assertTrue(t.prune(ab, 5.0, m, true, true, true), "A-B cannot reach 5");
+        assertFalse(t.prune(cd, 5.0, m, true, true, true), "C-D can reach 5");
+        assertEquals(1, m.prunedByP2);
+        assertEquals(1, m.prunedByP2Single);
+        Metrics off = new Metrics();
+        assertFalse(t.prune(ab, 5.0, off, true, true, false), "the k = 1 part switched off");
+        assertFalse(t.prune(ab, 5.0, off, true, false, true), "it acts only when P2 is on");
+        assertFalse(t.prune(ab, 1.0, off, true, true, true), "1 is not below tau_w = 1");
+        assertEquals(0, off.prunedByP2 + off.prunedByP2Single);
+    }
 }

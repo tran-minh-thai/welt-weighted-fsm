@@ -41,6 +41,8 @@ public final class WeightedLookupTable {
 
     private final int k;
     private final Map<String, Double> maxW = new HashMap<>(); // code -> MaxW(p), frequent patterns only
+    /** Heaviest edge of each edge type (GraphIndex triple key): the weight bound of 1-edge patterns. */
+    private final Map<Long, Double> maxWByType = new HashMap<>();
 
     private WeightedLookupTable(int k) {
         this.k = k;
@@ -67,6 +69,16 @@ public final class WeightedLookupTable {
         long mniBefore = metrics.mniIsoCalls;
         long weightBefore = metrics.weightIsoCalls;
         long evaluated = 0;
+
+        // heaviest edge per edge type: W of a 1-edge pattern is the weight of one of its
+        // occurrences, so it cannot exceed this value (the P2 bound for k = 1)
+        for (int u = 0; u < g.numVertices(); u++) {
+            for (LabeledWeightedGraph.Adjacency a : g.neighbors(u)) {
+                if (a.to <= u) continue;
+                long key = GraphIndex.tripleKey(g.vertexLabel(u), g.vertexLabel(a.to), a.edgeLabel);
+                t.maxWByType.merge(key, a.weight, Math::max);
+            }
+        }
 
         // frequent single-edge patterns
         List<Pattern> freqEdges = new ArrayList<>();
@@ -132,7 +144,29 @@ public final class WeightedLookupTable {
      * not prune), so P2 then uses only the subpatterns present in the table.
      */
     public boolean prune(Pattern s, double minWeight, Metrics metrics, boolean p1, boolean p2) {
+        return prune(s, minWeight, metrics, p1, p2, true);
+    }
+
+    /**
+     * Full form. {@code p2single} switches the k = 1 part of P2: a 1-edge pattern whose edge
+     * type has no edge of weight ≥ minWeight cannot reach the threshold (UB_1 = heaviest edge
+     * of the type). It acts only when {@code p2} is on. For k ≥ 2 the 2-edge entries already
+     * bound every edge (MaxW of a path ≤ the heaviest edge of each of its types).
+     */
+    public boolean prune(Pattern s, double minWeight, Metrics metrics, boolean p1, boolean p2, boolean p2single) {
         if (!p1 && !p2) return false;
+        if (s.edgeCount() == 1) {
+            if (!p2 || !p2single) return false;
+            int[] e = s.edges().get(0);
+            Double w = maxWByType.get(GraphIndex.tripleKey(s.nodeLabel(e[0]), s.nodeLabel(e[1]), e[2]));
+            if (w == null || w < minWeight) { // P2, k = 1: UB_1(S) < minWeight
+                metrics.prunedByP2++;
+                metrics.prunedByP2Single++;
+                metrics.prunedByStrategy++;
+                return true;
+            }
+            return false;
+        }
         if (s.edgeCount() < k) return false; // UB_k = +∞, no k-edge subpattern exists
 
         double ub = Double.POSITIVE_INFINITY;

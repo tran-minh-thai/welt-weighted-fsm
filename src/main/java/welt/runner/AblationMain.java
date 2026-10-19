@@ -19,8 +19,9 @@ import java.util.function.Consumer;
  * {@code full} in exactly ONE factor (except {@code noTable}, the combination P1 off + P2 off,
  * which completes the four {P1, P2} combinations with P3 on):
  * <pre>
- *   full      p1 on, p2 on, p3 on, P3 against F, wext on, voter = WELT_VOTER, worder on
- *   noP1      p1 off            noP2     p2 off            noP3     p3 off
+ *   full      p1 on, p2 on (with its k = 1 part), p3 on, P3 against F, wext on, voter = WELT_VOTER, worder on
+ *   noP1      p1 off            noP2     p2 off (k = 1 and k = 2 parts)   noP3     p3 off
+ *   noP2single  the k = 1 part of P2 off
  *   p3R       P3 against R      noWext   wext off          voteDeg  voter = degree only
  *   noWorder  worder off        noTable  p1 off and p2 off
  * </pre>
@@ -65,6 +66,7 @@ public final class AblationMain {
             new Variant("full", "-", c -> { }),
             new Variant("noP1", "p1=off", c -> c.p1 = false),
             new Variant("noP2", "p2=off", c -> c.p2 = false),
+            new Variant("noP2single", "p2single=off", c -> c.p2single = false),
             new Variant("noP3", "p3=off", c -> c.p3 = false),
             new Variant("p3R", "p3set=R", c -> c.p3AgainstResults = true),
             new Variant("noWext", "wext=off", c -> c.wext = false),
@@ -167,6 +169,7 @@ public final class AblationMain {
                     .put("runs", runs.size())
                     .put("p1", cfg.p1 ? "on" : "off")
                     .put("p2", cfg.p2 ? "on" : "off")
+                    .put("p2single", cfg.p2single ? "on" : "off")
                     .put("p3", cfg.p3 ? "on" : "off")
                     .put("p3set", cfg.p3AgainstResults ? "R" : "F")
                     .put("wext", cfg.wext ? "on" : "off")
@@ -181,6 +184,7 @@ public final class AblationMain {
                     .put("N", last.m.generated)
                     .put("prunedP1", last.m.prunedByP1)
                     .put("prunedP2", last.m.prunedByP2)
+                    .put("prunedP2Single", last.m.prunedByP2Single)
                     .put("prunedP3", last.m.prunedByApriori)
                     .put("M", last.m.candidateCount)
                     .put("Mtotal", last.candidatesTotal())

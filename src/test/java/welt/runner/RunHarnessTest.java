@@ -70,7 +70,9 @@ class RunHarnessTest {
         assertEquals(5, run(g, "EdgeTypeBound-ungated").patterns.size());
         RunHarness.Result w = run(g, "WeLT");
         assertEquals(5, w.patterns.size());
-        assertEquals(19, w.m.candidateCount);
+        // candMNI was 19 before the k = 1 part of P2 (heaviest edge per type) was added to WeLT;
+        // with it, 9 hopeless single edges no longer reach MNI counting. The result set is unchanged.
+        assertEquals(10, w.m.candidateCount);
     }
 
     @Test

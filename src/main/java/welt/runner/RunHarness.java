@@ -63,6 +63,8 @@ public final class RunHarness {
         public boolean weightOrder = false;
         /** Ablation flags (WeLT): lookup-table filters P1, P2 and weight-gated extension. */
         public boolean p1 = true, p2 = true, wext = true;
+        /** The k = 1 part of P2 (heaviest edge per edge type); acts only when p2 is on. */
+        public boolean p2single = true;
         /** Ablation flags (every algorithm): P3 closure, and P3 against R instead of F. */
         public boolean p3 = true, p3AgainstResults = false;
         /** Record per-phase times of the mining phase (ablation runs only). */
@@ -193,6 +195,7 @@ public final class RunHarness {
                 WeLTStrategy welt = new WeLTStrategy(g, cfg.minWeight, counter, table, m);
                 welt.setFilters(cfg.p1, cfg.p2);
                 welt.setWeightExtension(cfg.wext);
+                welt.setSingleEdgeBound(cfg.p2single);
                 strategy = welt;
                 break;
             }
