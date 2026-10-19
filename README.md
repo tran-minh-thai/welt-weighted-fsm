@@ -274,12 +274,14 @@ result sets, the speed-up claim is WeLT versus EdgeTypeBound), `edge-label` (WEG
 `prepare` (campaign directory, JDK and `JAVA_OPTS` lock, dataset check, self-tests), `voting`
 (WeLT voting weights fixed in advance at (1,1,1) with the weight-aware order), `b2grid` (voting
 sensitivity over the 21-point simplex grid and (1,1,1)),
-`b4` (ablation), `b1` per dataset (efficiency), `b5` per dataset (τ_w sweep at the smallest
+`b4` (ablation), `b1` per dataset (efficiency), `b2hard` and `b4hard` (the same two analyses at
+the smallest B1 support where WeLT completes within 60 s), `b5` per dataset (τ_w sweep at the smallest
 support where GraMi completes, a shared-table WeLT sweep, and a WeLT-only sweep at the smallest
 support where WeLT completes) and `b7` (EdgeTypeBound = WeLT on every completed cell). Running
 it again continues: finished steps and cells are skipped. With `CHECKPOINT=1` every cell is
 committed, pushed to the branch `campaign-revision-r1` and reported to a status repository.
-`./revision.sh list` describes each step.
+`./revision.sh list` describes each step. The git tree of `src/` is locked at the first step of a
+campaign; a later step on a different measurement code is refused.
 
 The per-dataset thresholds are configured in the scenario definitions inside `experiments.sh`;
 report them as ratios (σ_s = minSup / |V|, and ρ_w within each dataset's weight range) for

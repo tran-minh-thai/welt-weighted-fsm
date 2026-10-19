@@ -10,6 +10,8 @@
 #                            (optional dataset name, e.g. citeseer, to split b1 into sessions)
 #   ./revision.sh b2grid     sensitivity of WeLT to the voting weights on the reported datasets
 #   ./revision.sh b4         one-factor ablation of WeLT
+#   ./revision.sh b2hard     voting sensitivity at the hardest cell of each dataset (after b1)
+#   ./revision.sh b4hard     ablation at the hardest cell of citeseer, email_eu, lastfm (after b1)
 #   ./revision.sh b5 [ds]    tau_w sweep: comparison at a support where GraMi completes, a WeLT
 #                            shared-table sweep, and a WeLT-only sweep at the lowest WeLT support
 #   ./revision.sh b7         result-set equivalence EdgeTypeBound = WeLT over every completed cell
@@ -44,7 +46,7 @@ fi
 
 # ---------------------------------------------------------------- whole campaign
 # all: prepare (skipped once prepare.done exists), voting (skipped once voting_choice.json
-# exists), b2grid, b4, b1 per dataset, b5 per dataset, b7. Every step skips its finished
+# exists), b2grid, b4, b1 per dataset, b2hard, b4hard, b5 per dataset, b7. Every step skips its finished
 # cells. A failing step stops the sequence and reports "all STOPPED at <step>".
 # ALL_DRY=1 prints the steps that would run; ALL_STEPS="b4 b1:citeseer" runs a subset.
 if [ "$CMD" = "all" ]; then
@@ -69,6 +71,8 @@ if [ "$CMD" = "all" ]; then
     all_step b2grid
     all_step b4
     for ds in citeseer email_eu string_ecoli lastfm mico github; do all_step b1 "$ds"; done
+    all_step b2hard
+    all_step b4hard
     for ds in citeseer email_eu lastfm; do all_step b5 "$ds"; done
     all_step b7
     [ "${ALL_DRY:-0}" = "1" ] || report_status "all done"
@@ -109,6 +113,17 @@ else
         diff <(jdk_identity) <(tr -d '\r' < "$RUN_DIR/environment.lock") >&2 || true
         exit 1
     fi
+fi
+# The measurement code is fixed for the whole campaign: the git tree of src/ is recorded at the
+# first step and every later step must run the same tree (the scripts may change, src/ may not).
+SRC_TREE=$(git rev-parse HEAD:src)
+if [ -f "$RUN_DIR/src.lock" ]; then
+    if [ "$(tr -d '\r' < "$RUN_DIR/src.lock")" != "$SRC_TREE" ]; then
+        echo "ERROR: src/ differs from the campaign lock $RUN_DIR/src.lock ($(tr -d '\r' < "$RUN_DIR/src.lock") vs $SRC_TREE)" >&2
+        exit 1
+    fi
+else
+    echo "$SRC_TREE" > "$RUN_DIR/src.lock"
 fi
 export DUMP_PATTERNS="$RUN_DIR/patterns"
 keep_awake
@@ -259,6 +274,36 @@ b4)
     for cell in "citeseer 250" "citeseer 200" "citeseer 150" "email_eu 12" "email_eu 10" "email_eu 8" "lastfm 600" "lastfm 400"; do
         read -r ds s <<< "$cell"
         run_ablation_cell "$OUT" "datasets/$ds.lg" "$s" "$(tau_w_of "$ds")" "$LIMIT" "$WARMUP" "$MEASURED"
+    done
+    ;;
+b2hard|b4hard)
+    # Hard cells, rule fixed before any run: for each dataset, the smallest B1 support at which
+    # WeLT completed with a median run time of at most 60 s (tools/b5_choose.py
+    # smallest-ok-within). A cell already measured by b2grid / b4 is not repeated.
+    require_voting_choice
+    B1="$RUN_DIR/B1_efficiency.csv"
+    CHOICES="$RUN_DIR/hard_cells.txt"
+    if [ "$CMD" = "b2hard" ]; then
+        OUT="$RUN_DIR/B2_voting_grid_hard.csv"; DSETS="citeseer email_eu lastfm mico string_ecoli"
+        DONE="citeseer:250 citeseer:200 email_eu:12 email_eu:10 lastfm:600 mico:15000 string_ecoli:1900"
+    else
+        OUT="$RUN_DIR/B4_ablation_hard.csv"; DSETS="citeseer email_eu lastfm"
+        DONE="citeseer:250 citeseer:200 citeseer:150 email_eu:12 email_eu:10 email_eu:8 lastfm:600 lastfm:400"
+    fi
+    for ds in $DSETS; do
+        s=$($PY tools/b5_choose.py smallest-ok-within "$B1" "$ds.lg" WeLT 60000 | tr -d '\r')
+        grep -q "^$CMD $ds " "$CHOICES" 2>/dev/null \
+            || echo "$CMD $ds minSup=${s:-none} (smallest B1 support where WeLT completed within 60 s)" >> "$CHOICES"
+        if [ -z "$s" ]; then echo "--- $CMD $ds: no B1 support qualifies"; continue; fi
+        case " $DONE " in *" $ds:$s "*) echo "--- $CMD $ds minSup=$s: already measured"; continue ;; esac
+        tw=$(tau_w_of "$ds")
+        if [ "$CMD" = "b2hard" ]; then
+            for v in $(voter_grid); do
+                WELT_VOTER="$v" WELT_WORDER=on run_cell "$OUT" "datasets/$ds.lg" "$s" "$tw" WeLT "$LIMIT" "$WARMUP" "$MEASURED"
+            done
+        else
+            run_ablation_cell "$OUT" "datasets/$ds.lg" "$s" "$tw" "$LIMIT" "$WARMUP" "$MEASURED"
+        fi
     done
     ;;
 b5)
