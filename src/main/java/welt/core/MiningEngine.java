@@ -187,6 +187,7 @@ public final class MiningEngine {
                                    Deque<FrontierItem> frontier) {
         String code = CanonicalCode.of(p);
         if (!seen.add(code)) return; // isomorphic pattern already considered
+        metrics.generated++;
 
         if (strategy.prePrune(p)) {
             return;
@@ -223,8 +224,14 @@ public final class MiningEngine {
         if (r.mni == MniSupportCounter.INFREQUENT) return;
 
         frequentCodes.add(code); // MNI-frequent ⇒ memoize for pruning larger patterns
+        metrics.mniFrequent++;
+        metrics.frequentMemoSize = frequentCodes.size();
         // MNI-frequent ⇒ extendable (if the strategy allows); pass domains to children
-        if (strategy.allowExtension(p, r.mni)) frontier.add(new FrontierItem(p, r.domains));
+        if (strategy.allowExtension(p, r.mni)) {
+            frontier.add(new FrontierItem(p, r.domains));
+            metrics.extended++;
+            if (frontier.size() > metrics.frontierPeak) metrics.frontierPeak = frontier.size();
+        }
         // accept as FWS if the strategy accepts it (GraMi: always accepts)
         if (strategy.acceptFrequent(p, r.mni)) {
             result.add(new FrequentPattern(p, r.mni));

@@ -81,6 +81,7 @@ public final class OWGraMiStrategy implements MiningStrategy {
             int lb = Math.max(s.nodeLabel(e[0]), s.nodeLabel(e[1]));
             long key = ((long) la << 42) | ((long) lb << 21) | e[2];
             if (!weightyTriples.contains(key)) {
+                metrics.prunedByEdgeType++;
                 metrics.prunedByStrategy++;
                 return true;
             }

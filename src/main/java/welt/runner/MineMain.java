@@ -67,8 +67,8 @@ public final class MineMain {
         System.out.println("Frequent vertex labels + vertex counts: " + engine.frequentLabelCounts());
         System.out.println("Number of FWS patterns (≥1 edge): " + fps.size());
         if (m.prunedByStrategy > 0) {
-            System.out.printf("Pruning: P1=%d, P2=%d (%d candidates in total skipped the MNI call)%n",
-                    m.prunedByP1, m.prunedByP2, m.prunedByStrategy);
+            System.out.printf("Pruning: P1=%d, P2=%d, edge type=%d (%d candidates in total skipped the MNI call)%n",
+                    m.prunedByP1, m.prunedByP2, m.prunedByEdgeType, m.prunedByStrategy);
         }
 
         fps.sort((a, b) -> {

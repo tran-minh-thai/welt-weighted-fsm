@@ -19,10 +19,21 @@ public final class Metrics {
     public long budgetExceeded = 0;   // MNI embedding searches ABORTED by the budget (approximate mode only; 0 in exact mode)
     public long frequentCount = 0;    // FWS patterns found (set when mining completes)
     public long resultCount = 0;      // FWS patterns accepted so far (incremental: valid after TO/OOM too)
-    public long prunedByStrategy = 0; // candidates pruned by the strategy before MNI counting
-    public long prunedByP1 = 0;       // pruned by the structural filter (infrequent k-edge subpattern)
-    public long prunedByP2 = 0;       // pruned by the weight filter (UB_k < minWeight)
-    public long prunedByApriori = 0;  // pruned by the full anti-monotone closure (infrequent (k-1)-edge subpattern)
+    public long prunedByStrategy = 0; // candidates pruned by the strategy before MNI counting (sum of the next three)
+    public long prunedByP1 = 0;       // WeLT table: structural filter (a 2-edge subpattern not in F_k)
+    public long prunedByP2 = 0;       // WeLT table: weight filter (UB_k < minWeight)
+    public long prunedByEdgeType = 0; // WEGM/OWGraMi: an edge type that cannot reach the weight threshold
+    public long prunedByApriori = 0;  // P3: full anti-monotone closure (a (k-1)-edge subpattern not frequent)
+
+    // Search-space counters of the mining phase, incremented as mining proceeds (so they are
+    // the values reached at the stop for a TO or OOM run). For a completed run:
+    //   generated = prunedByStrategy + prunedByApriori + candidateCount
+    //   candidateCount >= mniFrequent >= resultCount,   mniFrequent >= extended
+    public long generated = 0;        // N: distinct patterns generated (after canonical-code deduplication, before any filter)
+    public long mniFrequent = 0;      // M': patterns with MNI >= minSup
+    public long extended = 0;         // patterns put on the frontier to be extended
+    public long frontierPeak = 0;     // largest frontier size
+    public long frequentMemoSize = 0; // size of the memo of frequent canonical codes used by P3
     public long tableBuildIsoCalls = 0;    // total iso-calls while building the lookup table (MNI + weight)
     public long tableBuildMniIsoCalls = 0; // just the MNI iso-calls while building the table (to separate the mining part)
     public long tableBuildWeightIsoCalls = 0; // weight iso-calls while building the table (MaxW binary searches)

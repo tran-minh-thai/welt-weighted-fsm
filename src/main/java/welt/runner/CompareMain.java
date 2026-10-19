@@ -83,8 +83,8 @@ public final class CompareMain {
             List<MiningEngine.FrequentPattern> fps = engine.mine(minSup, strategy);
             m.timeMs = (System.nanoTime() - t0) / 1_000_000;
             m.sampleMemory();
-            System.out.printf("[WEGM]     freq=%d, cand=%d, iso=%d, P2=%d, time=%dms%n",
-                    fps.size(), m.candidateCount, m.isoCallCount, m.prunedByP2, m.timeMs);
+            System.out.printf("[WEGM]     freq=%d, cand=%d, iso=%d, edgeTypePruned=%d, time=%dms%n",
+                    fps.size(), m.candidateCount, m.isoCallCount, m.prunedByEdgeType, m.timeMs);
             csvRows.add(m.csvRow("WEGM", dataset, minSup, minWeight, 0));
         }
 

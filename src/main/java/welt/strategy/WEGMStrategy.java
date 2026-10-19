@@ -83,7 +83,7 @@ public final class WEGMStrategy implements MiningStrategy {
             long key = ((long) la << 42) | ((long) lb << 21) | e[2];
             Double maxW = maxWeightByTriple.get(key);
             if (maxW == null || maxW < minWeight) {
-                metrics.prunedByP2++;
+                metrics.prunedByEdgeType++;
                 metrics.prunedByStrategy++;
                 return true;
             }
