@@ -11,7 +11,7 @@
 
     <name>SubWeightedGraphMiner</name>
     <description>
-        Nền chung + chiến lược cắm rời cho GraMi / OWGraMi / WEGM (baseline) và WeLT (đề xuất).
+        Shared mining engine with pluggable strategies: GraMi, OWGraMi, WEGM, EdgeTypeBound (baselines) and WeLT (proposed).
     </description>
 
     <properties>
