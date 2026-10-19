@@ -4,6 +4,8 @@
 Usage:
   python tools/b5_choose.py smallest-ok <csv> <dataset.lg> <algorithm>
       Smallest minSup with a status-OK row of <algorithm> on <dataset.lg>; prints nothing if none.
+  python tools/b5_choose.py smallest-ok-within <csv> <dataset.lg> <algorithm> <maxMs>
+      Smallest minSup with a status-OK row whose totalMs (median) is at most <maxMs>.
   python tools/b5_choose.py status <csv> <dataset.lg> <algorithm> <minSup>
       Status of the last row of that cell, or "none".
 
@@ -13,6 +15,8 @@ Rules of B5:
   GraMi completed nowhere in the range, the first value of a fixed extension list at which a
   GraMi probe completes within 60 s.
   minSup of the WeLT-only sweep = smallest-ok of WeLT in the B1 range.
+Rule of the hard-cell rounds (b2hard, b4hard): minSup = smallest-ok-within of WeLT in the B1
+range with maxMs = 60000 (median run time at most 60 s).
 """
 import csv
 import os
@@ -30,6 +34,11 @@ def main():
     a = sys.argv[1:]
     if len(a) == 4 and a[0] == "smallest-ok":
         ok = [int(r["minSup"]) for r in rows(a[1], a[2], a[3]) if r["status"] == "OK"]
+        if ok:
+            print(min(ok))
+    elif len(a) == 5 and a[0] == "smallest-ok-within":
+        ok = [int(r["minSup"]) for r in rows(a[1], a[2], a[3])
+              if r["status"] == "OK" and r.get("totalMs", "") != "" and float(r["totalMs"]) <= float(a[4])]
         if ok:
             print(min(ok))
     elif len(a) == 5 and a[0] == "status":

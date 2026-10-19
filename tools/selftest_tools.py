@@ -75,8 +75,14 @@ def main():
         check("b5: no completed support gives nothing", out("smallest-ok", b1, "l.lg", "GraMi") == "")
         check("b5: status is the last row of the cell", out("status", b1, "c.lg", "GraMi", "300") == "OK")
         check("b5: a missing cell is none", out("status", b1, "c.lg", "GraMi", "150") == "none")
+        b1t = os.path.join(tmp, "b1t.csv")
+        with open(b1t, "w", encoding="utf-8") as fh:
+            fh.write("dataset,algorithm,minSup,status,totalMs\n"
+                     "c.lg,WeLT,300,OK,10\nc.lg,WeLT,200,OK,59000\nc.lg,WeLT,150,OK,61000\nc.lg,WeLT,100,TO,3600000\n")
+        check("hard: smallest completed support within 60 s", out("smallest-ok-within", b1t, "c.lg", "WeLT", "60000") == "200")
+        check("hard: nothing within the cap gives nothing", out("smallest-ok-within", b1t, "c.lg", "WeLT", "5") == "")
 
-    print(f"selftest_tools: {12 - len(failures)}/12 cases passed")
+    print(f"selftest_tools: {14 - len(failures)}/14 cases passed")
     sys.exit(1 if failures else 0)
 
 
