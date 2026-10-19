@@ -16,7 +16,7 @@ public final class Metrics {
     public long mniIsoCalls = 0;      // EXPENSIVE iso-calls: MNI counting (findEmbedding in support)
     public long weightIsoCalls = 0;   // CHEAP iso-calls: weight checks (embedsWithMinWeight/VertexWeight)
     public long backtrackNodes = 0;   // backtracking tree nodes (auxiliary detail)
-    public long budgetExceeded = 0;   // embedding searches ABORTED for exceeding the budget (direction A, approximate)
+    public long budgetExceeded = 0;   // MNI embedding searches ABORTED by the budget (approximate mode only; 0 in exact mode)
     public long frequentCount = 0;    // FWS patterns found
     public long prunedByStrategy = 0; // candidates pruned by the strategy before MNI counting
     public long prunedByP1 = 0;       // pruned by the structural filter (infrequent k-edge subpattern)

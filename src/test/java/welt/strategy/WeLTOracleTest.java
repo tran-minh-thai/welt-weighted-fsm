@@ -63,6 +63,7 @@ class WeLTOracleTest {
         WeLTStrategy strat = new WeLTStrategy(g, minWeight, counter, table, m);
         MiningEngine engine = new MiningEngine(g, m);
         List<MiningEngine.FrequentPattern> fps = engine.mine(minSup, strat);
+        assertEquals(0, m.budgetExceeded, "exact mode: no embedding search may be aborted");
         Set<String> codes = new TreeSet<>();
         for (MiningEngine.FrequentPattern fp : fps) codes.add(CanonicalCode.of(fp.pattern));
         return codes;

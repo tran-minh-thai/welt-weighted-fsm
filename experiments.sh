@@ -44,6 +44,8 @@ MEASURED="${MEASURED:-5}"
 
 # Fill SC_NUM / SC_NAME / SC_ALGOS / SC_CONFIGS for the requested scenario.
 # Each CONFIGS row is:  <dataset> <minWeight tau_w> <search budget> <minSup values...>
+# The search budget is 0 (exact mode) in every row; a non-zero budget switches the run to
+# approximate mode (MNI becomes a lower bound) and is recorded as mode=approx in the CSV.
 # (minWeight/minSup absolute scales differ per dataset; report them as ratios when writing up.)
 scenario_def() {
     case "$1" in
@@ -54,9 +56,9 @@ scenario_def() {
             # grows with the lattice). The sweep therefore spans a high "no-overhead" anchor down
             # to where the baseline times out, to trace the full speedup-vs-support curve.
             SC_CONFIGS=(
-                "datasets/citeseer.lg  96   800  400 300 250 200 150 100"
-                "datasets/email_eu.lg  336  400  20 15 12 10 8 6"
-                "datasets/lastfm.lg    40   400  600 500 400 300 200"
+                "datasets/citeseer.lg  96   0  400 300 250 200 150 100"
+                "datasets/email_eu.lg  336  0  20 15 12 10 8 6"
+                "datasets/lastfm.lg    40   0  600 500 400 300 200"
             ) ;;
         sc2)
             SC_NUM=2; SC_NAME="scalability"; SC_ALGOS="GraMi,WEGM,WeLT"
@@ -66,9 +68,9 @@ scenario_def() {
             # 100K-vertex graph (mico ~24s), a 2-label 37K-vertex graph (github) and a dense graph
             # (string_ecoli). mico and github need a large heap: run with JAVA_OPTS="-Xmx20g".
             SC_CONFIGS=(
-                "datasets/mico.lg          100  2000  16000 15000 14000"
-                "datasets/github.lg        30   2000  26000 25000 24000"
-                "datasets/string_ecoli.lg  750  400   2000 1900 1850"
+                "datasets/mico.lg          100  0  16000 15000 14000"
+                "datasets/github.lg        30   0  26000 25000 24000"
+                "datasets/string_ecoli.lg  750  0   2000 1900 1850"
             ) ;;
         sc3)
             SC_NUM=3; SC_NAME="vertex_generality"; SC_ALGOS="OWGraMi"
@@ -79,8 +81,8 @@ scenario_def() {
             # weights have no clean operating point -- OWGraMi either explodes or returns nothing --
             # so it is not a meaningful generality showcase.
             SC_CONFIGS=(
-                "datasets/citeseer.lg  78   400  400 300 200"
-                "datasets/email_eu.lg  75   400  20 15 10"
+                "datasets/citeseer.lg  78   0  400 300 200"
+                "datasets/email_eu.lg  75   0  20 15 10"
             ) ;;
         *) echo "Unknown scenario: $1 (expected sc1|sc2|sc3)" >&2; return 1 ;;
     esac
@@ -114,7 +116,7 @@ run_scenario() {
     stamp=$(date +%Y%m%d_%H%M%S)
     out="results/SC${SC_NUM}_${stamp}_${SC_NAME}.csv"
     mkdir -p results
-    echo "dataset,algorithm,weightModel,minSup,minWeight,budget,limitMs,freq,candMNI,mineMNI,medianMs,timedOut,peakMemMB" > "$out"
+    echo "dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,freq,candMNI,mineMNI,budgetExceeded,medianMs,timedOut,peakMemMB" > "$out"
     echo "=== Scenario SC${SC_NUM} (${SC_NAME}) | algos=${SC_ALGOS} | limit=${LIMIT}ms ==="
     echo "    -> $out"
     for cfg in "${SC_CONFIGS[@]}"; do
@@ -169,12 +171,12 @@ run_memory() {
     local stamp out; stamp=$(date +%Y%m%d_%H%M%S)
     out="results/SC5_${stamp}_memory.csv"
     mkdir -p results
-    echo "dataset,algorithm,weightModel,minSup,minWeight,budget,limitMs,freq,candMNI,mineMNI,medianMs,timedOut,peakMemMB" > "$out"
+    echo "dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,freq,candMNI,mineMNI,budgetExceeded,medianMs,timedOut,peakMemMB" > "$out"
     echo "=== Memory (RQ3) | limit=${LIMIT}ms ==="
     echo "    -> $out"
     local CFG=(
-        "datasets/citeseer.lg  96   800  250 200"
-        "datasets/email_eu.lg  336  400  12 10"
+        "datasets/citeseer.lg  96   0  250 200"
+        "datasets/email_eu.lg  336  0  12 10"
     )
     for cfg in "${CFG[@]}"; do
         read -r ds tw budget sups <<< "$cfg"

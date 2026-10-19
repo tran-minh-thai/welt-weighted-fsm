@@ -56,6 +56,7 @@ class WEGMOracleTest {
         WEGMStrategy strategy = new WEGMStrategy(g, minWeight, counter, m);
         List<MiningEngine.FrequentPattern> fps =
                 new MiningEngine(g, m).mine(minSup, strategy);
+        assertEquals(0, m.budgetExceeded, "exact mode: no embedding search may be aborted");
         Set<String> codes = new TreeSet<>();
         for (MiningEngine.FrequentPattern fp : fps) codes.add(CanonicalCode.of(fp.pattern));
         return codes;

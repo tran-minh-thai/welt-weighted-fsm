@@ -37,6 +37,9 @@ import java.lang.management.MemoryType;
  */
 public final class BenchmarkMain {
 
+    /** Process exit code when an exact-mode run reports an aborted embedding search. */
+    static final int EXIT_EXACT_VIOLATION = 4;
+
     private static int WARMUP = 1;
     private static int MEASURED = 5;
 
@@ -78,11 +81,30 @@ public final class BenchmarkMain {
         return peak / (1024.0 * 1024.0);
     }
 
+    /** {@code exact} when no search budget is set (budget 0), {@code approx} otherwise. */
+    static String mode(long budget) {
+        return budget <= 0 ? "exact" : "approx";
+    }
+
+    /**
+     * Exact-mode guard: in exact mode no embedding search may have been aborted by a budget.
+     * Returns an error message, or {@code null} when the run is consistent with its mode.
+     */
+    static String exactModeViolation(long budget, long budgetExceeded) {
+        if (mode(budget).equals("exact") && budgetExceeded != 0) {
+            return "exact mode (budget=" + budget + ") but budgetExceeded=" + budgetExceeded
+                    + ": an embedding search was aborted, so MNI is not exact";
+        }
+        return null;
+    }
+
     private static void emitCsv(String ds, String algo, int minSup, double minWeight, long budget,
-                                long limitMs, int freq, long cand, long mineMni, String time, String to, double peakMem) {
+                                long limitMs, int freq, long cand, long mineMni, long budgetExceeded,
+                                String time, String to, double peakMem) {
         if (CSV) {
-            System.out.printf("CSV,%s,%s,%s,%d,%.1f,%d,%d,%d,%d,%d,%s,%s,%.1f%n",
-                    ds, algo, weightModel(algo), minSup, minWeight, budget, limitMs, freq, cand, mineMni, time, to, peakMem);
+            System.out.printf("CSV,%s,%s,%s,%d,%.1f,%s,%d,%d,%d,%d,%d,%d,%s,%s,%.1f%n",
+                    ds, algo, weightModel(algo), minSup, minWeight, mode(budget), budget, limitMs,
+                    freq, cand, mineMni, budgetExceeded, time, to, peakMem);
         }
     }
 
@@ -102,7 +124,7 @@ public final class BenchmarkMain {
                 limitMs == 0 ? "∞" : (limitMs + "ms"), WARMUP, MEASURED);
         System.out.printf("%-9s %-7s %6s %8s %10s %12s %6s %8s%n",
                 "algo", "model", "#FWS", "candMNI", "MINEmni", "time(ms)", "T.O.", "memMB");
-        if (CSV) System.out.println("CSV,dataset,algorithm,weightModel,minSup,minWeight,budget,limitMs,freq,candMNI,mineMNI,medianMs,timedOut,peakMemMB");
+        if (CSV) System.out.println("CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,freq,candMNI,mineMNI,budgetExceeded,medianMs,timedOut,peakMemMB");
 
         // Which strategies to run: BENCH_ALGOS (comma/space separated) overrides the default,
         // letting a scenario run just the comparable edge-weight set (GraMi,WEGM,WeLT) or only
@@ -120,11 +142,17 @@ public final class BenchmarkMain {
                                   int minSup, double minWeight, long budget, long limitMs) {
         // Single probe run: if it times out immediately, report T.O. (avoids 6 runs × limit — saves time).
         Run probe = runOnce(algo, g, minSup, minWeight, budget, limitMs);
+        String probeViolation = exactModeViolation(budget, probe.m.budgetExceeded);
+        if (probeViolation != null) {
+            System.err.println("ERROR: " + algo + " " + ds + " minSup=" + minSup + ": " + probeViolation);
+            System.exit(EXIT_EXACT_VIOLATION);
+        }
         if (probe.timedOut) {
             long pmni = probe.m.mniIsoCalls - probe.m.tableBuildMniIsoCalls;
             System.out.printf("%-9s %-7s %6d %8d %10d %12s %6s %8.1f%n",
                     algo, weightModel(algo), probe.fps, probe.m.candidateCount, pmni, "T.O.(>" + limitMs + ")", "1/1", probe.peakMB);
-            emitCsv(ds, algo, minSup, minWeight, budget, limitMs, probe.fps, probe.m.candidateCount, pmni, "TO", "1/1", probe.peakMB);
+            emitCsv(ds, algo, minSup, minWeight, budget, limitMs, probe.fps, probe.m.candidateCount, pmni,
+                    probe.m.budgetExceeded, "TO", "1/1", probe.peakMB);
             return;
         }
         for (int i = 1; i < WARMUP; i++) runOnce(algo, g, minSup, minWeight, budget, limitMs);
@@ -134,6 +162,11 @@ public final class BenchmarkMain {
         Run last = probe;
         for (int i = 0; i < MEASURED; i++) {
             Run r = runOnce(algo, g, minSup, minWeight, budget, limitMs);
+            String violation = exactModeViolation(budget, r.m.budgetExceeded);
+            if (violation != null) {
+                System.err.println("ERROR: " + algo + " " + ds + " minSup=" + minSup + ": " + violation);
+                System.exit(EXIT_EXACT_VIOLATION);
+            }
             last = r;
             if (r.timedOut) toCount++;
             else times.add(r.timeMs);
@@ -149,7 +182,8 @@ public final class BenchmarkMain {
         String toStr = toCount > 0 ? (toCount + "/" + MEASURED) : "-";
         System.out.printf("%-9s %-7s %6d %8d %10d %12s %6s %8.1f%n",
                 algo, weightModel(algo), last.fps, last.m.candidateCount, mineMni, timeStr, toStr, last.peakMB);
-        emitCsv(ds, algo, minSup, minWeight, budget, limitMs, last.fps, last.m.candidateCount, mineMni, timeStr, toStr, last.peakMB);
+        emitCsv(ds, algo, minSup, minWeight, budget, limitMs, last.fps, last.m.candidateCount, mineMni,
+                last.m.budgetExceeded, timeStr, toStr, last.peakMB);
     }
 
     private static final class Run {

@@ -18,10 +18,10 @@ CAP="${PROBE_CAP_MS:-600000}"
 # Round 3: fine sweep AROUND each sharp cliff found in round 2, with a 10-min cap, to pin the
 # lowest minSup at which WeLT still completes (meaningful minutes of work, not milliseconds).
 PROBES=(
-  "datasets/mico.lg          100  2000  14000 13000 12000 11000"
-  "datasets/github.lg        30   2000  23000 21000 20000"
-  "datasets/string_ecoli.lg  750  400   1900 1800 1700 1600"
-  "datasets/lastfm.lg        20   400   2000 1600 1300"
+  "datasets/mico.lg          100  0  14000 13000 12000 11000"
+  "datasets/github.lg        30   0  23000 21000 20000"
+  "datasets/string_ecoli.lg  750  0   1900 1800 1700 1600"
+  "datasets/lastfm.lg        20   0   2000 1600 1300"
 )
 
 # Probe one graph: descend its support list, stop at the first WeLT timeout.

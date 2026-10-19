@@ -119,17 +119,22 @@ public final class MniSupportCounter {
     private int usedGen = 0;
 
     /**
-     * DIRECTION A — EMBEDDING-SEARCH BUDGET (GraMi/AGRAMI style): cap the number of
-     * backtrack nodes for EACH top-level embedding search. {@link Long#MAX_VALUE} = NO
-     * limit (EXACT, the default — kept for the oracle tests + small graphs). When set
-     * finite, an embedding search that exceeds the budget is ABORTED (treated as not
-     * found) ⇒ MNI becomes a LOWER BOUND (no false positives; may miss some — approximate,
-     * in the spirit of the original GraMi's time cutoff). All algorithms share the
-     * engine + budget ⇒ the COMPARISON stays fair (same approximate result set).
+     * EMBEDDING-SEARCH BUDGET (approximate mode only): cap the number of backtrack nodes
+     * of EACH top-level MNI embedding search. {@link Long#MAX_VALUE} = NO limit = EXACT
+     * mode, the default. When finite, an MNI embedding search that exceeds the budget is
+     * ABORTED (treated as not found) ⇒ MNI becomes a LOWER BOUND (approximate, in the
+     * spirit of the original GraMi's time cutoff); every abort is counted in
+     * {@link Metrics#budgetExceeded}.
+     *
+     * <p>The budget applies to MNI searches ONLY. Weight checks
+     * ({@link #embedsWithMinWeight}, {@link #maxBottleneckWeight},
+     * {@link #embedsWithMinVertexWeight}) always search to completion, so {@code W} and
+     * the lookup-table {@code MaxW} are exact even in approximate mode.
      */
     private long searchBudget = Long.MAX_VALUE;
     private long searchNodes = 0;
     private boolean searchAborted = false;
+    private boolean budgetApplies = false; // true only inside an MNI embedding search
 
     public void setSearchBudget(long maxBacktrackPerSearch) {
         this.searchBudget = maxBacktrackPerSearch <= 0 ? Long.MAX_VALUE : maxBacktrackPerSearch;
@@ -163,6 +168,11 @@ public final class MniSupportCounter {
 
     public long searchBudget() {
         return searchBudget;
+    }
+
+    /** {@code true} when no embedding-search budget is set (exact mode). */
+    public boolean isExact() {
+        return searchBudget == Long.MAX_VALUE;
     }
 
     private void newSearch() {
@@ -484,7 +494,13 @@ public final class MniSupportCounter {
         assign[fixedVar] = fixedVal;
         usedStamp[fixedVal] = usedGen;
         // structural MNI: no weight constraint ⇒ minW = -∞ (every edge valid)
-        boolean ok = backtrack(p, matchOrder, 1, assign, Double.NEGATIVE_INFINITY);
+        boolean ok;
+        budgetApplies = true;              // the budget (approximate mode) applies to MNI searches only
+        try {
+            ok = backtrack(p, matchOrder, 1, assign, Double.NEGATIVE_INFINITY);
+        } finally {
+            budgetApplies = false;
+        }
         if (searchAborted) metrics.budgetExceeded++; // embedding search aborted by the budget
         if (!ok) {
             // reset assign to -1 so no state leaks on failure
@@ -515,7 +531,7 @@ public final class MniSupportCounter {
 
     private boolean backtrack(Pattern p, int[] matchOrder, int pos, int[] assign, double minW) {
         metrics.backtrackNodes++;
-        if (++searchNodes > searchBudget) { searchAborted = true; return false; } // budget (direction A)
+        if (budgetApplies && ++searchNodes > searchBudget) { searchAborted = true; return false; } // MNI budget
         int n = p.nodeCount();
         if (pos == n) return true;
 
@@ -736,8 +752,7 @@ public final class MniSupportCounter {
      * not use it).
      */
     private boolean backtrackVW(Pattern p, int[] matchOrder, int pos, int[] assign, double minVW) {
-        metrics.backtrackNodes++;
-        if (++searchNodes > searchBudget) { searchAborted = true; return false; } // budget (direction A)
+        metrics.backtrackNodes++; // weight check: never budgeted (exact in every mode)
         int n = p.nodeCount();
         if (pos == n) return true;
 

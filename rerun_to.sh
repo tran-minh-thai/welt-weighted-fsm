@@ -13,6 +13,8 @@
 #   ./rerun_to.sh                 # re-run every T.O. cell
 #   ./rerun_to.sh string          # only configs whose line matches "string" (scope it down)
 #   RERUN_LIMIT_MS=1800000 ./rerun_to.sh   # use a 30-min limit instead of 60
+#
+# Re-runs are always in EXACT mode (search budget 0), whatever budget the source row used.
 set -euo pipefail
 cd "$(dirname "$0")"
 [ -d target/classes ] || ./build.sh
@@ -31,19 +33,21 @@ if [ ${#SRC[@]} -eq 0 ]; then echo "No SC1/SC2 result CSV found in results/." >&
 
 stamp=$(date +%Y%m%d_%H%M%S)
 out="results/RERUN_${stamp}_to.csv"
-echo "dataset,algorithm,weightModel,minSup,minWeight,budget,limitMs,freq,candMNI,mineMNI,medianMs,timedOut,peakMemMB" > "$out"
+echo "dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,freq,candMNI,mineMNI,budgetExceeded,medianMs,timedOut,peakMemMB" > "$out"
 
-# Build a list of (dataset|minSup|minWeight|budget) -> comma-list of TIMED-OUT algorithms.
-# CSV column 12 is timedOut ("-" when the cell finished, "k/n" or "1/1" when it timed out).
+# Build a list of (dataset|minSup|minWeight) -> comma-list of TIMED-OUT algorithms.
+# Columns are located by HEADER NAME in each file (the column order changed between versions);
+# timedOut is "-" when the cell finished, "k/n" or "1/1" when it timed out.
 cfgfile=$(mktemp)
-awk -F, 'FNR>1 && $12!="-" && $12!="" {k=$1"|"$4"|"$5"|"$6; a[k]=a[k]","$2}
+awk -F, 'FNR==1 {delete c; for (i=1;i<=NF;i++) c[$i]=i; next}
+         $c["timedOut"]!="-" && $c["timedOut"]!="" {k=$c["dataset"]"|"$c["minSup"]"|"$c["minWeight"]; a[k]=a[k]","$c["algorithm"]}
          END{for(k in a) print k" "substr(a[k],2)}' "${SRC[@]}" | sort > "$cfgfile"
 if [ -n "$FILTER" ]; then grep "$FILTER" "$cfgfile" > "$cfgfile.f" || true; mv "$cfgfile.f" "$cfgfile"; fi
 
 # Continue mode: skip TO configs already re-run in a previous RERUN_*.csv (matched by dataset|minSup).
 prevcsv=$(ls results/RERUN_*.csv 2>/dev/null || true)
 if [ -n "$prevcsv" ]; then
-    awk -F, 'FNR>1{print $1"|"$4}' $prevcsv | sort -u > "$cfgfile.done"
+    awk -F, 'FNR==1 {delete c; for (i=1;i<=NF;i++) c[$i]=i; next} {print $c["dataset"]"|"$c["minSup"]}' $prevcsv | sort -u > "$cfgfile.done"
     awk -F'|' 'NR==FNR{d[$1"|"$2]=1;next} !(($1"|"$2) in d)' "$cfgfile.done" "$cfgfile" > "$cfgfile.keep"
     mv "$cfgfile.keep" "$cfgfile"; rm -f "$cfgfile.done"
 fi
@@ -54,14 +58,14 @@ echo "=== $n timed-out configuration(s) to re-run at $((LIMIT/60000)) min/run ->
 sed 's/^/  /' "$cfgfile"
 
 while read -r cfg algos; do
-    IFS='|' read -r ds minSup minWeight budget <<< "$cfg"
+    IFS='|' read -r ds minSup minWeight <<< "$cfg"
     # Run WeLT FIRST, then the timed-out baselines, so WeLT's result lands before the long T.O.s.
     base=$(echo "$algos" | tr ',' '\n' | grep -vx 'WeLT' | paste -sd, -)
     runalgos="WeLT${base:+,$base}"
     echo ">>> datasets/$ds  minSup=$minSup  tau_w=$minWeight  algos=$runalgos  limit=${LIMIT}ms"
     tmp=$(mktemp)
     BENCH_CSV=1 BENCH_ALGOS="$runalgos" java ${JAVA_OPTS:-} -cp target/classes \
-        welt.runner.BenchmarkMain "datasets/$ds" "$minSup" "$minWeight" "$budget" "$LIMIT" 0 1 > "$tmp" 2>&1 || true
+        welt.runner.BenchmarkMain "datasets/$ds" "$minSup" "$minWeight" 0 "$LIMIT" 0 1 > "$tmp" 2>&1 || true
     cat "$tmp"
     grep '^CSV,' "$tmp" | grep -v 'CSV,dataset' | sed 's/^CSV,//' >> "$out" || true
     rm -f "$tmp"
