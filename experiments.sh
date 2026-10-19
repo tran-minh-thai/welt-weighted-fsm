@@ -20,10 +20,10 @@
 #                               median); a DIFFERENT (vertex-weight) result set kept in its own
 #                               file so it is never mistaken for a speedup baseline.
 #
-# Why the split also helps aggregation: sc1/sc2 contain only the edge-weight algorithms whose
-# result sets are comparable (WEGM and WeLT share the SAME #FWS; GraMi is the unweighted
-# reference). OWGraMi (vertex weights) lives alone in sc3. Every CSV additionally carries a
-# `weightModel` column (none/edge/vertex) as a second safeguard.
+# Result sets: EdgeTypeBound and WeLT solve the same problem (identical result sets); GraMi is
+# the unweighted reference; WEGM treats edge weights as pattern labels (a different result set,
+# efficiency comparison only); OWGraMi (vertex weights) lives alone in sc3. Every CSV carries a
+# `weightModel` column (none / edge / edge-label / vertex) as a safeguard.
 #
 # Usage:
 #   ./experiments.sh list                 # describe the scenarios and exit
@@ -57,7 +57,7 @@ MEASURED="${MEASURED:-5}"
 scenario_def() {
     case "$1" in
         sc1)
-            SC_NUM=1; SC_NAME="efficiency"; SC_ALGOS="GraMi,WEGM,WeLT"
+            SC_NUM=1; SC_NAME="efficiency"; SC_ALGOS="GraMi,EdgeTypeBound,WEGM,WeLT"
             # The WeLT/WEGM gap is negligible at high support (both finish in ms) and explodes at
             # low support (WeLT's candidate set stays bounded by tau_w selectivity while WEGM's
             # grows with the lattice). The sweep therefore spans a high "no-overhead" anchor down
@@ -68,7 +68,7 @@ scenario_def() {
                 "datasets/lastfm.lg    40   0  600 500 400 300 200"
             ) ;;
         sc2)
-            SC_NUM=2; SC_NAME="scalability"; SC_ALGOS="GraMi,WEGM,WeLT"
+            SC_NUM=2; SC_NAME="scalability"; SC_ALGOS="GraMi,EdgeTypeBound,WEGM,WeLT"
             # Large / dense graphs. Here the per-candidate MNI cost on the big graph dominates, so
             # at a completable support all methods converge (WeLT's candidate-pruning advantage only
             # shows in the candidate-bound regime of sc1). These runs demonstrate WeLT SCALES to a
@@ -168,7 +168,7 @@ run_memory() {
     for cfg in "${CFG[@]}"; do
         read -r ds tw budget sups <<< "$cfg"
         for s in $sups; do
-            for algo in GraMi WEGM WeLT; do
+            for algo in GraMi EdgeTypeBound WEGM WeLT; do
                 run_cell "$out" "$ds" "$s" "$tw" "$algo" "$LIMIT" 0 1 "$budget"
             done
         done

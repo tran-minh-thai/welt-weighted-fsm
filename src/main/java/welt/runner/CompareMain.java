@@ -9,7 +9,7 @@ import welt.core.MniSupportCounter;
 import welt.strategy.GraMiStrategy;
 import welt.strategy.MiningStrategy;
 import welt.strategy.OWGraMiStrategy;
-import welt.strategy.WEGMStrategy;
+import welt.strategy.EdgeTypeBoundStrategy;
 import welt.strategy.WeLTStrategy;
 import welt.strategy.WeightedLookupTable;
 
@@ -29,7 +29,7 @@ import java.util.List;
  * <p><b>Comparison note:</b> OWGraMi's {@code frequentCount} column reflects VERTEX
  * weights, which is entirely different from the other three algorithms (EDGE weights) —
  * do NOT use it for accuracy comparison; only use the performance columns (candidateCount,
- * isoCallCount, timeMs, peakMemMB) for a direct comparison against GraMi/WEGM/WeLT.
+ * isoCallCount, timeMs, peakMemMB) for a direct comparison against GraMi/EdgeTypeBound/WeLT.
  */
 public final class CompareMain {
 
@@ -71,21 +71,21 @@ public final class CompareMain {
             csvRows.add(m.csvRow("GraMi", dataset, minSup, Double.NaN, 0));
         }
 
-        // ---- 2. WEGM (edge weights, no lookup table) ----
+        // ---- 2. EdgeTypeBound (edge weights, no lookup table) ----
         {
             Metrics m = new Metrics();
             MniSupportCounter counter = new MniSupportCounter(g, m);
             counter.setSearchBudget(budget);
-            WEGMStrategy strategy = new WEGMStrategy(g, minWeight, counter, m);
+            EdgeTypeBoundStrategy strategy = new EdgeTypeBoundStrategy(g, minWeight, counter, m);
             MiningEngine engine = new MiningEngine(g, m);
             engine.setSearchBudget(budget);
             long t0 = System.nanoTime();
             List<MiningEngine.FrequentPattern> fps = engine.mine(minSup, strategy);
             m.timeMs = (System.nanoTime() - t0) / 1_000_000;
             m.sampleMemory();
-            System.out.printf("[WEGM]     freq=%d, cand=%d, iso=%d, edgeTypePruned=%d, time=%dms%n",
+            System.out.printf("[EdgeTypeBound] freq=%d, cand=%d, iso=%d, edgeTypePruned=%d, time=%dms%n",
                     fps.size(), m.candidateCount, m.isoCallCount, m.prunedByEdgeType, m.timeMs);
-            csvRows.add(m.csvRow("WEGM", dataset, minSup, minWeight, 0));
+            csvRows.add(m.csvRow("EdgeTypeBound", dataset, minSup, minWeight, 0));
         }
 
         // ---- 3. WeLT (edge weights + F_2 lookup table) ----

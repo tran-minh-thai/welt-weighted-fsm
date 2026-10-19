@@ -25,7 +25,8 @@ import java.util.TreeMap;
  * </pre>
  * {@code mni} is the EXACT MNI ({@link MniSupportCounter#exactMni}); the value carried by a
  * mining result can be capped at minSup by early stopping. {@code weight} is the exact edge
- * bottleneck W (max over occurrences of the minimum edge weight). Both are computed here, after
+ * bottleneck W (max over occurrences of the minimum edge weight), or for WEGM (weight-labeled
+ * graph) the Max-method weight of the pattern's own edges. Both are computed here, after
  * the timed runs, on a fresh counter: they do not enter any timing or counter of the benchmark.
  */
 final class PatternDump {
@@ -41,6 +42,12 @@ final class PatternDump {
     /** @return the number of patterns written */
     static int write(Path dir, LabeledWeightedGraph g, String dataset, String algo, int minSup, double minWeight,
                      Iterable<MiningEngine.FrequentPattern> patterns) throws IOException {
+        return write(dir, g, false, dataset, algo, minSup, minWeight, patterns);
+    }
+
+    /** {@code weightLabels}: {@code g} is the weight-labeled graph of WEGM. */
+    static int write(Path dir, LabeledWeightedGraph g, boolean weightLabels, String dataset, String algo,
+                     int minSup, double minWeight, Iterable<MiningEngine.FrequentPattern> patterns) throws IOException {
         Files.createDirectories(dir);
         MniSupportCounter exact = new MniSupportCounter(g, new Metrics());
         double[] weights = new GraphIndex(g, minSup).sortedDistinctWeightsDesc;
@@ -57,7 +64,8 @@ final class PatternDump {
             for (Map.Entry<String, Pattern> e : byCode.entrySet()) {
                 Pattern p = e.getValue();
                 w.write(String.format(Locale.ROOT, "%s\t%d\t%d\t%d\t%s\n", e.getKey(), p.nodeCount(), p.edgeCount(),
-                        exact.exactMni(p), exact.maxBottleneckWeight(p, weights)));
+                        exact.exactMni(p), weightLabels ? welt.strategy.WEGMStrategy.weightMax(p, minWeight)
+                                : exact.maxBottleneckWeight(p, weights)));
             }
         }
         return byCode.size();

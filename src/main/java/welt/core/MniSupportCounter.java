@@ -345,19 +345,26 @@ public final class MniSupportCounter {
      * than {@link #support}. Uses the same domains, AC-3 and embedding search as support().
      */
     public int exactMni(Pattern p) {
+        int mni = Integer.MAX_VALUE;
+        for (int size : exactImageSizes(p)) mni = Math.min(mni, size);
+        return mni;
+    }
+
+    /** |image(v_i)| for every pattern vertex, without early stopping (all zero if p does not embed). */
+    public int[] exactImageSizes(Pattern p) {
         int n = p.nodeCount();
+        int[] sizes = new int[n];
         List<int[]> domains = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
             int[] dom = buildDomain(p, i);
-            if (dom.length == 0) return 0;
+            if (dom.length == 0) return sizes;
             domains.add(dom);
         }
-        if (arcConsistencyOn && !arcConsistency(p, domains, 1, n)) return 0; // a domain became empty
+        if (arcConsistencyOn && !arcConsistency(p, domains, 1, n)) return sizes; // a domain became empty
         @SuppressWarnings("unchecked")
         Set<Integer>[] valid = new Set[n];
         for (int i = 0; i < n; i++) valid[i] = new HashSet<>();
         int[] assign = new int[n];
-        int mni = Integer.MAX_VALUE;
         for (int i = 0; i < n; i++) {
             int[] matchOrder = bfsOrder(p, i);
             for (int u : domains.get(i)) {
@@ -367,9 +374,9 @@ public final class MniSupportCounter {
                     for (int j = 0; j < n; j++) valid[j].add(assign[j]);
                 }
             }
-            mni = Math.min(mni, valid[i].size());
         }
-        return mni;
+        for (int i = 0; i < n; i++) sizes[i] = valid[i].size();
+        return sizes;
     }
 
     /**

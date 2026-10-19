@@ -6,6 +6,7 @@ import welt.core.Metrics;
 import welt.core.MiningEngine;
 import welt.core.MniSupportCounter;
 import welt.core.PivotVoter;
+import welt.strategy.EdgeTypeBoundStrategy;
 import welt.strategy.GraMiStrategy;
 import welt.strategy.MiningStrategy;
 import welt.strategy.OWGraMiStrategy;
@@ -149,9 +150,17 @@ public final class RunHarness {
         return r;
     }
 
-    private static void mineTimed(LabeledWeightedGraph g, Config cfg, Result r, long t0) {
+    /** WEGM mines the weight-labeled copy of the graph (see WEGMStrategy); every other algorithm the input graph. */
+    public static boolean usesWeightLabels(String algo) {
+        return algo.equals("WEGM");
+    }
+
+    private static void mineTimed(LabeledWeightedGraph input, Config cfg, Result r, long t0) {
         Metrics m = r.m;
         m.phaseTiming = cfg.phaseTiming;
+        // WEGM preprocessing that belongs to the algorithm: relabel edges by integer weight.
+        LabeledWeightedGraph g = usesWeightLabels(cfg.algo) ? WEGMStrategy.weightLabeledGraph(input) : input;
+        long tRelabel = System.nanoTime();
         long deadline = cfg.limitMs > 0 ? t0 + cfg.limitMs * 1_000_000L : Long.MAX_VALUE;
         MniSupportCounter counter = new MniSupportCounter(g, m); // strategy counter (table / weight checks)
         counter.setSearchBudget(cfg.budget);
@@ -165,13 +174,16 @@ public final class RunHarness {
         engine.setAprioriPruning(cfg.p3);
         engine.setP3AgainstResults(cfg.p3AgainstResults);
 
+        long tIndex = System.nanoTime();
         GraphIndex index = new GraphIndex(g, cfg.minSup);
         long t1 = System.nanoTime();
 
         MiningStrategy strategy;
         switch (cfg.algo) {
             case "GraMi": strategy = new GraMiStrategy(); break;
-            case "WEGM": strategy = new WEGMStrategy(g, cfg.minWeight, counter, m); break;
+            case "EdgeTypeBound": strategy = new EdgeTypeBoundStrategy(g, cfg.minWeight, counter, m, true); break;
+            case "EdgeTypeBound-ungated": strategy = new EdgeTypeBoundStrategy(g, cfg.minWeight, counter, m, false); break;
+            case "WEGM": strategy = new WEGMStrategy(cfg.minWeight, m); break;
             case "OWGraMi": strategy = new OWGraMiStrategy(g, cfg.minWeight, counter, m); break;
             case "WeLT": {
                 long tb = System.nanoTime();
@@ -191,8 +203,8 @@ public final class RunHarness {
         r.patterns = engine.mine(cfg.minSup, strategy, index);
         long t3 = System.nanoTime();
 
-        r.indexMs = ms(t1 - t0);
-        r.prepMs = ms(t2 - t1);
+        r.indexMs = ms(t1 - tIndex);
+        r.prepMs = ms(tRelabel - t0) + ms(tIndex - tRelabel) + ms(t2 - t1); // relabeling (WEGM) + counters + strategy
         r.mineMs = ms(t3 - t2);
         r.totalMs = ms(t3 - t0);
         r.peakMB = peakHeapMB();

@@ -48,7 +48,7 @@ class RunHarnessTest {
     @Test
     void baselinesHaveNoTableCost() throws IOException {
         LabeledWeightedGraph g = citeseer();
-        for (String algo : new String[]{"GraMi", "WEGM"}) {
+        for (String algo : new String[]{"GraMi", "EdgeTypeBound", "WEGM"}) {
             RunHarness.Result r = run(g, algo);
             assertPhasesAddUp(r);
             assertEquals(0.0, r.tableBuildMs, algo);
@@ -64,9 +64,10 @@ class RunHarnessTest {
     void sameResultSizeAsBeforeTheHarness() throws IOException {
         // Values printed by the pre-harness BenchmarkMain at commit b9b9709 for
         // citeseer, minSup 300, tau_w 96: #FWS GraMi 9, WEGM 5, WeLT 5; candMNI 30, 20, 19.
+        // ("WEGM" there is the strategy now named EdgeTypeBound-ungated.)
         LabeledWeightedGraph g = citeseer();
         assertEquals(9, run(g, "GraMi").patterns.size());
-        assertEquals(5, run(g, "WEGM").patterns.size());
+        assertEquals(5, run(g, "EdgeTypeBound-ungated").patterns.size());
         RunHarness.Result w = run(g, "WeLT");
         assertEquals(5, w.patterns.size());
         assertEquals(19, w.m.candidateCount);

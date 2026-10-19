@@ -46,7 +46,7 @@ public final class BenchmarkMain {
     /**
      * Matching-order configuration of each algorithm. WeLT uses {@code WELT_VOTER=α,β,γ} and
      * {@code WELT_WORDER=on|off} (default when unset: (1,1,1) and on; the CSV column
-     * voterSource tells which). GraMi, WEGM and OWGraMi keep the shared default: degree-only
+     * voterSource tells which). The baselines keep the shared default: degree-only
      * pivot, no weight-aware order.
      */
     static RunHarness.Config configure(RunHarness.Config cfg) {
@@ -74,14 +74,16 @@ public final class BenchmarkMain {
     /**
      * Weight semantics of each strategy, recorded as a CSV column so result aggregation never
      * confuses non-comparable result sets: {@code none} (GraMi, unweighted reference),
-     * {@code edge} (WEGM and WeLT, the same edge-bottleneck result set), {@code vertex}
-     * (OWGraMi, a different vertex-bottleneck result set).
+     * {@code edge} (EdgeTypeBound, EdgeTypeBound-ungated and WeLT: the same edge-bottleneck
+     * result set), {@code edge-label} (WEGM: edge weights are pattern labels, a different result
+     * set), {@code vertex} (OWGraMi, a different vertex-bottleneck result set).
      */
     static String weightModel(String algo) {
         switch (algo) {
-            case "WEGM": case "WeLT": return "edge";
-            case "OWGraMi":           return "vertex";
-            default:                  return "none";
+            case "EdgeTypeBound": case "EdgeTypeBound-ungated": case "WeLT": return "edge";
+            case "WEGM":    return "edge-label";
+            case "OWGraMi": return "vertex";
+            default:        return "none";
         }
     }
 
@@ -127,7 +129,7 @@ public final class BenchmarkMain {
 
         String algosEnv = System.getenv("BENCH_ALGOS");
         String[] algos = (algosEnv == null || algosEnv.isBlank())
-                ? new String[]{"GraMi", "WEGM", "WeLT", "OWGraMi"}
+                ? new String[]{"GraMi", "EdgeTypeBound", "WEGM", "WeLT", "OWGraMi"}
                 : algosEnv.trim().split("[,\\s]+");
         for (String algo : algos) {
             benchmark(algo, g, ds, minSup, minWeight, budget, limitMs);
@@ -204,8 +206,9 @@ public final class BenchmarkMain {
         if (dumpDir != null && !dumpDir.isBlank()) {
             if (cell.status.equals("OK")) {
                 // after the timed runs: exact MNI and W are recomputed outside every measurement
-                int n = PatternDump.write(Path.of(dumpDir), g, ds, algo, minSup, minWeight,
-                        cell.runs.get(cell.runs.size() - 1).patterns);
+                boolean labels = RunHarness.usesWeightLabels(algo);
+                int n = PatternDump.write(Path.of(dumpDir), labels ? welt.strategy.WEGMStrategy.weightLabeledGraph(g) : g,
+                        labels, ds, algo, minSup, minWeight, cell.runs.get(cell.runs.size() - 1).patterns);
                 System.out.println("patterns: " + n + " -> " + Path.of(dumpDir).resolve(
                         PatternDump.fileName(ds, algo, minSup, minWeight)));
             } else {

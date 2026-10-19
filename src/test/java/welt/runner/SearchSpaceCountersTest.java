@@ -21,7 +21,7 @@ class SearchSpaceCountersTest {
     private static void checkCell(String file, int minSup, double minWeight) throws IOException {
         LabeledWeightedGraph g = new LgGraphReader().read(Path.of(file)).graph;
         long sumP1 = 0, sumP2 = 0, sumEdgeType = 0, sumP3 = 0, sumGap = 0;
-        for (String algo : new String[]{"GraMi", "WEGM", "WeLT", "OWGraMi"}) {
+        for (String algo : new String[]{"GraMi", "EdgeTypeBound", "EdgeTypeBound-ungated", "WEGM", "WeLT", "OWGraMi"}) {
             RunHarness.Result r = RunHarness.runOnce(g, new RunHarness.Config(algo, minSup, minWeight));
             Metrics m = r.m;
             String at = algo + " " + file + " minSup=" + minSup;
