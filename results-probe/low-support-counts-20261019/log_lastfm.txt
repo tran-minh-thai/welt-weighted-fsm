@@ -1,0 +1,33 @@
+>>> EdgeTypeBound  datasets/lastfm.lg  minSup=400  tau_w=40  limit=600000ms  budget=0
+== Benchmark | lastfm.lg | minSup=400 minWeight=40.0 mode=exact budget=0 | limit=600000ms | warmup=0 measured=1 ==
+algo      model     #FWS  candMNI    MINEmni    table(ms)    total(ms)   T.O.    memMB
+EdgeTypeBound edge        19       54      45038          0.0        195.1     OK     30.5
+CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,warmup,runs,status,partial,nonOkRuns,N,prunedStrategy,prunedP1,prunedP2,prunedP2Single,prunedEdgeType,prunedP3,M,Mtotal,Mprime,R,extended,visitedSize,frequentSize,frontierPeak,mniIsoCallsMine,mniIsoCallsTotal,weightIsoCalls,tableSize,tableBuildCandidates,tableBuildMniIsoCalls,tableBuildWeightIsoCalls,budgetExceeded,voter,worder,voterSource,backtrack,backtrackMni,backtrackWeight,voteMs,deterministic,indexMs,prepMs,tableBuildMs,mineMs,totalMs,totalMinMs,totalMaxMs,totalSdMs,peakMemMB,peakMemMaxMB
+CSV,lastfm.lg,EdgeTypeBound,edge,400,40.000,exact,0,600000,0,1,OK,0,0,289,231,0,0,0,231,4,54,54,48,19,19,289,48,7,45038,45038,48,0,0,0,0,0,0;1;0,off,baseline,334107,300468,33639,0.959,1,15.627,3.331,0.000,176.132,195.089,195.089,195.089,0.000,30.497,30.497
+patterns: 19 -> results-probe/low-support-counts-20261019/patterns/lastfm_EdgeTypeBound_400_40.0.tsv
+[checkpoint] EdgeTypeBound lastfm.lg minSup=400 tau_w=40: OK
+>>> WeLT  datasets/lastfm.lg  minSup=400  tau_w=40  limit=600000ms  budget=0
+== Benchmark | lastfm.lg | minSup=400 minWeight=40.0 mode=exact budget=0 | limit=600000ms | warmup=0 measured=1 ==
+algo      model     #FWS  candMNI    MINEmni    table(ms)    total(ms)   T.O.    memMB
+WeLT      edge        19       50      45044         37.6        291.2     OK     30.7
+CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,warmup,runs,status,partial,nonOkRuns,N,prunedStrategy,prunedP1,prunedP2,prunedP2Single,prunedEdgeType,prunedP3,M,Mtotal,Mprime,R,extended,visitedSize,frequentSize,frontierPeak,mniIsoCallsMine,mniIsoCallsTotal,weightIsoCalls,tableSize,tableBuildCandidates,tableBuildMniIsoCalls,tableBuildWeightIsoCalls,budgetExceeded,voter,worder,voterSource,backtrack,backtrackMni,backtrackWeight,voteMs,deterministic,indexMs,prepMs,tableBuildMs,mineMs,totalMs,totalMinMs,totalMaxMs,totalSdMs,peakMemMB,peakMemMaxMB
+CSV,lastfm.lg,WeLT,edge,400,40.000,exact,0,600000,0,1,OK,0,0,289,239,220,19,19,0,0,50,127,48,19,19,289,48,7,45044,50935,92,3,77,5891,44,0,1;1;1,on,default,363666,314122,49544,1.143,1,19.936,37.615,37.601,233.676,291.227,291.227,291.227,0.000,30.706,30.706
+patterns: 19 -> results-probe/low-support-counts-20261019/patterns/lastfm_WeLT_400_40.0.tsv
+[checkpoint] WeLT lastfm.lg minSup=400 tau_w=40: OK
+>>> EdgeTypeBound  datasets/lastfm.lg  minSup=200  tau_w=40  limit=600000ms  budget=0
+== Benchmark | lastfm.lg | minSup=200 minWeight=40.0 mode=exact budget=0 | limit=600000ms | warmup=0 measured=1 ==
+algo      model     #FWS  candMNI    MINEmni    table(ms)    total(ms)   T.O.    memMB
+EdgeTypeBound edge        29       92      37595          0.0        325.3     OK     74.5
+CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,warmup,runs,status,partial,nonOkRuns,N,prunedStrategy,prunedP1,prunedP2,prunedP2Single,prunedEdgeType,prunedP3,M,Mtotal,Mprime,R,extended,visitedSize,frequentSize,frontierPeak,mniIsoCallsMine,mniIsoCallsTotal,weightIsoCalls,tableSize,tableBuildCandidates,tableBuildMniIsoCalls,tableBuildWeightIsoCalls,budgetExceeded,voter,worder,voterSource,backtrack,backtrackMni,backtrackWeight,voteMs,deterministic,indexMs,prepMs,tableBuildMs,mineMs,totalMs,totalMinMs,totalMaxMs,totalSdMs,peakMemMB,peakMemMaxMB
+CSV,lastfm.lg,EdgeTypeBound,edge,200,40.000,exact,0,600000,0,1,OK,0,0,656,502,0,0,0,502,62,92,92,88,29,29,656,88,9,37595,37595,88,0,0,0,0,0,0;1;0,off,baseline,760319,713290,47029,1.283,1,13.124,2.570,0.000,309.561,325.256,325.256,325.256,0.000,74.474,74.474
+patterns: 29 -> results-probe/low-support-counts-20261019/patterns/lastfm_EdgeTypeBound_200_40.0.tsv
+[checkpoint] EdgeTypeBound lastfm.lg minSup=200 tau_w=40: OK
+>>> WeLT  datasets/lastfm.lg  minSup=200  tau_w=40  limit=600000ms  budget=0
+== Benchmark | lastfm.lg | minSup=200 minWeight=40.0 mode=exact budget=0 | limit=600000ms | warmup=0 measured=1 ==
+algo      model     #FWS  candMNI    MINEmni    table(ms)    total(ms)   T.O.    memMB
+WeLT      edge        29       88      36109         26.3        284.1     OK     66.8
+CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,warmup,runs,status,partial,nonOkRuns,N,prunedStrategy,prunedP1,prunedP2,prunedP2Single,prunedEdgeType,prunedP3,M,Mtotal,Mprime,R,extended,visitedSize,frequentSize,frontierPeak,mniIsoCallsMine,mniIsoCallsTotal,weightIsoCalls,tableSize,tableBuildCandidates,tableBuildMniIsoCalls,tableBuildWeightIsoCalls,budgetExceeded,voter,worder,voterSource,backtrack,backtrackMni,backtrackWeight,voteMs,deterministic,indexMs,prepMs,tableBuildMs,mineMs,totalMs,totalMinMs,totalMaxMs,totalSdMs,peakMemMB,peakMemMaxMB
+CSV,lastfm.lg,WeLT,edge,200,40.000,exact,0,600000,0,1,OK,0,0,656,568,522,46,42,0,0,88,233,84,29,29,656,84,9,36109,41568,216,9,145,5459,132,0,1;1;1,on,default,797928,722711,75217,0.715,1,16.559,26.332,26.319,241.252,284.143,284.143,284.143,0.000,66.817,66.817
+patterns: 29 -> results-probe/low-support-counts-20261019/patterns/lastfm_WeLT_200_40.0.tsv
+[checkpoint] WeLT lastfm.lg minSup=200 tau_w=40: OK
+stream lastfm done

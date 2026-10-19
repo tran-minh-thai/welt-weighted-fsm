@@ -1,0 +1,21 @@
+{
+  "startTime": "2026-10-19T18:08:06.702069+07:00",
+  "hostname": "ThaiTMs-MacBook-Pro.local",
+  "os": "Mac OS X 27.0.1",
+  "arch": "aarch64",
+  "cpu": "Apple M5",
+  "physicalCores": "10",
+  "logicalProcessors": "10",
+  "ramGB": "32.0",
+  "javaVendor": "Oracle Corporation",
+  "javaRuntimeVersion": "26.0.1+8-34",
+  "javaVmName": "OpenJDK 64-Bit Server VM",
+  "jvmArgs": "-Xmx8g",
+  "maxHeapMB": "8192",
+  "JAVA_OPTS": "",
+  "gitCommit": "814404f6e41397d509c3eea1515ca088d1058168",
+  "gitTree": "clean",
+  "command": "low-support count probe: EdgeTypeBound and WeLT, one run per cell, limit 600000 ms, -Xmx8g, three datasets in parallel",
+  "kind": "probe (counts only; times are not measurements)",
+  "endTime": "2026-10-19T18:09:04.517529+07:00"
+}

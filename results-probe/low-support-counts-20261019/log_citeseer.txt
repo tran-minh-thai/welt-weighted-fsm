@@ -1,0 +1,33 @@
+>>> EdgeTypeBound  datasets/citeseer.lg  minSup=150  tau_w=96  limit=600000ms  budget=0
+== Benchmark | citeseer.lg | minSup=150 minWeight=96.0 mode=exact budget=0 | limit=600000ms | warmup=0 measured=1 ==
+algo      model     #FWS  candMNI    MINEmni    table(ms)    total(ms)   T.O.    memMB
+EdgeTypeBound edge         7       21       3724          0.0         35.5     OK      6.5
+CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,warmup,runs,status,partial,nonOkRuns,N,prunedStrategy,prunedP1,prunedP2,prunedP2Single,prunedEdgeType,prunedP3,M,Mtotal,Mprime,R,extended,visitedSize,frequentSize,frontierPeak,mniIsoCallsMine,mniIsoCallsTotal,weightIsoCalls,tableSize,tableBuildCandidates,tableBuildMniIsoCalls,tableBuildWeightIsoCalls,budgetExceeded,voter,worder,voterSource,backtrack,backtrackMni,backtrackWeight,voteMs,deterministic,indexMs,prepMs,tableBuildMs,mineMs,totalMs,totalMinMs,totalMaxMs,totalSdMs,peakMemMB,peakMemMaxMB
+CSV,citeseer.lg,EdgeTypeBound,edge,150,96.000,exact,0,600000,0,1,OK,0,0,84,55,0,0,0,55,8,21,21,13,7,7,84,13,4,3724,3724,13,0,0,0,0,0,0;1;0,off,baseline,15254,12185,3069,0.485,1,3.599,1.749,0.000,30.176,35.524,35.524,35.524,0.000,6.513,6.513
+patterns: 7 -> results-probe/low-support-counts-20261019/patterns/citeseer_EdgeTypeBound_150_96.0.tsv
+[checkpoint] EdgeTypeBound citeseer.lg minSup=150 tau_w=96: OK
+>>> WeLT  datasets/citeseer.lg  minSup=150  tau_w=96  limit=600000ms  budget=0
+== Benchmark | citeseer.lg | minSup=150 minWeight=96.0 mode=exact budget=0 | limit=600000ms | warmup=0 measured=1 ==
+algo      model     #FWS  candMNI    MINEmni    table(ms)    total(ms)   T.O.    memMB
+WeLT      edge         7       19       3243         21.6         59.1     OK      6.7
+CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,warmup,runs,status,partial,nonOkRuns,N,prunedStrategy,prunedP1,prunedP2,prunedP2Single,prunedEdgeType,prunedP3,M,Mtotal,Mprime,R,extended,visitedSize,frequentSize,frontierPeak,mniIsoCallsMine,mniIsoCallsTotal,weightIsoCalls,tableSize,tableBuildCandidates,tableBuildMniIsoCalls,tableBuildWeightIsoCalls,budgetExceeded,voter,worder,voterSource,backtrack,backtrackMni,backtrackWeight,voteMs,deterministic,indexMs,prepMs,tableBuildMs,mineMs,totalMs,totalMinMs,totalMaxMs,totalSdMs,peakMemMB,peakMemMaxMB
+CSV,citeseer.lg,WeLT,edge,150,96.000,exact,0,600000,0,1,OK,0,0,84,65,50,15,13,0,0,19,70,11,7,7,84,11,4,3243,5332,44,5,51,2089,33,0,1;1;1,on,default,25287,16033,9254,9.705,1,2.471,21.623,21.612,35.001,59.095,59.095,59.095,0.000,6.659,6.659
+patterns: 7 -> results-probe/low-support-counts-20261019/patterns/citeseer_WeLT_150_96.0.tsv
+[checkpoint] WeLT citeseer.lg minSup=150 tau_w=96: OK
+>>> EdgeTypeBound  datasets/citeseer.lg  minSup=100  tau_w=96  limit=600000ms  budget=0
+== Benchmark | citeseer.lg | minSup=100 minWeight=96.0 mode=exact budget=0 | limit=600000ms | warmup=0 measured=1 ==
+algo      model     #FWS  candMNI    MINEmni    table(ms)    total(ms)   T.O.    memMB
+EdgeTypeBound edge         9       28       3191          0.0         38.5     OK      6.7
+CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,warmup,runs,status,partial,nonOkRuns,N,prunedStrategy,prunedP1,prunedP2,prunedP2Single,prunedEdgeType,prunedP3,M,Mtotal,Mprime,R,extended,visitedSize,frequentSize,frontierPeak,mniIsoCallsMine,mniIsoCallsTotal,weightIsoCalls,tableSize,tableBuildCandidates,tableBuildMniIsoCalls,tableBuildWeightIsoCalls,budgetExceeded,voter,worder,voterSource,backtrack,backtrackMni,backtrackWeight,voteMs,deterministic,indexMs,prepMs,tableBuildMs,mineMs,totalMs,totalMinMs,totalMaxMs,totalSdMs,peakMemMB,peakMemMaxMB
+CSV,citeseer.lg,EdgeTypeBound,edge,100,96.000,exact,0,600000,0,1,OK,0,0,107,70,0,0,0,70,9,28,28,16,9,9,107,16,5,3191,3191,16,0,0,0,0,0,0;1;0,off,baseline,14854,11412,3442,0.273,1,3.171,1.840,0.000,33.517,38.528,38.528,38.528,0.000,6.654,6.654
+patterns: 9 -> results-probe/low-support-counts-20261019/patterns/citeseer_EdgeTypeBound_100_96.0.tsv
+[checkpoint] EdgeTypeBound citeseer.lg minSup=100 tau_w=96: OK
+>>> WeLT  datasets/citeseer.lg  minSup=100  tau_w=96  limit=600000ms  budget=0
+== Benchmark | citeseer.lg | minSup=100 minWeight=96.0 mode=exact budget=0 | limit=600000ms | warmup=0 measured=1 ==
+algo      model     #FWS  candMNI    MINEmni    table(ms)    total(ms)   T.O.    memMB
+WeLT      edge         9       22       2871         30.4         91.8     OK      6.7
+CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,warmup,runs,status,partial,nonOkRuns,N,prunedStrategy,prunedP1,prunedP2,prunedP2Single,prunedEdgeType,prunedP3,M,Mtotal,Mprime,R,extended,visitedSize,frequentSize,frontierPeak,mniIsoCallsMine,mniIsoCallsTotal,weightIsoCalls,tableSize,tableBuildCandidates,tableBuildMniIsoCalls,tableBuildWeightIsoCalls,budgetExceeded,voter,worder,voterSource,backtrack,backtrackMni,backtrackWeight,voteMs,deterministic,indexMs,prepMs,tableBuildMs,mineMs,totalMs,totalMinMs,totalMaxMs,totalSdMs,peakMemMB,peakMemMaxMB
+CSV,citeseer.lg,WeLT,edge,100,96.000,exact,0,600000,0,1,OK,0,0,107,85,70,15,13,0,0,22,89,14,9,9,107,14,5,2871,4452,47,5,67,1581,33,0,1;1;1,on,default,23952,14325,9627,0.390,1,3.187,30.419,30.409,58.167,91.773,91.773,91.773,0.000,6.679,6.679
+patterns: 9 -> results-probe/low-support-counts-20261019/patterns/citeseer_WeLT_100_96.0.tsv
+[checkpoint] WeLT citeseer.lg minSup=100 tau_w=96: OK
+stream citeseer done
