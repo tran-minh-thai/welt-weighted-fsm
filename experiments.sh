@@ -191,7 +191,7 @@ print_checklist
 
 # One directory per campaign: results/v2_revision/<YYYYMMDD_HHMM>_<host>/. Set RUN_DIR to an
 # existing directory to add scenarios to the same campaign (rows are appended).
-HOST=$(hostname | tr -c 'A-Za-z0-9_.-\n' '_')
+HOST=$(hostname | sed 's/[^A-Za-z0-9_.-]/_/g')
 RUN_DIR="${RUN_DIR:-results/v2_revision/$(date +%Y%m%d_%H%M)_${HOST}}"
 mkdir -p "$RUN_DIR"
 echo "=== run directory: $RUN_DIR"

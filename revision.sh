@@ -92,7 +92,7 @@ require_clean_tree
 
 EXISTING="$(cat "$CURRENT_FILE" 2>/dev/null || true)"
 if [ "$CMD" = "prepare" ] && { [ "${NEW_CAMPAIGN:-0}" = "1" ] || [ -z "$EXISTING" ] || [ ! -d "$EXISTING" ]; }; then
-    HOST=$(hostname | tr -c 'A-Za-z0-9_.-\n' '_')
+    HOST=$(hostname | sed 's/[^A-Za-z0-9_.-]/_/g')
     RUN_DIR="${RUN_DIR:-results/v2_revision/$(date +%Y%m%d_%H%M)_${HOST}}"
     mkdir -p "$RUN_DIR" "$(dirname "$CURRENT_FILE")"
     echo "$RUN_DIR" > "$CURRENT_FILE"
