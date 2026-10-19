@@ -10,15 +10,26 @@ Reference implementation and experiment suite for the paper:
 > Lookup-Table Double Filter.** Tan-Dung Vo, Bao Huynh, Thai Tran.
 > *Manuscript submitted for publication, 2026.*
 
-A shared mining engine plus pluggable strategies for a **fair** comparison of four
+A shared mining engine plus pluggable strategies for a **fair** comparison of
 subgraph-mining algorithms on a single large graph:
 
-| Algorithm | Role | Code provenance |
-|---|---|---|
-| **GraMi** | unweighted baseline | *adapted* from the open-source code of Elseidy & Abdelhamid (PVLDB 2014) |
-| **OWGraMi** | vertex weights | *reimplementation* from the paper |
-| **WEGM** | edge weights, Max/Min operators | *reimplementation* from the paper |
-| **WeLT** | **proposed** — bottleneck edge weights + double filter (P1+P2) + bnb | new |
+| Algorithm | Problem solved | Role | Code provenance |
+|---|---|---|---|
+| **GraMi** | frequent subgraphs, no weights | unweighted reference | *adapted* from the open-source code of Elseidy & Abdelhamid (PVLDB 2014) |
+| **EdgeTypeBound** | the same problem as WeLT (edge-bottleneck weight) | **direct baseline**: identical result set | per-edge-type weight bound + weight-gated extension, no lookup table |
+| **EdgeTypeBound-ungated** | same as above | the baseline of the first submission (then called "WEGM") | as above, but every frequent pattern is extended |
+| **WEGM** | edge weights are pattern labels (Max method) | published edge-weight method; **different result set** | *reimplementation* of Nguyen et al., J. Inf. Telecommun. 9(4):543-558, 2025 |
+| **OWGraMi** | vertex-bottleneck weight | vertex-weight method; **different result set** | *reimplementation* from the paper |
+| **WeLT** | edge-bottleneck weight | **proposed** — lookup-table filters P1+P2, voting, bnb | new |
+
+> **WEGM versus EdgeTypeBound.** In WEGM an edge weight is part of the pattern: an isomorphism
+> must map edges to edges of equal weight (Definition 3(b) of the WEGM article), so support
+> counts only equal-weight occurrences, and the weight of a pattern is computed from its own
+> edges. `WEGMStrategy` mines the graph whose edge labels are the integer edge weights (the
+> article's Citeseer rule) and prunes every edge below w (Max method). Its result set therefore
+> differs from WeLT's by definition: compare its efficiency only. EdgeTypeBound solves WeLT's
+> problem with the simple per-edge-type bound and is the baseline whose result set must equal
+> WeLT's. The Javadoc of `WEGMStrategy` lists how three inconsistencies of the article are read.
 
 > Every algorithm shares ONE engine (`core/`) and a single MNI counter, so any
 > difference in candidate count / runtime reflects the algorithm itself, not an
@@ -86,16 +97,24 @@ src/main/java/welt/
     MiningStrategy         plug-in point: prePrune / acceptFrequent / allowExtension
     GraMiStrategy          unweighted baseline: prunes by MNI only
     OWGraMiStrategy        vertex-weight bottleneck (different result set; efficiency comparison only)
-    WEGMStrategy           edge-weight bottleneck with a per-edge upper-bound filter
-    WeightedLookupTable    F_k lookup table (k=2) with MaxW(p) computed exactly; double filter
-                           P1 (structural — some k-edge subpattern not in F_k) + P2 (UB_k < τ_w)
+    EdgeTypeBoundStrategy  edge-bottleneck baseline: per-edge-type weight bound, exact weight check,
+                           optional weight-gated extension (EdgeTypeBound / EdgeTypeBound-ungated)
+    WEGMStrategy           WEGM, Max method: weight-labeled graph, edges below w pruned
+    WeightedLookupTable    F_k lookup table (k=2) with MaxW(p) computed exactly, plus the heaviest
+                           edge per edge type; filters P1 (some k-edge subpattern not in F_k) and
+                           P2 (UB_k < τ_w; for 1-edge patterns, heaviest edge of the type < τ_w)
     WeLTStrategy           proposed: double filter + exact weight check W(S) ≥ τ_w by embedding
                            into G_{≥τ_w} with weight branch-and-bound (Lemma "bnb" in the paper)
   runner/
     MineMain               run one strategy on one dataset
     CompareMain            run all four algorithms, print a CSV comparison
-    BenchmarkMain          rigorous timing: warmup + N runs (median) with a per-run time limit
-    ...                    plus ablation/probe runners (AblationMain, AcCompareMain, WeltSweepMain, ...)
+    RunHarness             one timed run: the clock covers index, preprocessing (lookup table) and
+                           mining; status OK / TO / OOM with the counts reached at the stop
+    BenchmarkMain          one cell: probe + warmup + measured runs (median, min, max, SD), CSV
+    AblationMain           one-factor ablation of WeLT, result-set invariant by canonical code
+    PatternDump            result sets with exact MNI and W (DUMP_PATTERNS)
+    RunMetaMain            run provenance (machine, JVM, commit, clean tree) -> meta_*.json
+    ...                    plus probe runners (AcCompareMain, WeltSweepMain, ...)
 ```
 
 `welt.sh` launches any runner from **any working directory** (it switches to the project
@@ -105,7 +124,7 @@ to `cd` in or build by hand). Run it with no arguments to list the available run
 ```bash
 ./welt.sh MineMain      datasets/citeseer.lg 300 WeLT 95     # mine one strategy
 ./welt.sh CompareMain   datasets/citeseer.lg 200 96 800      # four-way comparison (+ CSV)
-./welt.sh BenchmarkMain datasets/email_eu.lg  10 336 400 60000  # median timing + time limit
+./welt.sh BenchmarkMain datasets/email_eu.lg  10 336 0 60000    # median timing + time limit
 ```
 
 Argument order: `MineMain <dataset> <minSup> <algorithm> [minWeight]`,
@@ -116,6 +135,12 @@ The `./run.sh` and `./experiments.sh` wrappers likewise work from any directory.
 
 The pivot voter, the early-pruning mechanisms, the decremental domain inheritance, and
 the search budget are all toggleable for ablation studies.
+
+**Exact mode is the default.** The `budget` argument is 0 everywhere in the scripts: every MNI
+embedding search runs to completion. A non-zero budget switches to approximate mode (MNI
+becomes a lower bound), is recorded as `mode=approx`, and never applies to weight checks. An
+exact-mode run that reports an aborted search stops with exit code 4. Results of the first
+submission were produced in approximate mode; reproduce them from commit `620017d`.
 
 ## Data (`datasets/`)
 
@@ -146,78 +171,118 @@ prints the resulting size and weight statistics. Raw downloads go under `dataset
 
 ## Running the full experiment
 
-The comparison is split into independent **scenarios** so it can be run in parts instead of
-one long unattended session. The consolidated, paper-final results live under `results/`
-with the stable names below; each new run writes its own timestamped CSV first
-(`SC<n>_<YYYYMMDD_HHMMSS>_<name>.csv`, gitignored) and is merged into the canonical file
-afterwards.
+The comparison is split into independent **scenarios**. Every scenario of one campaign writes
+into ONE run directory, together with its provenance:
 
-| Scenario | Algorithms | Datasets | Final CSV | Purpose |
-|---|---|---|---|---|
-| `sc1` efficiency | GraMi, WEGM, WeLT | citeseer, email_eu, lastfm | `results/v1_submission/SC1_efficiency.csv` | RQ1+RQ2 — at low support WeLT completes while baselines T.O. |
-| `sc2` scalability | GraMi, WEGM, WeLT | mico, github, string_ecoli | `results/v1_submission/SC2_scalability.csv` | scales to large/dense graphs (per-candidate MNI dominates) |
-| `sc3` vertex_generality | OWGraMi | citeseer, email_eu | `results/v1_submission/SC3_vertex_generality.csv` | framework generality — **different** (vertex-weight) result set with OWGraMi's **own** τ_w (≈ vertex-weight median); kept separate |
-| `sc4` ablation | WeLT variants | citeseer, email_eu | `results/v1_submission/SC4_ablation.csv` | RQ4 — per-component contribution (lookup table / voting / weight-order) |
-| `sc5` memory | GraMi, WEGM, WeLT | citeseer, email_eu | `results/v1_submission/SC5_memory.csv` | RQ3 — peak heap at completable supports |
+```
+results/v2_revision/<YYYYMMDD_HHMM>_<host>/
+    SC<n>_<scenario>.csv           one row per (dataset, minSup, algorithm) cell
+    meta_<datetime>_<command>.json machine, OS, CPU, RAM, JVM and its arguments, commit, clean tree, start/end
+    topology.csv                   size, density, degree and weight statistics of every dataset
+    patterns/                      result set of every completed cell (exact MNI and W)
+```
+
+Set `RUN_DIR=<that directory>` to add scenarios to an existing campaign. The results of the
+first submission are kept unchanged in `results/v1_submission/` (see its README for what they
+do not record).
+
+| Scenario | Algorithms | Datasets | Purpose |
+|---|---|---|---|
+| `sc1` efficiency | GraMi, EdgeTypeBound, WEGM, WeLT | citeseer, email_eu, lastfm | runtime and search space versus support |
+| `sc2` scalability | GraMi, EdgeTypeBound, WEGM, WeLT | mico, github, string_ecoli | large or dense graphs |
+| `sc3` vertex_generality | OWGraMi | citeseer, email_eu | framework generality (own τ_w, different result set) |
+| `sc4` ablation | WeLT variants | citeseer, email_eu | one-factor ablation |
+| `sc5` memory | GraMi, EdgeTypeBound, WEGM, WeLT | citeseer, email_eu | peak heap |
 
 ```bash
 ./experiments.sh list            # describe the scenarios
-./experiments.sh sc1             # run scenario 1 -> results/SC1_<datetime>_efficiency.csv
-./experiments.sh sc2 mico        # run scenario 2, only datasets whose path matches "mico"
-./experiments.sh all             # run sc1, sc2, sc3 sequentially
-./experiments.sh ablation        # RQ4 ablation -> SC4 CSV
-./experiments.sh memory          # RQ3 peak memory -> SC5 CSV
+./experiments.sh sc1             # run scenario 1
+./experiments.sh sc2 mico        # scenario 2, only datasets whose path matches "mico"
+./experiments.sh ablation        # one-factor ablation
+./experiments.sh memory          # peak memory
 ```
 
-Each `(dataset, minSup)` cell is timed with `BenchmarkMain`: warmup runs are discarded and the
-**median** of `MEASURED` runs (default 5) is reported, because a single timed run is unreliable
-(JIT/GC noise). The deterministic counting metrics (candidate count, MNI iso-calls) come from
-one run. The default per-run limit is **60 minutes** (`TIME_LIMIT_MS`); a run that exceeds it is
-recorded as `TO`. Tune with `TIME_LIMIT_MS`, `WARMUP`, and `MEASURED`.
+**Protocol.** Each `(dataset, minSup, algorithm)` cell runs in its **own JVM** (an
+out-of-memory error or a crash cannot affect the next algorithm, and no algorithm inherits
+another's JIT warm-up). `BenchmarkMain` makes a probe run (also the first warmup); a probe
+that ends in TO or OOM is reported alone; otherwise `WARMUP - 1` further warmups and
+`MEASURED` runs follow (defaults 1 and 5). The per-run limit is `TIME_LIMIT_MS` (default 60
+minutes); the deadline is checked inside every search, so a run stops near it. The scripts
+refuse to run from a modified working tree (`ALLOW_DIRTY=1` for trial runs only), always
+rebuild, keep the machine awake and print the manual checklist.
 
-When a baseline times out at the default 30-minute budget, `rerun_to.sh` re-runs the timed-out
-cells at an extended limit (e.g. 60 minutes) and writes a `RERUN_*.csv`; those rows have already
-been merged into the canonical `SC1_efficiency.csv` and `SC2_scalability.csv` and are
-distinguished by their `limitMs` column.
+**What the clock covers.** Reading the `.lg` file is outside (the same for every algorithm).
+Inside: the graph index (`indexMs`), the algorithm's preprocessing (`prepMs`: the WeLT lookup
+table, reported separately as `tableBuildMs`; the per-type weight maps of the baselines; the
+weight relabeling of WEGM) and mining (`mineMs`). `totalMs` is their sum and is the reported
+runtime. The peak heap is reset (after a `System.gc()`) right before the clock starts.
 
-**Reading the results — the `weightModel` column.** Every CSV row carries a `weightModel` of
-`none`/`edge`/`vertex` so non-comparable result sets are never mixed up when aggregating:
+**Status.** `OK`, `TO` (time limit), `OOM` (OutOfMemoryError caught; exit code 3) or `CRASH`
+(the JVM died without a row; written by the script). For TO and OOM the counting columns hold
+the values reached at the stop and `partial=1`.
 
-- `none` — GraMi: unweighted; its `#FWS` is the structural superset (an upper reference).
-- `edge` — WEGM and WeLT: the **same** edge-bottleneck result set, so their `#FWS` must be
-  **identical** (a built-in correctness cross-check); the speedup claim is **WeLT vs WEGM**.
-- `vertex` — OWGraMi: a **different** vertex-bottleneck set; read only its performance metrics,
-  never compare its `#FWS` with the others.
+**Main CSV columns** (`BenchmarkMain`; the header is printed by the runner, never typed in a
+script):
 
-> **JVM memory:** no special flags are required for the committed datasets (all under
-> 100K vertices), and **no `-Xss` is ever needed** — the backtracking recursion is only as
-> deep as the pattern size. The default heap is 1/4 of physical RAM; on a low-RAM machine,
-> or when mining the large graphs (`mico.lg`, `github.lg`) at low support, raise it via
-> `JAVA_OPTS`, e.g. `JAVA_OPTS="-Xmx8g" ./experiments.sh sc2`.
+| Column | Meaning |
+|---|---|
+| `N` | distinct patterns generated (after canonical deduplication, before any filter); `visitedSize` equals it by construction |
+| `prunedStrategy` = `prunedP1` + `prunedP2` + `prunedEdgeType` | pruned before MNI counting: WeLT table structural (P1), WeLT table weight (P2, of which `prunedP2Single` on 1-edge patterns), per-edge-type bound of EdgeTypeBound / WEGM / OWGraMi |
+| `prunedP3` | pruned by the anti-monotone closure (some (k-1)-edge subpattern not frequent) |
+| `M`, `Mtotal` | patterns whose MNI was counted: mining phase, and mining plus lookup-table construction (`M` was `candMNI` in the first submission) |
+| `Mprime`, `R` | patterns with MNI ≥ minSup; result patterns (`R` was `freq`) |
+| `extended`, `frontierPeak`, `frequentSize` | patterns extended, largest frontier, size of the P3 memo |
+| `mniIsoCallsMine`, `mniIsoCallsTotal`, `weightIsoCalls` | embedding searches of MNI counting (mining / total) and of weight checks |
+| `tableSize`, `tableBuildCandidates`, `tableBuildMniIsoCalls`, `tableBuildWeightIsoCalls` | lookup-table cost (0 for the baselines) |
+| `backtrack` = `backtrackMni` + `backtrackWeight` | backtracking nodes |
+| `voter`, `worder`, `voterSource`, `voteMs` | matching-order configuration and voting time |
+| `indexMs`, `prepMs`, `tableBuildMs`, `mineMs`, `totalMs`, `totalMinMs`, `totalMaxMs`, `totalSdMs` | phase medians; total median, min, max, sample SD |
+| `peakMemMB`, `peakMemMaxMB` | peak heap: median and max over the measured runs |
+| `mode`, `budget`, `budgetExceeded`, `deterministic` | exact/approximate mode; counts identical across runs |
+
+**Matching order.** WeLT reads `WELT_VOTER=α,β,γ` and `WELT_WORDER=on|off` (default when unset:
+`1,1,1` and `on`, recorded as `voterSource=default`). GraMi, EdgeTypeBound, WEGM and OWGraMi
+use the degree-only pivot without weight-aware order.
+
+**Ablation.** `AblationMain` measures, one JVM per variant (`ABLATION_VARIANT`), the variants
+`full`, `noP1`, `noP2`, `noP2single`, `noP3`, `p3R` (P3 checks the result set instead of the
+MNI-frequent set), `noWext`, `voteDeg`, `noWorder`, and the combination `noTable` (P1 and P2
+off). Each differs from `full` in exactly one factor except `noTable`. Every completed variant
+must return the result set of `full`, compared by canonical code (`invariant=OK`; exit code 5
+otherwise). Phase timers (`canonMs`, `filterMs`, `mniMs`, `weightMs`) are recorded here only.
+
+**Result sets.** With `DUMP_PATTERNS=<dir>` (on by default in `experiments.sh`) each completed
+cell writes `<dataset>_<algorithm>_<minSup>_<minWeight>.tsv`: canonical code, vertices, edges,
+exact MNI and exact W, computed after the timed runs. `tools/compare_patterns.py <dir> <out.csv>
+[A] [B]` compares two algorithms cell by cell (exit 1 on a difference, 2 if nothing could be
+compared).
+
+**Reading the `weightModel` column:** `none` (GraMi), `edge` (EdgeTypeBound, WeLT: identical
+result sets, the speed-up claim is WeLT versus EdgeTypeBound), `edge-label` (WEGM) and
+`vertex` (OWGraMi): read only the performance metrics of the last two.
+
+> **Measurement machine (Windows).** The scripts run under Git Bash. They keep Windows awake
+> with `tools/keep_awake.ps1` (SetThreadExecutionState, Windows PowerShell 5.1) and print a
+> checklist of what they cannot enforce: pause Windows Update, "High performance" power plan,
+> plugged in with lid-close action "Do nothing", the repository folder excluded from Defender
+> real-time scanning, cloud sync paused. Use the same `JAVA_OPTS` (for example `-Xmx48g`) for
+> every scenario; it is recorded in `meta_*.json`.
 >
-> **Staying awake:** a full run can take hours. On macOS the script already wraps itself in
-> `caffeinate` so the machine will not idle-sleep mid-run (it is a no-op elsewhere); on
-> Linux, prefix the command with `nohup` and/or disable suspend if running unattended.
->
-> **On a laptop:** keep it on AC power with the lid open — `caffeinate` prevents idle sleep
-> but cannot override a lid-close suspend. Sustained load also thermal-throttles a laptop,
-> which makes wall-clock *times* noisier; the deterministic *count* metrics (candidates, MNI
-> iso-calls) are unaffected, and `BenchmarkMain` runs each scenario's algorithms back-to-back
-> per configuration so their relative comparison stays fair under the same thermal state. For
-> the cleanest absolute timings, use a well-cooled machine or run one scenario (or one dataset
-> via the filter argument) at a time.
+> **No `-Xss` is needed:** the backtracking recursion is only as deep as the pattern size.
+> `tools/check_run_cell.sh` checks the four cell outcomes (OK, OOM in the JVM, JVM killed by
+> OOM, JVM that cannot start) in about a minute.
 
-The per-dataset support and weight thresholds (whose absolute scales differ across
-datasets) are configured in the scenario definitions inside `experiments.sh`; report them as
-ratios (σ_s = minSup / |V|, and ρ_w within each dataset's weight range) for cross-dataset
-comparability.
+The per-dataset thresholds are configured in the scenario definitions inside `experiments.sh`;
+report them as ratios (σ_s = minSup / |V|, and ρ_w within each dataset's weight range) for
+cross-dataset comparability.
 
 ## Reproducing the paper figures
 
 The script `tools/make_paper_figures.py` regenerates the four data figures of the paper
 (`Fig2_efficiency_comparison.pdf`, `Fig3_memory_comparison.pdf`, `Fig4_ablation_study.pdf`,
 `Fig5_scalability_comparison.pdf`) from the values embedded at the top of the script
-(which match `results/SC1`..`SC5_*.csv`). It needs Python 3 + `matplotlib` + `numpy`:
+(which match the first-submission files `results/v1_submission/SC1`..`SC5_*.csv`). It needs
+Python 3 + `matplotlib` + `numpy`:
 
 ```bash
 python tools/make_paper_figures.py
@@ -233,13 +298,19 @@ The example graph used as Figure 1 of the paper is drawn with TikZ (source in
 
 ## Correctness testing
 
-The full suite (run with `./test.sh`) is **56 tests, all green**. Highlights:
+The full suite runs with `./test.sh`. Highlights:
 
 - `GraMiOracleTest` — `GraMiStrategy` reproduces EXACTLY the pattern set of the original
   GraMi at minSup = 500 / 400 / 300 (oracle outputs in `reference/oracle/unlab_s*.txt`,
   generated by the original GraMi on unlabeled CiteSeer).
-- `WeLTOracleTest`, `WEGMOracleTest`, `OWGraMiOracleTest` — each strategy's result set
+- `WeLTOracleTest`, `EdgeTypeBoundOracleTest`, `OWGraMiOracleTest` — each strategy's result set
   equals the GraMi-frequent set post-filtered by the corresponding weight condition.
+- `WEGMPaperExampleTest` — `WEGMStrategy` reproduces the worked example of the WEGM article
+  (domains of Figures 3 and 4, weights of Figure 5, Max-method pruning at w = 2).
+- `ExactModeTest`, `DeadlineTest`, `RunHarnessTest`, `SearchSpaceCountersTest`,
+  `VotingConfigTest`, `AblationTest`, `PatternDumpTest` — exact mode, deadline inside searches,
+  cost accounting, counter identities, voting configuration, one-factor ablation and the
+  result-set invariant, exact MNI. Each was checked by injecting the fault it targets.
 - `CanonicalCodeGSpanTest` — the minimum-DFS-code canonical form induces the same
   isomorphism classes as a brute-force check, and lifts the small-pattern size cap.
 - `PivotInvarianceTest`, `PruneMechanismInvarianceTest` — the ordering and the early-pruning
@@ -249,12 +320,14 @@ The full suite (run with `./test.sh`) is **56 tests, all green**. Highlights:
 
 - [x] Shared MNI engine + `GraMiStrategy`, validated against the original GraMi oracle.
 - [x] `WeLTStrategy`: F_2 lookup table, double filter P1/P2, exact bottleneck check via G_{≥w}.
-- [x] `OWGraMiStrategy` (vertex weights) & `WEGMStrategy` (edge weights); `CompareMain` CSV export.
+- [x] `OWGraMiStrategy` (vertex weights), `EdgeTypeBoundStrategy` (WeLT's problem, simple bound) and
+      `WEGMStrategy` (WEGM as published, Max method); `CompareMain` CSV export.
 - [x] `PivotVoter` multi-criteria extension ordering; early-pruning mechanisms; ablation runners.
 - [x] gSpan minimum-DFS-code canonical form (no small-pattern size cap).
 - [x] MNI optimizations: arc consistency, domain-restricted backtracking, parent→child domain
       inheritance, hub-aware candidate enumeration.
-- [x] Search-budget approximation + per-run time limit; `BenchmarkMain` (median over repeated runs).
+- [x] Exact mode by default (approximate search budget optional); per-run time limit checked inside
+      searches; OK / TO / OOM / CRASH status; run provenance; pattern export.
 
 ## Cite this work
 
