@@ -4,7 +4,8 @@
 #   ./revision.sh list       describe the steps and exit
 #   ./revision.sh prepare    new campaign directory, environment lock, data check, tests, topology
 #   ./revision.sh b2dev      calibrate the development cells and choose the voting weights
-#   ./revision.sh b1         efficiency: GraMi, EdgeTypeBound, WEGM, WeLT over the support ranges
+#   ./revision.sh b1 [ds]    efficiency: GraMi, EdgeTypeBound, WEGM, WeLT over the support ranges
+#                            (optional dataset name, e.g. citeseer, to split b1 into sessions)
 #   ./revision.sh b2grid     sensitivity of WeLT to the voting weights on the reported datasets
 #   ./revision.sh b4         one-factor ablation of WeLT
 #   ./revision.sh b5         tau_w sweep (per point, and WeLT with one shared lookup table)
@@ -178,6 +179,7 @@ b1)
     OUT="$RUN_DIR/B1_efficiency.csv"
     for row in "${B1_CELLS[@]}"; do
         read -r ds sups <<< "$row"
+        if [ -n "${2:-}" ] && [ "$ds" != "$2" ]; then continue; fi
         tw=$(tau_w_of "$ds")
         for s in $sups; do
             for algo in GraMi EdgeTypeBound WEGM WeLT; do
