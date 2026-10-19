@@ -270,6 +270,16 @@ result sets, the speed-up claim is WeLT versus EdgeTypeBound), `edge-label` (WEG
 > `tools/check_run_cell.sh` checks the four cell outcomes (OK, OOM in the JVM, JVM killed by
 > OOM, JVM that cannot start) in about a minute.
 
+**Full campaign (`revision.sh`).** `JAVA_OPTS="-Xmx48g" ./revision.sh all` runs, in order:
+`prepare` (campaign directory, JDK and `JAVA_OPTS` lock, dataset check, self-tests), `b2dev`
+(choice of the voting weights on calibrated `bitcoin_otc` cells), `b2grid` (voting sensitivity),
+`b4` (ablation), `b1` per dataset (efficiency), `b5` per dataset (τ_w sweep at the smallest
+support where GraMi completes, a shared-table WeLT sweep, and a WeLT-only sweep at the smallest
+support where WeLT completes) and `b7` (EdgeTypeBound = WeLT on every completed cell). Running
+it again continues: finished steps and cells are skipped. With `CHECKPOINT=1` every cell is
+committed, pushed to the branch `campaign-revision-r1` and reported to a status repository.
+`./revision.sh list` describes each step.
+
 The per-dataset thresholds are configured in the scenario definitions inside `experiments.sh`;
 report them as ratios (σ_s = minSup / |V|, and ρ_w within each dataset's weight range) for
 cross-dataset comparability.
