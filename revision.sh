@@ -8,7 +8,8 @@
 #                            (optional dataset name, e.g. citeseer, to split b1 into sessions)
 #   ./revision.sh b2grid     sensitivity of WeLT to the voting weights on the reported datasets
 #   ./revision.sh b4         one-factor ablation of WeLT
-#   ./revision.sh b5         tau_w sweep (per point, and WeLT with one shared lookup table)
+#   ./revision.sh b5 [ds]    tau_w sweep: comparison at a support where GraMi completes, a WeLT
+#                            shared-table sweep, and a WeLT-only sweep at the lowest WeLT support
 #   ./revision.sh b7         result-set equivalence EdgeTypeBound = WeLT over every completed cell
 #
 # Order: prepare, b2dev (writes voting_choice.json), then b1, b2grid, b4, b5, b7. Every step after
@@ -217,27 +218,57 @@ b4)
     done
     ;;
 b5)
+    # tau_w sweep, rule fixed before any run (see tools/b5_choose.py):
+    #  comparison sweep  minSup = smallest support of the B1 range at which GraMi completed (the
+    #                    tau_w -> 0 limit, so every tau_w point is at most as hard); if none, the
+    #                    first value of the extension list at which a GraMi probe completes in 60 s.
+    #                    Algorithms EdgeTypeBound, WEGM, WeLT per point, plus WeLT with one shared table.
+    #  WeLT-only sweep   minSup = smallest support of the B1 range at which WeLT completed; result
+    #                    counts and sizes only (no baseline at that support).
+    #  tau_w grid        rho = 0.1 ... 0.9 of the weight range, plus the dataset's tau_w.
     require_voting_choice
     B1="$RUN_DIR/B1_efficiency.csv"
-    if [ ! -f "$B1" ]; then echo "ERROR: $B1 is missing; run ./revision.sh b1 first" >&2; exit 1; fi
     OUT="$RUN_DIR/B5_tau_sweep.csv"
     SWEEP="$RUN_DIR/B5_shared_table.csv"
+    ONLY="$RUN_DIR/B5_welt_only.csv"
+    PROBE="$RUN_DIR/B5_grami_probe.csv"
+    CHOICES="$RUN_DIR/B5_choices.txt"
     for row in "${B1_CELLS[@]:0:3}"; do
         read -r ds sups <<< "$row"
+        if [ -n "${2:-}" ] && [ "$ds" != "$2" ]; then continue; fi
         tw=$(tau_w_of "$ds")
-        # minSup: the smallest value of the B1 range at which EdgeTypeBound completed; else the largest.
-        s=$($PY - "$B1" "$ds.lg" "$sups" <<'PY'
-import csv, sys
-rows = [r for r in csv.DictReader(open(sys.argv[1])) if r["dataset"] == sys.argv[2] and r["algorithm"] == "EdgeTypeBound"]
-ok = [int(r["minSup"]) for r in rows if r["status"] == "OK"]
-print(min(ok) if ok else max(int(x) for x in sys.argv[3].split()))
-PY
-)
+        for v in $sups; do
+            if [ "$($PY tools/b5_choose.py status "$B1" "$ds.lg" GraMi "$v")" = "none" ]; then
+                echo "ERROR: B1 has no GraMi row for $ds minSup=$v; run ./revision.sh b1 $ds first" >&2
+                exit 1
+            fi
+        done
+        s=$($PY tools/b5_choose.py smallest-ok "$B1" "$ds.lg" GraMi)
+        how="smallest B1 support at which GraMi completed"
+        if [ -z "$s" ]; then
+            case "$ds" in
+                citeseer) ext="600 900 1350 2000" ;; email_eu) ext="30 45 68 100" ;; lastfm) ext="900 1350 2000 3000" ;;
+            esac
+            for v in $ext; do
+                run_cell "$PROBE" "datasets/$ds.lg" "$v" "$tw" GraMi 60000 0 1
+                if [ "$($PY tools/b5_choose.py status "$PROBE" "$ds.lg" GraMi "$v")" = "OK" ]; then s="$v"; break; fi
+            done
+            how="first support of the extension list ($ext) at which a GraMi probe completed within 60 s"
+            if [ -z "$s" ]; then
+                echo "ERROR: GraMi completed at no support of the extension list $ext for $ds" >&2
+                checkpoint "b5 $ds FAILED: no support found for the comparison sweep"
+                exit 1
+            fi
+        fi
+        sw=$($PY tools/b5_choose.py smallest-ok "$B1" "$ds.lg" WeLT)
         taus=$(java -cp target/classes welt.runner.SharedTableSweepMain --grid "datasets/$ds.lg" \
             0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9 "$tw" | paste -sd, -)
-        grep -q "^=== B5 $ds minSup=$s " "$RUN_DIR/B5_choices.txt" 2>/dev/null \
-            || echo "=== B5 $ds minSup=$s tau_w=$taus" >> "$RUN_DIR/B5_choices.txt"
-        echo "=== B5 $ds minSup=$s tau_w=$taus"
+        grep -q "^$ds " "$CHOICES" 2>/dev/null || {
+            echo "$ds comparison minSup=$s ($how)"
+            echo "$ds WeLT-only minSup=${sw:-none} (smallest B1 support at which WeLT completed)"
+            echo "$ds tau_w=$taus"
+        } >> "$CHOICES"
+        echo "=== B5 $ds comparison minSup=$s, WeLT-only minSup=${sw:-none}, tau_w=$taus"
         for t in ${taus//,/ }; do
             for algo in EdgeTypeBound WEGM WeLT; do
                 run_cell "$OUT" "datasets/$ds.lg" "$s" "$t" "$algo" "$LIMIT" "$WARMUP" "$MEASURED"
@@ -253,6 +284,11 @@ PY
             append_csv "$tmp" "$SWEEP"
             rm -f "$tmp"
             checkpoint "shared-table sweep $ds minSup=$s: $(last_status "$SWEEP")"
+        fi
+        if [ -n "$sw" ] && [ "$sw" != "$s" ]; then
+            for t in ${taus//,/ }; do
+                run_cell "$ONLY" "datasets/$ds.lg" "$sw" "$t" WeLT "$LIMIT" "$WARMUP" "$MEASURED"
+            done
         fi
     done
     ;;

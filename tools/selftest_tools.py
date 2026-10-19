@@ -2,7 +2,7 @@
 """Self-test of the Python tools on constructed inputs (standard library only).
 
 Usage:  python tools/selftest_tools.py      # exit 0 when every case passes
-Covers every branch of choose_voting.py and the exit codes of compare_patterns.py.
+Covers every branch of choose_voting.py and b5_choose.py and the exit codes of compare_patterns.py.
 """
 import json
 import os
@@ -65,7 +65,18 @@ def main():
         check("compare: different sets exit 1", run("compare_patterns.py", pdir, out, "GraMi", "WeLT").returncode == 1)
         check("compare: nothing comparable exits 2", run("compare_patterns.py", pdir, out, "WEGM", "WeLT").returncode == 2)
 
-    print(f"selftest_tools: {8 - len(failures)}/8 cases passed")
+        b1 = os.path.join(tmp, "b1.csv")
+        with open(b1, "w", encoding="utf-8") as fh:
+            fh.write("dataset,algorithm,minSup,status\n"
+                     "c.lg,GraMi,400,OK\nc.lg,GraMi,250,OK\nc.lg,GraMi,200,TO\nc.lg,WeLT,100,OK\n"
+                     "l.lg,GraMi,600,TO\nl.lg,GraMi,200,OOM\nc.lg,GraMi,300,CRASH\nc.lg,GraMi,300,OK\n")
+        out = lambda *x: run("b5_choose.py", *x).stdout.strip()
+        check("b5: smallest completed support, timeouts ignored", out("smallest-ok", b1, "c.lg", "GraMi") == "250")
+        check("b5: no completed support gives nothing", out("smallest-ok", b1, "l.lg", "GraMi") == "")
+        check("b5: status is the last row of the cell", out("status", b1, "c.lg", "GraMi", "300") == "OK")
+        check("b5: a missing cell is none", out("status", b1, "c.lg", "GraMi", "150") == "none")
+
+    print(f"selftest_tools: {12 - len(failures)}/12 cases passed")
     sys.exit(1 if failures else 0)
 
 
