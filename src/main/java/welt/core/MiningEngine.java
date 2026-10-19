@@ -132,7 +132,7 @@ public final class MiningEngine {
         public final Pattern pattern;
         public final int support; // MNI (may be capped at minSup due to early stopping)
 
-        FrequentPattern(Pattern pattern, int support) {
+        public FrequentPattern(Pattern pattern, int support) {
             this.pattern = pattern;
             this.support = support;
         }

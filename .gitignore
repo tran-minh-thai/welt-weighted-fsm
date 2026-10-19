@@ -31,3 +31,6 @@ results/SC?_..._*.csv
 # Python bytecode
 __pycache__/
 *.pyc
+
+# External programs fetched and built by tools/build_resum.py (not part of this repository)
+third_party/
