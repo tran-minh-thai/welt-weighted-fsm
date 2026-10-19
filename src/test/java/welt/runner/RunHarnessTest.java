@@ -73,6 +73,26 @@ class RunHarnessTest {
     }
 
     @Test
+    void completedRunCountsEveryResult() throws IOException {
+        RunHarness.Result r = run(citeseer(), "WeLT");
+        assertEquals("OK", r.status);
+        assertEquals(r.patterns.size(), r.m.resultCount, "the incremental count equals the result list");
+    }
+
+    @Test
+    void timeLimitStopsTheRunAndKeepsPartialCounts() throws IOException {
+        // GraMi at minSup 100 runs for minutes on citeseer; a 100 ms limit must stop it soon
+        // after the deadline (it is checked inside the searches) with the counts reached so far.
+        RunHarness.Config cfg = new RunHarness.Config("GraMi", 100, 96);
+        cfg.limitMs = 100;
+        RunHarness.Result r = RunHarness.runOnce(citeseer(), cfg);
+        assertEquals("TO", r.status);
+        assertTrue(r.partial());
+        assertTrue(r.m.candidateCount > 0 && r.m.resultCount > 0, "partial counts must be kept");
+        assertTrue(r.totalMs < 2000, "the run must stop near the 100 ms deadline, took " + r.totalMs + " ms");
+    }
+
+    @Test
     void rowRejectsDuplicateColumnsAndCommas() {
         RunHarness.Row row = new RunHarness.Row().put("a", 1).put("b", 2.5);
         assertEquals("a,b", row.header());

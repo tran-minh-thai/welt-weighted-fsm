@@ -26,8 +26,9 @@
 #   ./experiments.sh sc2 bitcoin          # run scenario 2, only datasets whose path matches "bitcoin"
 #   ./experiments.sh all                  # run sc1, sc2, sc3 sequentially
 #
-# Each (dataset, minSup) cell is timed with BenchmarkMain: warmup runs are discarded and the
-# MEDIAN of MEASURED runs is reported; a run exceeding the per-run limit is recorded as TO.
+# Each (dataset, minSup, algorithm) cell runs in its own JVM (tools/common.sh run_cell): warmup
+# runs are discarded and the MEDIAN of MEASURED runs is reported. The status column is OK,
+# TO (per-run limit reached), OOM (OutOfMemoryError) or CRASH (the JVM died without a row).
 # With the default 60-minute limit there is no need to find timeouts and re-run them.
 #
 # Tunable via environment variables:
@@ -123,13 +124,9 @@ run_scenario() {
         read -r ds tw budget sups <<< "$cfg"
         if [ -n "$filter" ] && [[ "$ds" != *"$filter"* ]]; then continue; fi
         for s in $sups; do
-            echo ">>> $ds  minSup=$s  tau_w=$tw  budget=$budget  limit=${LIMIT}ms"
-            tmp=$(mktemp)
-            BENCH_CSV=1 BENCH_ALGOS="$SC_ALGOS" java ${JAVA_OPTS:-} -cp target/classes \
-                welt.runner.BenchmarkMain "$ds" "$s" "$tw" "$budget" "$LIMIT" "$WARMUP" "$MEASURED" > "$tmp" 2>&1 || true
-            cat "$tmp"
-            append_csv "$tmp" "$out"
-            rm -f "$tmp"
+            for algo in ${SC_ALGOS//,/ }; do
+                run_cell "$out" "$ds" "$s" "$tw" "$algo" "$LIMIT" "$WARMUP" "$MEASURED" "$budget"
+            done
         done
     done
     echo "--- SC${SC_NUM} done -> $out ---"
@@ -179,13 +176,9 @@ run_memory() {
     for cfg in "${CFG[@]}"; do
         read -r ds tw budget sups <<< "$cfg"
         for s in $sups; do
-            echo ">>> memory $ds  minSup=$s"
-            tmp=$(mktemp)
-            BENCH_CSV=1 BENCH_ALGOS="GraMi,WEGM,WeLT" java ${JAVA_OPTS:-} -cp target/classes \
-                welt.runner.BenchmarkMain "$ds" "$s" "$tw" "$budget" "$LIMIT" 0 1 > "$tmp" 2>&1 || true
-            cat "$tmp"
-            append_csv "$tmp" "$out"
-            rm -f "$tmp"
+            for algo in GraMi WEGM WeLT; do
+                run_cell "$out" "$ds" "$s" "$tw" "$algo" "$LIMIT" 0 1 "$budget"
+            done
         done
     done
     echo "--- memory done -> $out ---"

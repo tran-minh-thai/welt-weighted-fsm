@@ -226,7 +226,10 @@ public final class MiningEngine {
         // MNI-frequent ⇒ extendable (if the strategy allows); pass domains to children
         if (strategy.allowExtension(p, r.mni)) frontier.add(new FrontierItem(p, r.domains));
         // accept as FWS if the strategy accepts it (GraMi: always accepts)
-        if (strategy.acceptFrequent(p, r.mni)) result.add(new FrequentPattern(p, r.mni));
+        if (strategy.acceptFrequent(p, r.mni)) {
+            result.add(new FrequentPattern(p, r.mni));
+            metrics.resultCount++;
+        }
     }
 
     /** Are all connected (k-1)-edge subpatterns of p present in the frequent memo? */

@@ -29,8 +29,11 @@ import java.util.function.ToDoubleFunction;
  */
 public final class BenchmarkMain {
 
+    /** Process exit code when a run ended with OutOfMemoryError (its CSV row is still printed). */
+    static final int EXIT_OOM = 3;
     /** Process exit code when an exact-mode run reports an aborted embedding search. */
     static final int EXIT_EXACT_VIOLATION = 4;
+    private static boolean anyOom = false;
 
     private static int WARMUP = 1;
     private static int MEASURED = 5;
@@ -70,6 +73,12 @@ public final class BenchmarkMain {
     }
 
     public static void main(String[] args) throws Exception {
+        if (args.length == 1 && args[0].equals("--header")) {
+            // The CSV header, so a driver script can write a row for a process that died
+            // before printing one.
+            System.out.println("CSV," + buildRow("", "", 0, 0, 0, 0, List.of(), "", 0).header());
+            return;
+        }
         Path file = Path.of(args[0]);
         int minSup = Integer.parseInt(args[1]);
         double minWeight = Double.parseDouble(args[2]);
@@ -93,6 +102,7 @@ public final class BenchmarkMain {
         for (String algo : algos) {
             benchmark(algo, g, ds, minSup, minWeight, budget, limitMs);
         }
+        if (anyOom) System.exit(EXIT_OOM);
     }
 
     private static RunHarness.Result run(String algo, LabeledWeightedGraph g, String ds,
@@ -113,27 +123,35 @@ public final class BenchmarkMain {
                                   int minSup, double minWeight, long budget, long limitMs) {
         RunHarness.Result probe = run(algo, g, ds, minSup, minWeight, budget, limitMs);
         List<RunHarness.Result> measured = new ArrayList<>();
-        int toCount = 0;
-        if (probe.timedOut) {
-            measured.add(probe); // a timed-out cell is a single probe run
-            toCount = 1;
+        String status = probe.status;
+        int nonOk = 0;
+        if (probe.partial()) {
+            measured.add(probe); // a TO or OOM cell is a single probe run
+            nonOk = 1;
         } else {
-            for (int i = 1; i < WARMUP; i++) run(algo, g, ds, minSup, minWeight, budget, limitMs);
+            for (int i = 1; i < WARMUP && status.equals("OK"); i++) {
+                RunHarness.Result w = run(algo, g, ds, minSup, minWeight, budget, limitMs);
+                if (w.partial()) status = w.status;
+            }
             for (int i = 0; i < MEASURED; i++) {
                 RunHarness.Result r = run(algo, g, ds, minSup, minWeight, budget, limitMs);
-                if (r.timedOut) toCount++;
+                if (r.partial()) {
+                    nonOk++;
+                    if (!status.equals("OOM")) status = r.status; // OOM outranks TO
+                }
                 measured.add(r);
             }
         }
-        report(algo, ds, minSup, minWeight, budget, limitMs, probe.timedOut, measured, toCount);
+        if (status.equals("OOM")) anyOom = true;
+        report(algo, ds, minSup, minWeight, budget, limitMs, measured, status, nonOk);
     }
 
     private static void report(String algo, String ds, int minSup, double minWeight, long budget, long limitMs,
-                               boolean probeTimedOut, List<RunHarness.Result> runs, int toCount) {
+                               List<RunHarness.Result> runs, String status, int nonOk) {
         RunHarness.Result last = runs.get(runs.size() - 1);
         boolean deterministic = true;
         for (RunHarness.Result r : runs) {
-            if (r.patterns.size() != last.patterns.size() || r.m.candidateCount != last.m.candidateCount
+            if (r.m.resultCount != last.m.resultCount || r.m.candidateCount != last.m.candidateCount
                     || r.m.mniIsoCalls != last.m.mniIsoCalls) {
                 deterministic = false;
             }
@@ -142,19 +160,40 @@ public final class BenchmarkMain {
             System.err.println("WARNING: " + algo + " " + ds + " minSup=" + minSup
                     + ": counting metrics differ across measured runs");
         }
-        String toStr = probeTimedOut ? "1/1" : (toCount > 0 ? toCount + "/" + runs.size() : "-");
-
-        System.out.printf(Locale.ROOT, "%-9s %-7s %6d %8d %10d %12.1f %12s %6s %8.1f%n",
-                algo, weightModel(algo), last.patterns.size(), last.m.candidateCount, last.mniIsoCallsMine(),
-                median(runs, r -> r.tableBuildMs),
-                probeTimedOut ? "T.O.(>" + limitMs + ")" : String.format(Locale.ROOT, "%.1f", median(runs, r -> r.totalMs)),
-                toStr, median(runs, r -> r.peakMB));
+        System.out.printf(Locale.ROOT, "%-9s %-7s %6d %8d %10d %12.1f %12.1f %6s %8.1f%n",
+                algo, weightModel(algo), last.m.resultCount, last.m.candidateCount, last.mniIsoCallsMine(),
+                median(runs, r -> r.tableBuildMs), median(runs, r -> r.totalMs),
+                status, median(runs, r -> r.peakMB));
 
         if (!CSV) return;
-        RunHarness.Row row = new RunHarness.Row()
+        RunHarness.Row row = buildRow(ds, algo, minSup, minWeight, budget, limitMs, runs, status, nonOk);
+        if (!headerPrinted) {
+            System.out.println("CSV," + row.header());
+            headerPrinted = true;
+        }
+        System.out.println("CSV," + row.values());
+        if (!deterministic) System.err.println("(deterministic=0 recorded for this row)");
+    }
+
+    /**
+     * The CSV row of one cell. With an empty {@code runs} list it yields the header with
+     * empty values (used by {@code --header}).
+     */
+    static RunHarness.Row buildRow(String ds, String algo, int minSup, double minWeight, long budget, long limitMs,
+                                   List<RunHarness.Result> runs, String status, int nonOk) {
+        boolean none = runs.isEmpty();
+        RunHarness.Result last = none ? null : runs.get(runs.size() - 1);
+        boolean deterministic = true;
+        for (RunHarness.Result r : runs) {
+            if (r.m.resultCount != last.m.resultCount || r.m.candidateCount != last.m.candidateCount
+                    || r.m.mniIsoCalls != last.m.mniIsoCalls) {
+                deterministic = false;
+            }
+        }
+        return new RunHarness.Row()
                 .put("dataset", ds)
                 .put("algorithm", algo)
-                .put("weightModel", weightModel(algo))
+                .put("weightModel", none ? "" : weightModel(algo))
                 .put("minSup", minSup)
                 .put("minWeight", minWeight)
                 .put("mode", mode(budget))
@@ -162,34 +201,31 @@ public final class BenchmarkMain {
                 .put("limitMs", limitMs)
                 .put("warmup", WARMUP)
                 .put("runs", runs.size())
-                .put("freq", last.patterns.size())
-                .put("candMNI", last.m.candidateCount)
-                .put("candMNITotal", last.candidatesTotal())
-                .put("mniIsoCallsMine", last.mniIsoCallsMine())
-                .put("mniIsoCallsTotal", last.m.mniIsoCalls)
-                .put("weightIsoCalls", last.m.weightIsoCalls)
-                .put("tableSize", last.tableSize)
-                .put("tableBuildCandidates", last.m.tableBuildCandidates)
-                .put("tableBuildMniIsoCalls", last.m.tableBuildMniIsoCalls)
-                .put("tableBuildWeightIsoCalls", last.m.tableBuildWeightIsoCalls)
-                .put("budgetExceeded", last.m.budgetExceeded)
-                .put("deterministic", deterministic ? 1 : 0)
-                .put("indexMs", median(runs, r -> r.indexMs))
-                .put("prepMs", median(runs, r -> r.prepMs))
-                .put("tableBuildMs", median(runs, r -> r.tableBuildMs))
-                .put("mineMs", median(runs, r -> r.mineMs))
-                .put("totalMs", median(runs, r -> r.totalMs))
-                .put("totalMinMs", min(runs, r -> r.totalMs))
-                .put("totalMaxMs", max(runs, r -> r.totalMs))
-                .put("totalSdMs", sd(runs, r -> r.totalMs))
-                .put("timedOut", toStr)
-                .put("peakMemMB", median(runs, r -> r.peakMB))
-                .put("peakMemMaxMB", max(runs, r -> r.peakMB));
-        if (!headerPrinted) {
-            System.out.println("CSV," + row.header());
-            headerPrinted = true;
-        }
-        System.out.println("CSV," + row.values());
+                .put("status", status)
+                .put("partial", none ? "" : (status.equals("OK") ? 0 : 1))
+                .put("nonOkRuns", none ? "" : nonOk)
+                .put("freq", none ? "" : last.m.resultCount)
+                .put("candMNI", none ? "" : last.m.candidateCount)
+                .put("candMNITotal", none ? "" : last.candidatesTotal())
+                .put("mniIsoCallsMine", none ? "" : last.mniIsoCallsMine())
+                .put("mniIsoCallsTotal", none ? "" : last.m.mniIsoCalls)
+                .put("weightIsoCalls", none ? "" : last.m.weightIsoCalls)
+                .put("tableSize", none ? "" : last.tableSize)
+                .put("tableBuildCandidates", none ? "" : last.m.tableBuildCandidates)
+                .put("tableBuildMniIsoCalls", none ? "" : last.m.tableBuildMniIsoCalls)
+                .put("tableBuildWeightIsoCalls", none ? "" : last.m.tableBuildWeightIsoCalls)
+                .put("budgetExceeded", none ? "" : last.m.budgetExceeded)
+                .put("deterministic", none ? "" : deterministic ? 1 : 0)
+                .put("indexMs", none ? "" : median(runs, r -> r.indexMs))
+                .put("prepMs", none ? "" : median(runs, r -> r.prepMs))
+                .put("tableBuildMs", none ? "" : median(runs, r -> r.tableBuildMs))
+                .put("mineMs", none ? "" : median(runs, r -> r.mineMs))
+                .put("totalMs", none ? "" : median(runs, r -> r.totalMs))
+                .put("totalMinMs", none ? "" : min(runs, r -> r.totalMs))
+                .put("totalMaxMs", none ? "" : max(runs, r -> r.totalMs))
+                .put("totalSdMs", none ? "" : sd(runs, r -> r.totalMs))
+                .put("peakMemMB", none ? "" : median(runs, r -> r.peakMB))
+                .put("peakMemMaxMB", none ? "" : max(runs, r -> r.peakMB));
     }
 
     static double median(List<RunHarness.Result> runs, ToDoubleFunction<RunHarness.Result> f) {

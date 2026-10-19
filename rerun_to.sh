@@ -40,7 +40,7 @@ out="results/RERUN_${stamp}_to.csv"
 # timedOut is "-" when the cell finished, "k/n" or "1/1" when it timed out.
 cfgfile=$(mktemp)
 awk -F, 'FNR==1 {delete c; for (i=1;i<=NF;i++) c[$i]=i; next}
-         $c["timedOut"]!="-" && $c["timedOut"]!="" {k=$c["dataset"]"|"$c["minSup"]"|"$c["minWeight"]; a[k]=a[k]","$c["algorithm"]}
+         (("timedOut" in c && $c["timedOut"]!="-" && $c["timedOut"]!="") || ("status" in c && $c["status"]!="OK" && $c["status"]!="")) {k=$c["dataset"]"|"$c["minSup"]"|"$c["minWeight"]; a[k]=a[k]","$c["algorithm"]}
          END{for(k in a) print k" "substr(a[k],2)}' "${SRC[@]}" | sort > "$cfgfile"
 if [ -n "$FILTER" ]; then grep "$FILTER" "$cfgfile" > "$cfgfile.f" || true; mv "$cfgfile.f" "$cfgfile"; fi
 
@@ -63,12 +63,9 @@ while read -r cfg algos; do
     base=$(echo "$algos" | tr ',' '\n' | grep -vx 'WeLT' | paste -sd, -)
     runalgos="WeLT${base:+,$base}"
     echo ">>> datasets/$ds  minSup=$minSup  tau_w=$minWeight  algos=$runalgos  limit=${LIMIT}ms"
-    tmp=$(mktemp)
-    BENCH_CSV=1 BENCH_ALGOS="$runalgos" java ${JAVA_OPTS:-} -cp target/classes \
-        welt.runner.BenchmarkMain "datasets/$ds" "$minSup" "$minWeight" 0 "$LIMIT" 0 1 > "$tmp" 2>&1 || true
-    cat "$tmp"
-    append_csv "$tmp" "$out"
-    rm -f "$tmp"
+    for algo in ${runalgos//,/ }; do
+        run_cell "$out" "datasets/$ds" "$minSup" "$minWeight" "$algo" "$LIMIT" 0 1 0
+    done
 done < "$cfgfile"
 rm -f "$cfgfile"
 echo "--- done -> $out (new finite rows supersede the old T.O. rows when building tables) ---"

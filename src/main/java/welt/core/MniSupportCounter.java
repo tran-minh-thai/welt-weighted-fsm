@@ -532,6 +532,7 @@ public final class MniSupportCounter {
     private boolean backtrack(Pattern p, int[] matchOrder, int pos, int[] assign, double minW) {
         metrics.backtrackNodes++;
         if (budgetApplies && ++searchNodes > searchBudget) { searchAborted = true; return false; } // MNI budget
+        if (deadlineExceeded()) return false; // time limit: the run is reported as TO, results are partial
         int n = p.nodeCount();
         if (pos == n) return true;
 
@@ -648,6 +649,7 @@ public final class MniSupportCounter {
 
         int[] assign = new int[n]; // reused across all root vertices
         for (int v = 0; v < g.numVertices(); v++) {
+            if (deadlineExceeded()) return false; // time limit
             if (g.vertexLabel(v) != targetLabel) continue;
             if (g.neighbors(v).size() < patDeg) continue;
             Arrays.fill(assign, -1);
@@ -753,6 +755,7 @@ public final class MniSupportCounter {
      */
     private boolean backtrackVW(Pattern p, int[] matchOrder, int pos, int[] assign, double minVW) {
         metrics.backtrackNodes++; // weight check: never budgeted (exact in every mode)
+        if (deadlineExceeded()) return false; // time limit
         int n = p.nodeCount();
         if (pos == n) return true;
 

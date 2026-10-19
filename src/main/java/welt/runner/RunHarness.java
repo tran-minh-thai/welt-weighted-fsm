@@ -35,7 +35,13 @@ import java.util.Map;
  * </ol>
  * {@code totalMs} spans all three and is the reported runtime. The peak heap is reset
  * right before the clock starts, after a {@code System.gc()} so that garbage left by a
- * previous run in the same JVM does not count towards this run.
+ * previous run in the same JVM does not count towards this run. The counters, engine and
+ * strategy are constructed inside the clock (their constructors are trivial).
+ *
+ * <p><b>Status.</b> {@code OK}, {@code TO} (the time limit was reached; the deadline is
+ * checked inside MNI counting, weight checks and backtracking) or {@code OOM}
+ * ({@link OutOfMemoryError} caught here). For TO and OOM the counting metrics are those
+ * reached at the stop ({@link Result#partial()}).
  */
 public final class RunHarness {
 
@@ -66,6 +72,13 @@ public final class RunHarness {
         public int tableSize = 0;
         public double peakMB;
         public boolean timedOut;
+        /** OK (completed), TO (time limit reached) or OOM (OutOfMemoryError). */
+        public String status = "OK";
+
+        /** {@code true} when the run stopped early: counts are those reached at the stop. */
+        public boolean partial() {
+            return !status.equals("OK");
+        }
 
         Result(Config cfg) {
             this.cfg = cfg;
@@ -104,17 +117,35 @@ public final class RunHarness {
     /** Run {@code cfg} once on {@code g}. */
     public static Result runOnce(LabeledWeightedGraph g, Config cfg) {
         Result r = new Result(cfg);
-        Metrics m = r.m;
-        MniSupportCounter counter = new MniSupportCounter(g, m); // strategy counter (table / weight checks)
-        counter.setSearchBudget(cfg.budget);
-        MiningEngine engine = new MiningEngine(g, m);
-        engine.setSearchBudget(cfg.budget);
-
         System.gc();
         resetPeakHeap();
         long t0 = System.nanoTime();
+        try {
+            mineTimed(g, cfg, r, t0);
+        } catch (OutOfMemoryError oom) {
+            // Every structure of the run (counters, engine, strategy, partial result list) is
+            // created inside mineTimed and unreachable once the error leaves it, so the heap is
+            // available again for reporting. The incremental counters in r.m keep the values
+            // reached when the error occurred.
+            r.patterns = List.of();
+            r.indexMs = r.prepMs = r.tableBuildMs = r.mineMs = Double.NaN; // not measured: phase unknown
+            r.totalMs = ms(System.nanoTime() - t0);
+            r.peakMB = peakHeapMB();
+            r.status = "OOM";
+            return r;
+        }
+        if (r.timedOut) r.status = "TO";
+        return r;
+    }
+
+    private static void mineTimed(LabeledWeightedGraph g, Config cfg, Result r, long t0) {
+        Metrics m = r.m;
         long deadline = cfg.limitMs > 0 ? t0 + cfg.limitMs * 1_000_000L : Long.MAX_VALUE;
+        MniSupportCounter counter = new MniSupportCounter(g, m); // strategy counter (table / weight checks)
+        counter.setSearchBudget(cfg.budget);
         counter.setDeadline(deadline);
+        MiningEngine engine = new MiningEngine(g, m);
+        engine.setSearchBudget(cfg.budget);
         engine.setDeadline(deadline);
 
         GraphIndex index = new GraphIndex(g, cfg.minSup);
@@ -147,7 +178,6 @@ public final class RunHarness {
         r.peakMB = peakHeapMB();
         r.timedOut = engine.isTimedOut() || counter.isTimedOut()
                 || (cfg.limitMs > 0 && r.totalMs > cfg.limitMs);
-        return r;
     }
 
     /** Ordered CSV row builder: the header is derived from the keys, never typed twice. */
@@ -156,7 +186,14 @@ public final class RunHarness {
 
         public Row put(String column, Object value) {
             if (cells.containsKey(column)) throw new IllegalStateException("duplicate column " + column);
-            cells.put(column, value instanceof Double ? String.format(Locale.ROOT, "%.3f", (Double) value) : String.valueOf(value));
+            String text;
+            if (value instanceof Double) {
+                double d = (Double) value;
+                text = Double.isNaN(d) ? "" : String.format(Locale.ROOT, "%.3f", d); // NaN = not measured
+            } else {
+                text = String.valueOf(value);
+            }
+            cells.put(column, text);
             return this;
         }
 

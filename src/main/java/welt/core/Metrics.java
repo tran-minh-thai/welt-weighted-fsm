@@ -17,7 +17,8 @@ public final class Metrics {
     public long weightIsoCalls = 0;   // CHEAP iso-calls: weight checks (embedsWithMinWeight/VertexWeight)
     public long backtrackNodes = 0;   // backtracking tree nodes (auxiliary detail)
     public long budgetExceeded = 0;   // MNI embedding searches ABORTED by the budget (approximate mode only; 0 in exact mode)
-    public long frequentCount = 0;    // FWS patterns found
+    public long frequentCount = 0;    // FWS patterns found (set when mining completes)
+    public long resultCount = 0;      // FWS patterns accepted so far (incremental: valid after TO/OOM too)
     public long prunedByStrategy = 0; // candidates pruned by the strategy before MNI counting
     public long prunedByP1 = 0;       // pruned by the structural filter (infrequent k-edge subpattern)
     public long prunedByP2 = 0;       // pruned by the weight filter (UB_k < minWeight)
