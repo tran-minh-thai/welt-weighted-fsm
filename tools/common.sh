@@ -33,7 +33,12 @@ append_csv() {
 #   exit 4      exact-mode violation -> the whole script stops.
 run_cell() {
     local out="$1" ds="$2" s="$3" tw="$4" algo="$5" lim="$6" wu="$7" me="$8" budget="${9:-0}"
-    local tmp code=0 status
+    local tmp code=0 status voter
+    voter=$(expected_voter "$algo")
+    if [ "${RESUME:-1}" = "1" ] && cell_done "$out" "dataset=$(basename "$ds")" "algorithm=$algo" "minSup=$s" "minWeight=$tw" "voter=$voter"; then
+        echo "--- skip (already in $(basename "$out")): $algo $ds minSup=$s tau_w=$tw voter=$voter"
+        return 0
+    fi
     tmp=$(mktemp)
     echo ">>> $algo  $ds  minSup=$s  tau_w=$tw  limit=${lim}ms  budget=$budget"
     BENCH_CSV=1 BENCH_ALGOS="$algo" java ${JAVA_OPTS:-} -cp target/classes welt.runner.BenchmarkMain \
@@ -52,6 +57,67 @@ run_cell() {
         append_failure_row "$out" "$(basename "$ds")" "$algo" "$s" "$tw" "$lim" "$budget" "$status"
     fi
     rm -f "$tmp"
+    checkpoint "$algo $(basename "$ds") minSup=$s tau_w=$tw: $(last_status "$out")"
+}
+
+# The voter BenchmarkMain uses for an algorithm (WELT_VOTER for WeLT, degree-only otherwise).
+expected_voter() {
+    if [ "$1" = "WeLT" ]; then echo "${WELT_VOTER:-1,1,1}"; else echo "0,1,0"; fi
+}
+
+# cell_done <csv> <key=value>...: true when the CSV already holds a row for the cell (resume).
+cell_done() {
+    local py
+    py=$(find_python)
+    [ -n "$py" ] || return 1
+    $py tools/cell_done.py "$@"
+}
+
+# last_status <csv>: status of the last row (for progress messages).
+last_status() {
+    local py
+    py=$(find_python)
+    [ -n "$py" ] && [ -s "$1" ] || { echo "?"; return 0; }
+    $py -c 'import csv,sys; r=list(csv.DictReader(open(sys.argv[1]))); print(r[-1].get("status","?") if r else "?")' "$1" || echo "?"
+}
+
+# report_status <message>: with CHECKPOINT=1, one line in the private status repository (same
+# layout as report.ps1: <repo>/<project>/<machine>.log), committed and pushed; otherwise only
+# printed. Never stops the caller. RUN_STATUS_DIR (default $HOME/work/run-status),
+# STATUS_PROJECT (default 01_SubWeightedGraphMiner).
+report_status() {
+    local repo="${RUN_STATUS_DIR:-$HOME/work/run-status}" project="${STATUS_PROJECT:-01_SubWeightedGraphMiner}"
+    local machine="${COMPUTERNAME:-$(hostname)}" line
+    line="$(date +%Y-%m-%dT%H:%M:%S) $1"
+    echo "[status] $line"
+    [ "${CHECKPOINT:-0}" = "1" ] || return 0
+    if [ ! -d "$repo/.git" ]; then
+        echo "WARNING: status repository $repo not found; line not recorded" >&2
+        return 0
+    fi
+    mkdir -p "$repo/$project"
+    printf '%s\r\n' "$line" >> "$repo/$project/$machine.log"
+    git -C "$repo" add -- "$project/$machine.log" >/dev/null 2>&1 || { echo "WARNING: report: git add failed" >&2; return 0; }
+    git -C "$repo" commit -q -m "$project $machine: $1" >/dev/null 2>&1 || { echo "WARNING: report: git commit failed" >&2; return 0; }
+    git -C "$repo" pull -q --rebase --autostash >/dev/null 2>&1 || echo "WARNING: report: git pull --rebase failed" >&2
+    git -C "$repo" push -q >/dev/null 2>&1 || echo "WARNING: report: push failed (committed locally)" >&2
+    return 0
+}
+
+# checkpoint <message>: with CHECKPOINT=1, commit results/ and push it to the campaign branch
+# (CAMPAIGN_BRANCH, default campaign-revision-r1), then report the message. Runs BETWEEN cells
+# only, never while a measurement runs. A failed push is reported and retried at the next
+# checkpoint; the run continues. Without CHECKPOINT=1 it only prints the message.
+checkpoint() {
+    if [ "${CHECKPOINT:-0}" != "1" ]; then
+        echo "[checkpoint] $1"
+        return 0
+    fi
+    local branch="${CAMPAIGN_BRANCH:-campaign-revision-r1}" pushed="pushed"
+    git add -- results >/dev/null 2>&1 || true
+    git commit -q -m "Results: $1" >/dev/null 2>&1 || true
+    git push -q origin "HEAD:refs/heads/$branch" >/dev/null 2>&1 || pushed="PUSH FAILED (retried at the next checkpoint)"
+    report_status "$1 [$pushed $(git rev-parse --short HEAD)]"
 }
 
 # run_ablation_cell <out.csv> <dataset.lg> <minSup> <minWeight> <limitMs> <warmup> <measured>
@@ -61,6 +127,11 @@ run_cell() {
 run_ablation_cell() {
     local out="$1" ds="$2" s="$3" tw="$4" lim="$5" wu="$6" me="$7" v tmp code
     for v in $(java -cp target/classes welt.runner.AblationMain --variants); do
+        if cell_done "$out" "dataset=$(basename "$ds")" "variant=$v" "minSup=$s" "minWeight=$tw" \
+            || grep -q "^$(basename "$ds"),$v,$s,$tw," "$out.failures" 2>/dev/null; then
+            echo "--- skip (already recorded): ablation $v $ds minSup=$s"
+            continue
+        fi
         tmp=$(mktemp); code=0
         echo ">>> ablation $v  $ds  minSup=$s  tau_w=$tw  limit=${lim}ms"
         ABLATION_CSV=1 ABLATION_VARIANT="$v" java ${JAVA_OPTS:-} -cp target/classes welt.runner.AblationMain \
@@ -78,6 +149,7 @@ run_ablation_cell() {
             echo "!!! ablation $v $ds minSup=$s: no row (exit $code) -> $status, see $out.failures" >&2
         fi
         rm -f "$tmp"
+        checkpoint "ablation $v $(basename "$ds") minSup=$s: $(last_status "$out")"
     done
 }
 
@@ -90,7 +162,7 @@ append_failure_row() {
     java -cp target/classes welt.runner.BenchmarkMain --header > "$hdrtmp"
     if [ ! -s "$out" ]; then sed 's/^CSV,//' "$hdrtmp" > "$out"; fi
     sed 's/^CSV,//' "$hdrtmp" | awk -F, -v ds="$2" -v algo="$3" -v s="$4" -v tw="$5" -v lim="$6" \
-        -v budget="$7" -v status="$8" '
+        -v budget="$7" -v status="$8" -v voter="$(expected_voter "$3" | tr ',' ';')" '
         { for (i = 1; i <= NF; i++) {
               v = ""
               if ($i == "dataset") v = ds;   else if ($i == "algorithm") v = algo
@@ -98,6 +170,7 @@ append_failure_row() {
               else if ($i == "limitMs") v = lim; else if ($i == "budget") v = budget
               else if ($i == "mode") v = (budget == 0 ? "exact" : "approx")
               else if ($i == "status") v = status; else if ($i == "partial") v = 1
+              else if ($i == "voter") v = voter
               printf "%s%s", v, (i < NF ? "," : "\n")
           } }' >> "$out"
     if [ "$(head -1 "$out")" != "$(sed 's/^CSV,//' "$hdrtmp")" ]; then

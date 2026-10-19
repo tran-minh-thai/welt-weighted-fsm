@@ -5,6 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 . tools/common.sh
+export RESUME=0 CHECKPOINT=0   # the same cell is run twice on purpose; nothing is pushed
 [ -d target/classes ] || ./build.sh
 OUT=$(mktemp)
 : > "$OUT"

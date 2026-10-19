@@ -18,6 +18,12 @@
 # Environment: JAVA_OPTS must set -Xmx (the same value for the whole campaign, e.g. -Xmx48g);
 # TIME_LIMIT_MS (default 3600000), WARMUP (1), MEASURED (5). The JDK (vendor and exact version)
 # is locked by prepare; a later step on another JDK is refused.
+#
+# Resume: every step skips the cells that already have a row, so an interrupted step is
+# continued by running the same command again (prepare reuses the current campaign unless
+# NEW_CAMPAIGN=1). CHECKPOINT=1 commits results/ after every cell, pushes it to the branch
+# CAMPAIGN_BRANCH (default campaign-revision-r1) and writes one line to the status repository
+# (RUN_STATUS_DIR, default $HOME/work/run-status; STATUS_PROJECT).
 set -euo pipefail
 cd "$(dirname "$0")"
 . tools/common.sh
@@ -49,14 +55,15 @@ jdk_identity() {
 require_clean_tree
 ./build.sh
 
-if [ "$CMD" = "prepare" ]; then
+EXISTING="$(cat "$CURRENT_FILE" 2>/dev/null || true)"
+if [ "$CMD" = "prepare" ] && { [ "${NEW_CAMPAIGN:-0}" = "1" ] || [ -z "$EXISTING" ] || [ ! -d "$EXISTING" ]; }; then
     HOST=$(hostname | tr -c 'A-Za-z0-9_.-\n' '_')
     RUN_DIR="${RUN_DIR:-results/v2_revision/$(date +%Y%m%d_%H%M)_${HOST}}"
     mkdir -p "$RUN_DIR" "$(dirname "$CURRENT_FILE")"
     echo "$RUN_DIR" > "$CURRENT_FILE"
     jdk_identity > "$RUN_DIR/environment.lock"
 else
-    RUN_DIR="${RUN_DIR:-$(cat "$CURRENT_FILE" 2>/dev/null || true)}"
+    RUN_DIR="${RUN_DIR:-$EXISTING}"
     if [ -z "$RUN_DIR" ] || [ ! -d "$RUN_DIR" ]; then
         echo "ERROR: no campaign directory (run ./revision.sh prepare first, or set RUN_DIR)" >&2
         exit 1
@@ -74,6 +81,7 @@ META="$RUN_DIR/meta_$(date +%Y%m%d_%H%M%S)_${CMD}.json"
 java ${JAVA_OPTS:-} -cp target/classes welt.runner.RunMetaMain start "$META" \
     "command=revision.sh $*" "limitMs=$LIMIT" "warmup=$WARMUP" "measured=$MEASURED"
 echo "=== campaign directory: $RUN_DIR"
+report_status "$CMD ${2:-} start (code $(git rev-parse --short HEAD), $RUN_DIR)"
 
 # tau_w per dataset.
 tau_w_of() {
@@ -162,6 +170,7 @@ PY
     } > "$RUN_DIR/B2_dev_calibration.txt"
     if [ "${#CHOSEN[@]}" -lt 2 ]; then
         java ${JAVA_OPTS:-} -cp target/classes welt.runner.RunMetaMain finish "$META"
+        checkpoint "b2dev FAILED: fewer than two development cells"
         echo "ERROR: calibration found ${#CHOSEN[@]} development cell(s); see $RUN_DIR/B2_dev_calibration.txt" >&2
         exit 1
     fi
@@ -225,18 +234,25 @@ PY
 )
         taus=$(java -cp target/classes welt.runner.SharedTableSweepMain --grid "datasets/$ds.lg" \
             0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9 "$tw" | paste -sd, -)
-        echo "=== B5 $ds minSup=$s tau_w=$taus" | tee -a "$RUN_DIR/B5_choices.txt"
+        grep -q "^=== B5 $ds minSup=$s " "$RUN_DIR/B5_choices.txt" 2>/dev/null \
+            || echo "=== B5 $ds minSup=$s tau_w=$taus" >> "$RUN_DIR/B5_choices.txt"
+        echo "=== B5 $ds minSup=$s tau_w=$taus"
         for t in ${taus//,/ }; do
             for algo in EdgeTypeBound WEGM WeLT; do
                 run_cell "$OUT" "datasets/$ds.lg" "$s" "$t" "$algo" "$LIMIT" "$WARMUP" "$MEASURED"
             done
         done
-        tmp=$(mktemp)
-        BENCH_CSV=1 java ${JAVA_OPTS:-} -cp target/classes welt.runner.SharedTableSweepMain \
-            "datasets/$ds.lg" "$s" "$taus" "$LIMIT" "$WARMUP" "$MEASURED" > "$tmp" 2>&1 || true
-        cat "$tmp"
-        append_csv "$tmp" "$SWEEP"
-        rm -f "$tmp"
+        if cell_done "$SWEEP" "dataset=$ds.lg" "minSup=$s" "row=sweep"; then
+            echo "--- skip (already in $(basename "$SWEEP")): shared-table sweep $ds minSup=$s"
+        else
+            tmp=$(mktemp)
+            BENCH_CSV=1 java ${JAVA_OPTS:-} -cp target/classes welt.runner.SharedTableSweepMain \
+                "datasets/$ds.lg" "$s" "$taus" "$LIMIT" "$WARMUP" "$MEASURED" > "$tmp" 2>&1 || true
+            cat "$tmp"
+            append_csv "$tmp" "$SWEEP"
+            rm -f "$tmp"
+            checkpoint "shared-table sweep $ds minSup=$s: $(last_status "$SWEEP")"
+        fi
     done
     ;;
 b7)
@@ -252,5 +268,6 @@ b7)
 esac
 
 java ${JAVA_OPTS:-} -cp target/classes welt.runner.RunMetaMain finish "$META"
+checkpoint "$CMD ${2:-} done"
 echo "Done: $CMD -> $RUN_DIR"
 if [ "$CMD" = "b7" ]; then exit "$status"; fi
