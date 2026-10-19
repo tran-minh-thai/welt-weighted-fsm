@@ -5,6 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 . tools/common.sh
+export CHECKPOINT=0   # the checks below set CHECKPOINT=1 only against temporary repositories
 [ -d target/classes ] || ./build.sh
 T=$(mktemp -d)
 fails=0
