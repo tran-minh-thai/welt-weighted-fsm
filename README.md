@@ -154,11 +154,11 @@ afterwards.
 
 | Scenario | Algorithms | Datasets | Final CSV | Purpose |
 |---|---|---|---|---|
-| `sc1` efficiency | GraMi, WEGM, WeLT | citeseer, email_eu, lastfm | `results/SC1_efficiency.csv` | RQ1+RQ2 — at low support WeLT completes while baselines T.O. |
-| `sc2` scalability | GraMi, WEGM, WeLT | mico, github, string_ecoli | `results/SC2_scalability.csv` | scales to large/dense graphs (per-candidate MNI dominates) |
-| `sc3` vertex_generality | OWGraMi | citeseer, email_eu | `results/SC3_vertex_generality.csv` | framework generality — **different** (vertex-weight) result set with OWGraMi's **own** τ_w (≈ vertex-weight median); kept separate |
-| `sc4` ablation | WeLT variants | citeseer, email_eu | `results/SC4_ablation.csv` | RQ4 — per-component contribution (lookup table / voting / weight-order) |
-| `sc5` memory | GraMi, WEGM, WeLT | citeseer, email_eu | `results/SC5_memory.csv` | RQ3 — peak heap at completable supports |
+| `sc1` efficiency | GraMi, WEGM, WeLT | citeseer, email_eu, lastfm | `results/v1_submission/SC1_efficiency.csv` | RQ1+RQ2 — at low support WeLT completes while baselines T.O. |
+| `sc2` scalability | GraMi, WEGM, WeLT | mico, github, string_ecoli | `results/v1_submission/SC2_scalability.csv` | scales to large/dense graphs (per-candidate MNI dominates) |
+| `sc3` vertex_generality | OWGraMi | citeseer, email_eu | `results/v1_submission/SC3_vertex_generality.csv` | framework generality — **different** (vertex-weight) result set with OWGraMi's **own** τ_w (≈ vertex-weight median); kept separate |
+| `sc4` ablation | WeLT variants | citeseer, email_eu | `results/v1_submission/SC4_ablation.csv` | RQ4 — per-component contribution (lookup table / voting / weight-order) |
+| `sc5` memory | GraMi, WEGM, WeLT | citeseer, email_eu | `results/v1_submission/SC5_memory.csv` | RQ3 — peak heap at completable supports |
 
 ```bash
 ./experiments.sh list            # describe the scenarios
