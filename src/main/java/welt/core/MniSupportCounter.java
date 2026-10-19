@@ -369,15 +369,28 @@ public final class MniSupportCounter {
 
     /** |image(v_i)| for every pattern vertex, without early stopping (all zero if p does not embed). */
     public int[] exactImageSizes(Pattern p) {
+        int[][] sets = exactImageSets(p);
+        int[] sizes = new int[sets.length];
+        for (int i = 0; i < sets.length; i++) sizes[i] = sets[i].length;
+        return sizes;
+    }
+
+    /**
+     * image(v_i) for every pattern vertex, without early stopping: entry {@code i} lists, in
+     * ascending order, the G vertices that v_i maps to in at least one embedding of p (all
+     * empty if p does not embed). These are the valid values whose count defines MNI; the
+     * search is the one of {@link #exactImageSizes}.
+     */
+    public int[][] exactImageSets(Pattern p) {
         int n = p.nodeCount();
-        int[] sizes = new int[n];
+        int[][] sets = new int[n][0];
         List<int[]> domains = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
             int[] dom = buildDomain(p, i);
-            if (dom.length == 0) return sizes;
+            if (dom.length == 0) return sets;
             domains.add(dom);
         }
-        if (arcConsistencyOn && !arcConsistency(p, domains, 1, n)) return sizes; // a domain became empty
+        if (arcConsistencyOn && !arcConsistency(p, domains, 1, n)) return sets; // a domain became empty
         @SuppressWarnings("unchecked")
         Set<Integer>[] valid = new Set[n];
         for (int i = 0; i < n; i++) valid[i] = new HashSet<>();
@@ -392,8 +405,10 @@ public final class MniSupportCounter {
                 }
             }
         }
-        for (int i = 0; i < n; i++) sizes[i] = valid[i].size();
-        return sizes;
+        for (int i = 0; i < n; i++) {
+            sets[i] = valid[i].stream().mapToInt(Integer::intValue).sorted().toArray();
+        }
+        return sets;
     }
 
     /**
