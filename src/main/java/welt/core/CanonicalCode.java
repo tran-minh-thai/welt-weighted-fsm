@@ -18,12 +18,10 @@ import java.util.Set;
  * on the quintuple sequence) is an ISOMORPHISM INVARIANT: isomorphic graphs share the
  * same minimum code, non-isomorphic ones differ.
  *
- * <p>Unlike the old version (brute force over {@code n!} permutations, capped at
- * {@code n≤9}), this version finds the minimum code by extending along the "rightmost
- * path" and keeping ONLY the states that reach the minimum prefix at each step. The cost
- * is bounded by the pattern's automorphism count (very small for labeled patterns)
- * instead of {@code n!} ⇒ NO more {@code n≤9} cap, able to handle large patterns at low
- * support thresholds.
+ * <p>The minimum code is found by extending along the "rightmost path" and keeping ONLY
+ * the states that reach the minimum prefix at each step. The cost is bounded by the
+ * pattern's automorphism count (very small for labeled patterns) instead of {@code n!},
+ * so large patterns at low support thresholds are handled.
  *
  * <p><b>Why it is correct.</b> (1) gSpan's rightmost-path extension rule generates
  * EXACTLY the set of all valid DFS codes of the graph; for two isomorphic graphs these

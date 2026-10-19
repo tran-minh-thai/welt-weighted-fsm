@@ -179,7 +179,7 @@ class CanonicalCodeGSpanTest {
 
     @Test
     void liftsNineNodeCap() {
-        Pattern big = pathN(12); // exceeds the former n≤9 cap
+        Pattern big = pathN(12); // 12 vertices
         String ref = assertDoesNotThrow(() -> CanonicalCode.of(big),
                 "a 12-vertex pattern must produce a code (the n≤9 cap has been lifted)");
         // permutation invariance on a large pattern (checked with a few fixed random permutations)

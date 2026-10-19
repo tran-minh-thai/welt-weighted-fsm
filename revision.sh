@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Revision campaign: the measurements requested in the first review round.
+# Experiment campaign (steps below).
 #
 #   ./revision.sh list       describe the steps and exit
 #   ./revision.sh prepare    new campaign directory, environment lock, data check, tests, topology
@@ -13,7 +13,7 @@
 #
 # Order: prepare, b2dev (writes voting_choice.json), then b1, b2grid, b4, b5, b7. Every step after
 # prepare writes into the campaign directory named in results/v2_revision/CURRENT (or RUN_DIR).
-# Peak memory (the former memory scenario) is read from the b1 rows (peakMemMB), not re-run.
+# Peak memory is read from the b1 rows (peakMemMB).
 #
 # Environment: JAVA_OPTS must set -Xmx (the same value for the whole campaign, e.g. -Xmx48g);
 # TIME_LIMIT_MS (default 3600000), WARMUP (1), MEASURED (5). The JDK (vendor and exact version)
@@ -75,7 +75,7 @@ java ${JAVA_OPTS:-} -cp target/classes welt.runner.RunMetaMain start "$META" \
     "command=revision.sh $*" "limitMs=$LIMIT" "warmup=$WARMUP" "measured=$MEASURED"
 echo "=== campaign directory: $RUN_DIR"
 
-# The tau_w of every dataset is the one used in the first submission.
+# tau_w per dataset.
 tau_w_of() {
     case "$1" in
         citeseer) echo 96 ;; email_eu) echo 336 ;; lastfm) echo 40 ;; mico) echo 100 ;;
@@ -83,7 +83,7 @@ tau_w_of() {
     esac
 }
 
-# B1 support ranges (unchanged from the first submission).
+# B1 support ranges.
 B1_CELLS=(
     "citeseer      400 300 250 200 150 100"
     "email_eu      20 15 12 10 8 6"

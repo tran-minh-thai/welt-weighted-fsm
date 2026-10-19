@@ -19,11 +19,11 @@ import java.util.Map;
  *   <li>acceptance: exact check that S embeds into G restricted to edges of weight ≥ minWeight;</li>
  *   <li>extension: by default only patterns that pass the weight check are extended (W is
  *       anti-monotone, so no result is lost). {@code gateExtension=false} extends every
- *       MNI-frequent pattern instead (the behaviour of the first submission).</li>
+ *       MNI-frequent pattern instead.</li>
  * </ul>
  * Its result set must equal WeLT's (same problem), which the oracle tests verify.
  *
- * <p><b>This is not WEGM.</b> The first submission called this strategy "WEGM". The WEGM
+ * <p><b>This is not WEGM.</b> The WEGM
  * paper (Nguyen et al., J. Inf. Telecommun. 9(4):543-558, 2025) treats an edge weight as part
  * of the pattern: isomorphism requires equal weights (Definition 3(b)), support counts only
  * occurrences with those weights, and W_E(S) is computed from the pattern's own edges

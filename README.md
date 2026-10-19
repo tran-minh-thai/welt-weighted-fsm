@@ -17,7 +17,7 @@ subgraph-mining algorithms on a single large graph:
 |---|---|---|---|
 | **GraMi** | frequent subgraphs, no weights | unweighted reference | *adapted* from the open-source code of Elseidy & Abdelhamid (PVLDB 2014) |
 | **EdgeTypeBound** | the same problem as WeLT (edge-bottleneck weight) | **direct baseline**: identical result set | per-edge-type weight bound + weight-gated extension, no lookup table |
-| **EdgeTypeBound-ungated** | same as above | the baseline of the first submission (then called "WEGM") | as above, but every frequent pattern is extended |
+| **EdgeTypeBound-ungated** | same as above | variant: no weight-gated extension | as above, but every frequent pattern is extended |
 | **WEGM** | edge weights are pattern labels (Max method) | published edge-weight method; **different result set** | *reimplementation* of Nguyen et al., J. Inf. Telecommun. 9(4):543-558, 2025 |
 | **OWGraMi** | vertex-bottleneck weight | vertex-weight method; **different result set** | *reimplementation* from the paper |
 | **WeLT** | edge-bottleneck weight | **proposed** — lookup-table filters P1+P2, voting, bnb | new |
@@ -139,8 +139,7 @@ the search budget are all toggleable for ablation studies.
 **Exact mode is the default.** The `budget` argument is 0 everywhere in the scripts: every MNI
 embedding search runs to completion. A non-zero budget switches to approximate mode (MNI
 becomes a lower bound), is recorded as `mode=approx`, and never applies to weight checks. An
-exact-mode run that reports an aborted search stops with exit code 4. Results of the first
-submission were produced in approximate mode; reproduce them from commit `620017d`.
+exact-mode run that reports an aborted search stops with exit code 4. The results in `results/v1_submission/` used approximate mode (commit `620017d`).
 
 ## Data (`datasets/`)
 
@@ -182,9 +181,8 @@ results/v2_revision/<YYYYMMDD_HHMM>_<host>/
     patterns/                      result set of every completed cell (exact MNI and W)
 ```
 
-Set `RUN_DIR=<that directory>` to add scenarios to an existing campaign. The results of the
-first submission are kept unchanged in `results/v1_submission/` (see its README for what they
-do not record).
+Set `RUN_DIR=<that directory>` to add scenarios to an existing campaign. `results/v1_submission/`
+holds the results of manuscript version 1 (see its README).
 
 | Scenario | Algorithms | Datasets | Purpose |
 |---|---|---|---|
@@ -229,7 +227,7 @@ script):
 | `N` | distinct patterns generated (after canonical deduplication, before any filter); `visitedSize` equals it by construction |
 | `prunedStrategy` = `prunedP1` + `prunedP2` + `prunedEdgeType` | pruned before MNI counting: WeLT table structural (P1), WeLT table weight (P2, of which `prunedP2Single` on 1-edge patterns), per-edge-type bound of EdgeTypeBound / WEGM / OWGraMi |
 | `prunedP3` | pruned by the anti-monotone closure (some (k-1)-edge subpattern not frequent) |
-| `M`, `Mtotal` | patterns whose MNI was counted: mining phase, and mining plus lookup-table construction (`M` was `candMNI` in the first submission) |
+| `M`, `Mtotal` | patterns whose MNI was counted: mining phase, and mining plus lookup-table construction |
 | `Mprime`, `R` | patterns with MNI ≥ minSup; result patterns (`R` was `freq`) |
 | `extended`, `frontierPeak`, `frequentSize` | patterns extended, largest frontier, size of the P3 memo |
 | `mniIsoCallsMine`, `mniIsoCallsTotal`, `weightIsoCalls` | embedding searches of MNI counting (mining / total) and of weight checks |
@@ -281,7 +279,7 @@ cross-dataset comparability.
 The script `tools/make_paper_figures.py` regenerates the four data figures of the paper
 (`Fig2_efficiency_comparison.pdf`, `Fig3_memory_comparison.pdf`, `Fig4_ablation_study.pdf`,
 `Fig5_scalability_comparison.pdf`) from the values embedded at the top of the script
-(which match the first-submission files `results/v1_submission/SC1`..`SC5_*.csv`). It needs
+(which match `results/v1_submission/SC1`..`SC5_*.csv`). It needs
 Python 3 + `matplotlib` + `numpy`:
 
 ```bash

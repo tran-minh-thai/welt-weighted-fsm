@@ -40,7 +40,7 @@ public final class MniSupportCounter {
 
     /**
      * Voter for choosing the matching start vertex (the paper's pivot section). Defaults
-     * to {@link PivotVoter#DEGREE_ONLY} = highest degree (reproducing the old heuristic);
+     * to {@link PivotVoter#DEGREE_ONLY} = highest degree;
      * switch to {@link PivotVoter#WELT_DEFAULT} to enable WeLT's multi-criteria voting.
      * Affects performance ONLY, not the result set.
      */
@@ -72,7 +72,7 @@ public final class MniSupportCounter {
      * check — match edges with the LOWEST weight ceiling first (most likely to violate
      * τ_w) so the bottleneck lower bound hits the cutoff threshold SOONER (the bnb lemma).
      * Affects performance only (reduces backtrackNodes), not the result. Disabled by
-     * default to preserve the old behavior.
+     * default.
      */
     private boolean weightAwareOrdering = false;
 
@@ -253,7 +253,7 @@ public final class MniSupportCounter {
         for (int i = 0; i < n; i++) valid[i] = new HashSet<>();
 
         // ---- Variable order from MULTI-CRITERIA VOTING (REAL domain size + degree + weight
-        //      UB). The default DEGREE_ONLY roughly preserves the old behavior; DOMAIN_ONLY
+        //      UB). DEGREE_ONLY = highest degree first (default); DOMAIN_ONLY
         //      reproduces "smallest domain first". Changes performance only, not the
         //      frequency decision. ----
         double[] domSize = new double[n];
@@ -840,7 +840,7 @@ public final class MniSupportCounter {
      * Choose the start pattern vertex via MULTI-CRITERIA VOTING {@link PivotVoter}:
      * combining domain size (a label-based proxy), pattern degree, and the weight upper
      * bound around the vertex. With {@link PivotVoter#DEGREE_ONLY} (the default) it
-     * degenerates to the old "highest degree".
+     * reduces to "highest degree".
      */
     private int chooseStart(Pattern p) {
         int n = p.nodeCount();

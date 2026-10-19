@@ -61,18 +61,14 @@ class RunHarnessTest {
     }
 
     @Test
-    void sameResultSizeAsBeforeTheHarness() throws IOException {
-        // Values printed by the pre-harness BenchmarkMain at commit b9b9709 for
-        // citeseer, minSup 300, tau_w 96: #FWS GraMi 9, WEGM 5, WeLT 5; candMNI 30, 20, 19.
-        // ("WEGM" there is the strategy now named EdgeTypeBound-ungated.)
+    void resultSizesOnCiteseer300() throws IOException {
+        // citeseer, minSup 300, tau_w 96
         LabeledWeightedGraph g = citeseer();
         assertEquals(9, run(g, "GraMi").patterns.size());
         assertEquals(5, run(g, "EdgeTypeBound-ungated").patterns.size());
         RunHarness.Result w = run(g, "WeLT");
         assertEquals(5, w.patterns.size());
-        // candMNI was 19 before the k = 1 part of P2 (heaviest edge per type) was added to WeLT;
-        // with it, 9 hopeless single edges no longer reach MNI counting. The result set is unchanged.
-        assertEquals(10, w.m.candidateCount);
+        assertEquals(10, w.m.candidateCount); // 9 single edges are pruned by the k = 1 bound of P2
     }
 
     @Test

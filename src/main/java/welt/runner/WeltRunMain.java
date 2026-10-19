@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * Runs a SINGLE WeLT configuration (apriori + weight-aware enabled) and prints metrics + time.
- * Used to verify the n≤9 cap has been removed: it runs at LOW support thresholds.
+ * Meant for LOW support thresholds (large patterns).
  *
  * <p>{@code java welt.runner.WeltRunMain datasets/citeseer.lg 250 90}
  */
