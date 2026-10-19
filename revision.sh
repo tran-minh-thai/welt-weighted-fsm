@@ -81,7 +81,7 @@ META="$RUN_DIR/meta_$(date +%Y%m%d_%H%M%S)_${CMD}.json"
 java ${JAVA_OPTS:-} -cp target/classes welt.runner.RunMetaMain start "$META" \
     "command=revision.sh $*" "limitMs=$LIMIT" "warmup=$WARMUP" "measured=$MEASURED"
 echo "=== campaign directory: $RUN_DIR"
-report_status "$CMD ${2:-} start (code $(git rev-parse --short HEAD), $RUN_DIR)"
+report_status "$CMD ${2:-} start (code $(git log -1 --format=%h -- . ':(exclude)results'), $RUN_DIR)"
 
 # tau_w per dataset.
 tau_w_of() {
