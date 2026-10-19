@@ -1,39 +1,31 @@
 package welt.runner;
 
-import welt.core.GraphIndex;
 import welt.core.LabeledWeightedGraph;
 import welt.core.LgGraphReader;
-import welt.core.Metrics;
-import welt.core.MiningEngine;
-import welt.core.MniSupportCounter;
-import welt.strategy.GraMiStrategy;
-import welt.strategy.MiningStrategy;
-import welt.strategy.OWGraMiStrategy;
-import welt.strategy.WEGMStrategy;
-import welt.strategy.WeLTStrategy;
-import welt.strategy.WeightedLookupTable;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryPoolMXBean;
-import java.lang.management.MemoryType;
+import java.util.Locale;
+import java.util.function.ToDoubleFunction;
 
 /**
- * Experimentally rigorous BENCHMARK HARNESS:
+ * Benchmark harness for one {@code (dataset, minSup, minWeight)} cell:
  * <ul>
- *   <li><b>Times multiple runs</b>: {@code WARMUP} warmup runs (discarded, to let the JIT
- *       warm up) + {@code MEASURED} measured runs, reporting the MEDIAN (more stable than
- *       the mean under GC/OS noise).</li>
- *   <li><b>Counting metrics printed once</b> (candidateCount/MINEmni/freq are DETERMINISTIC).</li>
- *   <li><b>TIME LIMIT</b> per run: exceeding it ⇒ marked <b>T.O.</b> (no unbounded waiting);
- *       covers both lookup-table construction (strategy counter) and MNI counting (engine counter).</li>
+ *   <li>a probe run (also the first warmup); if it times out the cell is reported from that
+ *       single probe and not repeated;</li>
+ *   <li>{@code WARMUP - 1} further warmup runs (discarded), then {@code MEASURED} runs;
+ *       the runtime is reported as median, min, max and standard deviation of
+ *       {@code totalMs} (see {@link RunHarness} for what the clock covers);</li>
+ *   <li>counting metrics (candidates, iso-calls, #FWS) are deterministic; the CSV records
+ *       whether they were identical across the measured runs.</li>
  * </ul>
  *
  * <p>{@code java welt.runner.BenchmarkMain <ds> <minSup> <minWeight> <budget> <limitMs> [warmup] [measured]}
+ *
+ * <p>With {@code BENCH_CSV} set, the header and one row per algorithm are printed with the
+ * prefix {@code CSV,}. {@code BENCH_ALGOS} selects the algorithms (comma or space separated).
  */
 public final class BenchmarkMain {
 
@@ -43,42 +35,21 @@ public final class BenchmarkMain {
     private static int WARMUP = 1;
     private static int MEASURED = 5;
 
-    /** When the BENCH_CSV environment variable is set, also emit machine-readable CSV rows
-     *  (prefixed "CSV,") so a driver script can aggregate results across many runs. */
     private static final boolean CSV = System.getenv("BENCH_CSV") != null;
+    private static boolean headerPrinted = false;
 
     /**
      * Weight semantics of each strategy, recorded as a CSV column so result aggregation never
-     * confuses non-comparable result sets:
-     * <ul>
-     *   <li>{@code none}   — GraMi: unweighted; its #FWS is the structural superset (reference).</li>
-     *   <li>{@code edge}   — WEGM and WeLT: the SAME edge-bottleneck FWS, so their #FWS MUST be
-     *       identical (a built-in correctness cross-check); their efficiency is what differs.</li>
-     *   <li>{@code vertex} — OWGraMi: a DIFFERENT, vertex-bottleneck set; never compare its #FWS
-     *       with the others — read its performance metrics only.</li>
-     * </ul>
+     * confuses non-comparable result sets: {@code none} (GraMi, unweighted reference),
+     * {@code edge} (WEGM and WeLT, the same edge-bottleneck result set), {@code vertex}
+     * (OWGraMi, a different vertex-bottleneck result set).
      */
-    private static String weightModel(String algo) {
+    static String weightModel(String algo) {
         switch (algo) {
             case "WEGM": case "WeLT": return "edge";
             case "OWGraMi":           return "vertex";
             default:                  return "none";
         }
-    }
-
-    /** Reset the peak heap usage of every heap pool — call right before a timed run. */
-    private static void resetPeakHeap() {
-        for (MemoryPoolMXBean p : ManagementFactory.getMemoryPoolMXBeans())
-            if (p.getType() == MemoryType.HEAP) p.resetPeakUsage();
-    }
-
-    /** Peak heap used (MB) since the last reset, summed over the heap pools. */
-    private static double peakHeapMB() {
-        long peak = 0;
-        for (MemoryPoolMXBean p : ManagementFactory.getMemoryPoolMXBeans())
-            if (p.getType() == MemoryType.HEAP && p.getPeakUsage() != null)
-                peak += p.getPeakUsage().getUsed();
-        return peak / (1024.0 * 1024.0);
     }
 
     /** {@code exact} when no search budget is set (budget 0), {@code approx} otherwise. */
@@ -98,16 +69,6 @@ public final class BenchmarkMain {
         return null;
     }
 
-    private static void emitCsv(String ds, String algo, int minSup, double minWeight, long budget,
-                                long limitMs, int freq, long cand, long mineMni, long budgetExceeded,
-                                String time, String to, double peakMem) {
-        if (CSV) {
-            System.out.printf("CSV,%s,%s,%s,%d,%.1f,%s,%d,%d,%d,%d,%d,%d,%s,%s,%.1f%n",
-                    ds, algo, weightModel(algo), minSup, minWeight, mode(budget), budget, limitMs,
-                    freq, cand, mineMni, budgetExceeded, time, to, peakMem);
-        }
-    }
-
     public static void main(String[] args) throws Exception {
         Path file = Path.of(args[0]);
         int minSup = Integer.parseInt(args[1]);
@@ -119,16 +80,12 @@ public final class BenchmarkMain {
 
         LabeledWeightedGraph g = new LgGraphReader().read(file).graph;
         String ds = file.getFileName().toString();
-        System.out.printf("== Benchmark | %s | minSup=%d minWeight=%.1f budget=%s | limit=%s | warmup=%d measured=%d ==%n",
-                ds, minSup, minWeight, budget == 0 ? "∞" : ("" + budget),
-                limitMs == 0 ? "∞" : (limitMs + "ms"), WARMUP, MEASURED);
-        System.out.printf("%-9s %-7s %6s %8s %10s %12s %6s %8s%n",
-                "algo", "model", "#FWS", "candMNI", "MINEmni", "time(ms)", "T.O.", "memMB");
-        if (CSV) System.out.println("CSV,dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,freq,candMNI,mineMNI,budgetExceeded,medianMs,timedOut,peakMemMB");
+        System.out.printf(Locale.ROOT, "== Benchmark | %s | minSup=%d minWeight=%.1f mode=%s budget=%d | limit=%s | warmup=%d measured=%d ==%n",
+                ds, minSup, minWeight, mode(budget), budget,
+                limitMs == 0 ? "none" : (limitMs + "ms"), WARMUP, MEASURED);
+        System.out.printf(Locale.ROOT, "%-9s %-7s %6s %8s %10s %12s %12s %6s %8s%n",
+                "algo", "model", "#FWS", "candMNI", "MINEmni", "table(ms)", "total(ms)", "T.O.", "memMB");
 
-        // Which strategies to run: BENCH_ALGOS (comma/space separated) overrides the default,
-        // letting a scenario run just the comparable edge-weight set (GraMi,WEGM,WeLT) or only
-        // the vertex-weight generality strategy (OWGraMi).
         String algosEnv = System.getenv("BENCH_ALGOS");
         String[] algos = (algosEnv == null || algosEnv.isBlank())
                 ? new String[]{"GraMi", "WEGM", "WeLT", "OWGraMi"}
@@ -138,94 +95,135 @@ public final class BenchmarkMain {
         }
     }
 
-    private static void benchmark(String algo, LabeledWeightedGraph g, String ds,
-                                  int minSup, double minWeight, long budget, long limitMs) {
-        // Single probe run: if it times out immediately, report T.O. (avoids 6 runs × limit — saves time).
-        Run probe = runOnce(algo, g, minSup, minWeight, budget, limitMs);
-        String probeViolation = exactModeViolation(budget, probe.m.budgetExceeded);
-        if (probeViolation != null) {
-            System.err.println("ERROR: " + algo + " " + ds + " minSup=" + minSup + ": " + probeViolation);
+    private static RunHarness.Result run(String algo, LabeledWeightedGraph g, String ds,
+                                         int minSup, double minWeight, long budget, long limitMs) {
+        RunHarness.Config cfg = new RunHarness.Config(algo, minSup, minWeight);
+        cfg.budget = budget;
+        cfg.limitMs = limitMs;
+        RunHarness.Result r = RunHarness.runOnce(g, cfg);
+        String violation = exactModeViolation(budget, r.m.budgetExceeded);
+        if (violation != null) {
+            System.err.println("ERROR: " + algo + " " + ds + " minSup=" + minSup + ": " + violation);
             System.exit(EXIT_EXACT_VIOLATION);
         }
-        if (probe.timedOut) {
-            long pmni = probe.m.mniIsoCalls - probe.m.tableBuildMniIsoCalls;
-            System.out.printf("%-9s %-7s %6d %8d %10d %12s %6s %8.1f%n",
-                    algo, weightModel(algo), probe.fps, probe.m.candidateCount, pmni, "T.O.(>" + limitMs + ")", "1/1", probe.peakMB);
-            emitCsv(ds, algo, minSup, minWeight, budget, limitMs, probe.fps, probe.m.candidateCount, pmni,
-                    probe.m.budgetExceeded, "TO", "1/1", probe.peakMB);
-            return;
-        }
-        for (int i = 1; i < WARMUP; i++) runOnce(algo, g, minSup, minWeight, budget, limitMs);
+        return r;
+    }
 
-        List<Long> times = new ArrayList<>();
+    private static void benchmark(String algo, LabeledWeightedGraph g, String ds,
+                                  int minSup, double minWeight, long budget, long limitMs) {
+        RunHarness.Result probe = run(algo, g, ds, minSup, minWeight, budget, limitMs);
+        List<RunHarness.Result> measured = new ArrayList<>();
         int toCount = 0;
-        Run last = probe;
-        for (int i = 0; i < MEASURED; i++) {
-            Run r = runOnce(algo, g, minSup, minWeight, budget, limitMs);
-            String violation = exactModeViolation(budget, r.m.budgetExceeded);
-            if (violation != null) {
-                System.err.println("ERROR: " + algo + " " + ds + " minSup=" + minSup + ": " + violation);
-                System.exit(EXIT_EXACT_VIOLATION);
-            }
-            last = r;
-            if (r.timedOut) toCount++;
-            else times.add(r.timeMs);
-        }
-        long mineMni = last == null ? 0 : last.m.mniIsoCalls - last.m.tableBuildMniIsoCalls;
-        String timeStr;
-        if (times.isEmpty()) {
-            timeStr = "T.O.(>" + limitMs + ")";
+        if (probe.timedOut) {
+            measured.add(probe); // a timed-out cell is a single probe run
+            toCount = 1;
         } else {
-            Collections.sort(times);
-            timeStr = String.valueOf(times.get(times.size() / 2)); // median
-        }
-        String toStr = toCount > 0 ? (toCount + "/" + MEASURED) : "-";
-        System.out.printf("%-9s %-7s %6d %8d %10d %12s %6s %8.1f%n",
-                algo, weightModel(algo), last.fps, last.m.candidateCount, mineMni, timeStr, toStr, last.peakMB);
-        emitCsv(ds, algo, minSup, minWeight, budget, limitMs, last.fps, last.m.candidateCount, mineMni,
-                last.m.budgetExceeded, timeStr, toStr, last.peakMB);
-    }
-
-    private static final class Run {
-        final Metrics m;
-        final long timeMs;
-        final boolean timedOut;
-        final int fps;
-        final double peakMB;
-        Run(Metrics m, long timeMs, boolean timedOut, int fps, double peakMB) {
-            this.m = m; this.timeMs = timeMs; this.timedOut = timedOut; this.fps = fps; this.peakMB = peakMB;
-        }
-    }
-
-    private static Run runOnce(String algo, LabeledWeightedGraph g,
-                               int minSup, double minWeight, long budget, long limitMs) {
-        Metrics m = new Metrics();
-        long deadline = limitMs > 0 ? System.nanoTime() + limitMs * 1_000_000L : Long.MAX_VALUE;
-        GraphIndex index = new GraphIndex(g, minSup);
-        MniSupportCounter counter = new MniSupportCounter(g, m); // strategy counter (table/weights)
-        counter.setSearchBudget(budget);
-        counter.setDeadline(deadline);
-        MiningStrategy strategy;
-        switch (algo) {
-            case "GraMi": strategy = new GraMiStrategy(); break;
-            case "WEGM": strategy = new WEGMStrategy(g, minWeight, counter, m); break;
-            case "OWGraMi": strategy = new OWGraMiStrategy(g, minWeight, counter, m); break;
-            case "WeLT": {
-                WeightedLookupTable table = WeightedLookupTable.build(g, index, minSup, counter, m);
-                strategy = new WeLTStrategy(g, minWeight, counter, table, m);
-                break;
+            for (int i = 1; i < WARMUP; i++) run(algo, g, ds, minSup, minWeight, budget, limitMs);
+            for (int i = 0; i < MEASURED; i++) {
+                RunHarness.Result r = run(algo, g, ds, minSup, minWeight, budget, limitMs);
+                if (r.timedOut) toCount++;
+                measured.add(r);
             }
-            default: throw new IllegalArgumentException(algo);
         }
-        MiningEngine engine = new MiningEngine(g, m);
-        engine.setSearchBudget(budget);
-        engine.setDeadline(deadline);
-        resetPeakHeap();
-        long t0 = System.nanoTime();
-        List<MiningEngine.FrequentPattern> fps = engine.mine(minSup, strategy);
-        long ms = (System.nanoTime() - t0) / 1_000_000;
-        double peakMB = peakHeapMB();
-        boolean to = engine.isTimedOut() || counter.isTimedOut() || (limitMs > 0 && ms > limitMs);
-        return new Run(m, ms, to, fps.size(), peakMB);
+        report(algo, ds, minSup, minWeight, budget, limitMs, probe.timedOut, measured, toCount);
+    }
+
+    private static void report(String algo, String ds, int minSup, double minWeight, long budget, long limitMs,
+                               boolean probeTimedOut, List<RunHarness.Result> runs, int toCount) {
+        RunHarness.Result last = runs.get(runs.size() - 1);
+        boolean deterministic = true;
+        for (RunHarness.Result r : runs) {
+            if (r.patterns.size() != last.patterns.size() || r.m.candidateCount != last.m.candidateCount
+                    || r.m.mniIsoCalls != last.m.mniIsoCalls) {
+                deterministic = false;
+            }
+        }
+        if (!deterministic) {
+            System.err.println("WARNING: " + algo + " " + ds + " minSup=" + minSup
+                    + ": counting metrics differ across measured runs");
+        }
+        String toStr = probeTimedOut ? "1/1" : (toCount > 0 ? toCount + "/" + runs.size() : "-");
+
+        System.out.printf(Locale.ROOT, "%-9s %-7s %6d %8d %10d %12.1f %12s %6s %8.1f%n",
+                algo, weightModel(algo), last.patterns.size(), last.m.candidateCount, last.mniIsoCallsMine(),
+                median(runs, r -> r.tableBuildMs),
+                probeTimedOut ? "T.O.(>" + limitMs + ")" : String.format(Locale.ROOT, "%.1f", median(runs, r -> r.totalMs)),
+                toStr, median(runs, r -> r.peakMB));
+
+        if (!CSV) return;
+        RunHarness.Row row = new RunHarness.Row()
+                .put("dataset", ds)
+                .put("algorithm", algo)
+                .put("weightModel", weightModel(algo))
+                .put("minSup", minSup)
+                .put("minWeight", minWeight)
+                .put("mode", mode(budget))
+                .put("budget", budget)
+                .put("limitMs", limitMs)
+                .put("warmup", WARMUP)
+                .put("runs", runs.size())
+                .put("freq", last.patterns.size())
+                .put("candMNI", last.m.candidateCount)
+                .put("candMNITotal", last.candidatesTotal())
+                .put("mniIsoCallsMine", last.mniIsoCallsMine())
+                .put("mniIsoCallsTotal", last.m.mniIsoCalls)
+                .put("weightIsoCalls", last.m.weightIsoCalls)
+                .put("tableSize", last.tableSize)
+                .put("tableBuildCandidates", last.m.tableBuildCandidates)
+                .put("tableBuildMniIsoCalls", last.m.tableBuildMniIsoCalls)
+                .put("tableBuildWeightIsoCalls", last.m.tableBuildWeightIsoCalls)
+                .put("budgetExceeded", last.m.budgetExceeded)
+                .put("deterministic", deterministic ? 1 : 0)
+                .put("indexMs", median(runs, r -> r.indexMs))
+                .put("prepMs", median(runs, r -> r.prepMs))
+                .put("tableBuildMs", median(runs, r -> r.tableBuildMs))
+                .put("mineMs", median(runs, r -> r.mineMs))
+                .put("totalMs", median(runs, r -> r.totalMs))
+                .put("totalMinMs", min(runs, r -> r.totalMs))
+                .put("totalMaxMs", max(runs, r -> r.totalMs))
+                .put("totalSdMs", sd(runs, r -> r.totalMs))
+                .put("timedOut", toStr)
+                .put("peakMemMB", median(runs, r -> r.peakMB))
+                .put("peakMemMaxMB", max(runs, r -> r.peakMB));
+        if (!headerPrinted) {
+            System.out.println("CSV," + row.header());
+            headerPrinted = true;
+        }
+        System.out.println("CSV," + row.values());
+    }
+
+    static double median(List<RunHarness.Result> runs, ToDoubleFunction<RunHarness.Result> f) {
+        List<Double> v = new ArrayList<>();
+        for (RunHarness.Result r : runs) v.add(f.applyAsDouble(r));
+        Collections.sort(v);
+        int n = v.size();
+        return n % 2 == 1 ? v.get(n / 2) : (v.get(n / 2 - 1) + v.get(n / 2)) / 2.0;
+    }
+
+    static double min(List<RunHarness.Result> runs, ToDoubleFunction<RunHarness.Result> f) {
+        double m = Double.POSITIVE_INFINITY;
+        for (RunHarness.Result r : runs) m = Math.min(m, f.applyAsDouble(r));
+        return m;
+    }
+
+    static double max(List<RunHarness.Result> runs, ToDoubleFunction<RunHarness.Result> f) {
+        double m = Double.NEGATIVE_INFINITY;
+        for (RunHarness.Result r : runs) m = Math.max(m, f.applyAsDouble(r));
+        return m;
+    }
+
+    /** Sample standard deviation (n-1); 0 for a single run. */
+    static double sd(List<RunHarness.Result> runs, ToDoubleFunction<RunHarness.Result> f) {
+        int n = runs.size();
+        if (n < 2) return 0.0;
+        double mean = 0;
+        for (RunHarness.Result r : runs) mean += f.applyAsDouble(r);
+        mean /= n;
+        double ss = 0;
+        for (RunHarness.Result r : runs) {
+            double d = f.applyAsDouble(r) - mean;
+            ss += d * d;
+        }
+        return Math.sqrt(ss / (n - 1));
     }
 }

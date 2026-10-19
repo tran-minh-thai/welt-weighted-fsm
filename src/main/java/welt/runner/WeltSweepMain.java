@@ -50,12 +50,12 @@ public final class WeltSweepMain {
             Metrics m = new Metrics();
             MniSupportCounter cw = new MniSupportCounter(g, m);
             cw.setSearchBudget(budget);
-            WeightedLookupTable table = WeightedLookupTable.build(g, index, minSup, cw, m);
-            WeLTStrategy strat = new WeLTStrategy(g, tw, cw, table, m);
             MiningEngine ew = new MiningEngine(g, m);
             ew.setSearchBudget(budget);
-            long t0 = System.nanoTime();
-            List<MiningEngine.FrequentPattern> fw = ew.mine(minSup, strat);
+            long t0 = System.nanoTime(); // the clock covers the lookup table and mining
+            WeightedLookupTable table = WeightedLookupTable.build(g, index, minSup, cw, m);
+            WeLTStrategy strat = new WeLTStrategy(g, tw, cw, table, m);
+            List<MiningEngine.FrequentPattern> fw = ew.mine(minSup, strat, index);
             long ms = (System.nanoTime() - t0) / 1_000_000;
             long mine = m.mniIsoCalls - m.tableBuildMniIsoCalls;
             System.out.printf("%-10.1f %6d %6d %6d %6d %10d %9d  %s%n",

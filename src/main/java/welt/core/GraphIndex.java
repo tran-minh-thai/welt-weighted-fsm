@@ -13,6 +13,7 @@ import java.util.TreeSet;
  */
 public final class GraphIndex {
 
+    public final int minSup;                       // support threshold this index was built for
     public final int[] labelCount;                 // labelCount[label]
     public final TreeSet<Integer> frequentLabels;  // labels with count >= minSup
     public final Set<Long> presentTriples;         // edge triples actually present
@@ -20,6 +21,7 @@ public final class GraphIndex {
     public final double[] sortedDistinctWeightsDesc; // distinct weights, DESCENDING
 
     public GraphIndex(LabeledWeightedGraph g, int minSup) {
+        this.minSup = minSup;
         int maxLabel = 0;
         for (int v = 0; v < g.numVertices(); v++) maxLabel = Math.max(maxLabel, g.vertexLabel(v));
         labelCount = new int[maxLabel + 1];

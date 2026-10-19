@@ -127,7 +127,19 @@ public final class MiningEngine {
     private long mineStart;
 
     public List<FrequentPattern> mine(int minSup, MiningStrategy strategy) {
-        this.index = new GraphIndex(g, minSup);
+        return mine(minSup, strategy, null);
+    }
+
+    /**
+     * Mine with a prebuilt {@link GraphIndex} (built once per run and shared with the
+     * lookup-table construction, so a timed run builds it exactly once). {@code null}
+     * builds a fresh index.
+     */
+    public List<FrequentPattern> mine(int minSup, MiningStrategy strategy, GraphIndex prebuilt) {
+        if (prebuilt != null && prebuilt.minSup != minSup) {
+            throw new IllegalArgumentException("index built for minSup=" + prebuilt.minSup + ", mining at " + minSup);
+        }
+        this.index = prebuilt != null ? prebuilt : new GraphIndex(g, minSup);
         frequentCodes.clear();
         mineStart = System.nanoTime();
         timedOut = false;

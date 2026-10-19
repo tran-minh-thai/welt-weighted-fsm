@@ -37,6 +37,7 @@
 #   JAVA_OPTS      extra JVM flags, e.g. JAVA_OPTS="-Xmx8g" for large graphs / low-RAM machines
 set -euo pipefail
 cd "$(dirname "$0")"
+. tools/common.sh
 
 LIMIT="${TIME_LIMIT_MS:-3600000}"
 WARMUP="${WARMUP:-1}"
@@ -116,7 +117,6 @@ run_scenario() {
     stamp=$(date +%Y%m%d_%H%M%S)
     out="results/SC${SC_NUM}_${stamp}_${SC_NAME}.csv"
     mkdir -p results
-    echo "dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,freq,candMNI,mineMNI,budgetExceeded,medianMs,timedOut,peakMemMB" > "$out"
     echo "=== Scenario SC${SC_NUM} (${SC_NAME}) | algos=${SC_ALGOS} | limit=${LIMIT}ms ==="
     echo "    -> $out"
     for cfg in "${SC_CONFIGS[@]}"; do
@@ -128,7 +128,7 @@ run_scenario() {
             BENCH_CSV=1 BENCH_ALGOS="$SC_ALGOS" java ${JAVA_OPTS:-} -cp target/classes \
                 welt.runner.BenchmarkMain "$ds" "$s" "$tw" "$budget" "$LIMIT" "$WARMUP" "$MEASURED" > "$tmp" 2>&1 || true
             cat "$tmp"
-            grep '^CSV,' "$tmp" | grep -v 'CSV,dataset' | sed 's/^CSV,//' >> "$out" || true
+            append_csv "$tmp" "$out"
             rm -f "$tmp"
         done
     done
@@ -143,7 +143,6 @@ run_ablation() {
     local stamp out; stamp=$(date +%Y%m%d_%H%M%S)
     out="results/SC4_${stamp}_ablation.csv"
     mkdir -p results
-    echo "dataset,variant,minSup,minWeight,freq,candMNI,mineMNI,backtrack,timeMs,peakMemMB,timedOut" > "$out"
     echo "=== Ablation (RQ4) | limit=${LIMIT}ms ==="
     echo "    -> $out"
     # <dataset> <minWeight tau_w> <minSup>
@@ -159,7 +158,7 @@ run_ablation() {
         ABLATION_CSV=1 java ${JAVA_OPTS:-} -cp target/classes welt.runner.AblationMain \
             "$ds" "$s" "$tw" "$LIMIT" > "$tmp" 2>&1 || true
         cat "$tmp"
-        grep '^CSV,' "$tmp" | grep -v 'CSV,dataset' | sed 's/^CSV,//' >> "$out" || true
+        append_csv "$tmp" "$out"
         rm -f "$tmp"
     done
     echo "--- ablation done -> $out ---"
@@ -171,7 +170,6 @@ run_memory() {
     local stamp out; stamp=$(date +%Y%m%d_%H%M%S)
     out="results/SC5_${stamp}_memory.csv"
     mkdir -p results
-    echo "dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,freq,candMNI,mineMNI,budgetExceeded,medianMs,timedOut,peakMemMB" > "$out"
     echo "=== Memory (RQ3) | limit=${LIMIT}ms ==="
     echo "    -> $out"
     local CFG=(
@@ -186,7 +184,7 @@ run_memory() {
             BENCH_CSV=1 BENCH_ALGOS="GraMi,WEGM,WeLT" java ${JAVA_OPTS:-} -cp target/classes \
                 welt.runner.BenchmarkMain "$ds" "$s" "$tw" "$budget" "$LIMIT" 0 1 > "$tmp" 2>&1 || true
             cat "$tmp"
-            grep '^CSV,' "$tmp" | grep -v 'CSV,dataset' | sed 's/^CSV,//' >> "$out" || true
+            append_csv "$tmp" "$out"
             rm -f "$tmp"
         done
     done

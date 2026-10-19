@@ -72,7 +72,10 @@ public final class AblationMain {
         long refFws = -1;
         for (String variant : VARIANTS) {
             Metrics m = new Metrics();
-            long deadline = limitMs > 0 ? System.nanoTime() + limitMs * 1_000_000L : Long.MAX_VALUE;
+            System.gc();
+            resetPeakHeap();
+            long t0 = System.nanoTime(); // the clock covers the index, the lookup table and mining
+            long deadline = limitMs > 0 ? t0 + limitMs * 1_000_000L : Long.MAX_VALUE;
             GraphIndex index = new GraphIndex(g, minSup);
 
             // Full configuration; each variant disables exactly one component.
@@ -90,9 +93,7 @@ public final class AblationMain {
             engine.setVoter(voter);
             engine.setDeadline(deadline);
 
-            resetPeakHeap();
-            long t0 = System.nanoTime();
-            List<MiningEngine.FrequentPattern> fps = engine.mine(minSup, strat);
+            List<MiningEngine.FrequentPattern> fps = engine.mine(minSup, strat, index);
             long ms = (System.nanoTime() - t0) / 1_000_000;
             double peak = peakHeapMB();
             boolean to = engine.isTimedOut() || counter.isTimedOut();

@@ -17,6 +17,7 @@
 # Re-runs are always in EXACT mode (search budget 0), whatever budget the source row used.
 set -euo pipefail
 cd "$(dirname "$0")"
+. tools/common.sh
 [ -d target/classes ] || ./build.sh
 LIMIT="${RERUN_LIMIT_MS:-3600000}"
 FILTER="${1:-}"
@@ -33,7 +34,6 @@ if [ ${#SRC[@]} -eq 0 ]; then echo "No SC1/SC2 result CSV found in results/." >&
 
 stamp=$(date +%Y%m%d_%H%M%S)
 out="results/RERUN_${stamp}_to.csv"
-echo "dataset,algorithm,weightModel,minSup,minWeight,mode,budget,limitMs,freq,candMNI,mineMNI,budgetExceeded,medianMs,timedOut,peakMemMB" > "$out"
 
 # Build a list of (dataset|minSup|minWeight) -> comma-list of TIMED-OUT algorithms.
 # Columns are located by HEADER NAME in each file (the column order changed between versions);
@@ -67,7 +67,7 @@ while read -r cfg algos; do
     BENCH_CSV=1 BENCH_ALGOS="$runalgos" java ${JAVA_OPTS:-} -cp target/classes \
         welt.runner.BenchmarkMain "datasets/$ds" "$minSup" "$minWeight" 0 "$LIMIT" 0 1 > "$tmp" 2>&1 || true
     cat "$tmp"
-    grep '^CSV,' "$tmp" | grep -v 'CSV,dataset' | sed 's/^CSV,//' >> "$out" || true
+    append_csv "$tmp" "$out"
     rm -f "$tmp"
 done < "$cfgfile"
 rm -f "$cfgfile"

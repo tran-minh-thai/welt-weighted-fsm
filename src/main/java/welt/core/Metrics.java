@@ -24,6 +24,8 @@ public final class Metrics {
     public long prunedByApriori = 0;  // pruned by the full anti-monotone closure (infrequent (k-1)-edge subpattern)
     public long tableBuildIsoCalls = 0;    // total iso-calls while building the lookup table (MNI + weight)
     public long tableBuildMniIsoCalls = 0; // just the MNI iso-calls while building the table (to separate the mining part)
+    public long tableBuildWeightIsoCalls = 0; // weight iso-calls while building the table (MaxW binary searches)
+    public long tableBuildCandidates = 0;  // 1- and 2-edge patterns whose MNI was evaluated while building the table
     public long timeMs = 0;
     public double peakMemMB = 0;
 

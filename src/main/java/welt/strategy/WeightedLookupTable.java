@@ -65,6 +65,8 @@ public final class WeightedLookupTable {
         WeightedLookupTable t = new WeightedLookupTable(DEFAULT_K);
         long isoBefore = metrics.isoCallCount;
         long mniBefore = metrics.mniIsoCalls;
+        long weightBefore = metrics.weightIsoCalls;
+        long evaluated = 0;
 
         // frequent single-edge patterns
         List<Pattern> freqEdges = new ArrayList<>();
@@ -76,6 +78,7 @@ public final class WeightedLookupTable {
             if (!index.frequentLabels.contains(lo) || !index.frequentLabels.contains(hi)) continue;
             Pattern p = Pattern.singleEdge(lo, hi, el);
             if (!seen1.add(WeightedCanonicalCode.of(p))) continue;
+            evaluated++;
             if (counter.support(p, minSup) != MniSupportCounter.INFREQUENT) freqEdges.add(p);
         }
 
@@ -85,6 +88,7 @@ public final class WeightedLookupTable {
             for (Pattern child : extendByLeaf(e, index)) {
                 String code = WeightedCanonicalCode.of(child);
                 if (!seen2.add(code)) continue;
+                evaluated++;
                 if (counter.support(child, minSup) == MniSupportCounter.INFREQUENT) continue;
                 double w = counter.maxBottleneckWeight(child, index.sortedDistinctWeightsDesc);
                 t.maxW.put(code, w);
@@ -93,6 +97,8 @@ public final class WeightedLookupTable {
 
         metrics.tableBuildIsoCalls += (metrics.isoCallCount - isoBefore);
         metrics.tableBuildMniIsoCalls += (metrics.mniIsoCalls - mniBefore);
+        metrics.tableBuildWeightIsoCalls += (metrics.weightIsoCalls - weightBefore);
+        metrics.tableBuildCandidates += evaluated;
         return t;
     }
 
