@@ -1,0 +1,3 @@
+dataset=bitcoin_otc.lg tau_w=12 (median edge weight, topology.csv)
+rule: scan minSup 1150 1100 1050 1000 950 900 850 800 750 700; keep values where WeLT (voter 0,1,0) completes in [1000 ms, 600000 ms]; stop at two or at the first run that does not complete
+chosen minSup: 
