@@ -15,21 +15,28 @@ subgraph-mining algorithms on a single large graph:
 
 | Algorithm | Problem solved | Role | Code provenance |
 |---|---|---|---|
-| **GraMi** | frequent subgraphs, no weights | unweighted reference | *adapted* from the open-source code of Elseidy & Abdelhamid (PVLDB 2014) |
-| **EdgeTypeBound** | the same problem as WeLT (edge-bottleneck weight) | **direct baseline**: identical result set | per-edge-type weight bound + weight-gated extension, no lookup table |
-| **EdgeTypeBound-ungated** | same as above | variant: no weight-gated extension | as above, but every frequent pattern is extended |
+| **GraMi** | frequent subgraphs, no weights | unweighted reference (the τ_w → 0 limit) | *adapted* from the open-source code of Elseidy & Abdelhamid (PVLDB 2014); reproduces the pattern sets of the original GraMi (`GraMiOracleTest`) |
+| **GraMiFilter** | the same problem as WeLT (edge-bottleneck weight) | **baseline**: identical result set | GraMi's search, then an exact weight check of every frequent pattern (the two-step design of ReSuM) |
+| **ReSuM-ALL** | MNI over the appearances whose edges all weigh more than α | closest published model; result set contained in WeLT's when α is just below τ_w | original code of Preti et al. (GPL-3.0), fetched and compiled by `tools/build_resum.py`, not part of this repository |
 | **WEGM** | edge weights are pattern labels (Max method) | published edge-weight method; **different result set** | *reimplementation* of Nguyen et al., J. Inf. Telecommun. 9(4):543-558, 2025 |
 | **OWGraMi** | vertex-bottleneck weight | vertex-weight method; **different result set** | *reimplementation* from the paper |
 | **WeLT** | edge-bottleneck weight | **proposed** — lookup-table filters P1+P2, voting, bnb | new |
+| **EdgeTypeBound**, **EdgeTypeBound-ungated** | the same problem as WeLT | **ablation variants of WeLT**: no lookup table, no voting, no weight-aware order | the per-edge-type bound (the 1-edge part of P2) and the exact weight check; with and without weight-gated extension |
 
-> **WEGM versus EdgeTypeBound.** In WEGM an edge weight is part of the pattern: an isomorphism
-> must map edges to edges of equal weight (Definition 3(b) of the WEGM article), so support
-> counts only equal-weight occurrences, and the weight of a pattern is computed from its own
-> edges. `WEGMStrategy` mines the graph whose edge labels are the integer edge weights (the
-> article's Citeseer rule) and prunes every edge below w (Max method). Its result set therefore
-> differs from WeLT's by definition: compare its efficiency only. EdgeTypeBound solves WeLT's
-> problem with the simple per-edge-type bound and is the baseline whose result set must equal
-> WeLT's. The Javadoc of `WEGMStrategy` lists how three inconsistencies of the article are read.
+> **WEGM.** In WEGM an edge weight is part of the pattern: an isomorphism must map edges to
+> edges of equal weight (Definition 3(b) of the WEGM article), so support counts only
+> equal-weight occurrences, and the weight of a pattern is computed from its own edges.
+> `WEGMStrategy` mines the graph whose edge labels are the integer edge weights (the article's
+> Citeseer rule) and prunes every edge below w (Max method). Its result set differs from WeLT's
+> by definition: compare its efficiency only. The Javadoc of `WEGMStrategy` lists how three
+> inconsistencies of the article are read.
+>
+> **ReSuM.** The ALL score of Preti et al. (EDBT 2018) is the MNI support over the appearances
+> whose edges all weigh more than α. With α the largest double below τ_w, ALL keeps a pattern
+> when minSup images exist inside G restricted to edges of weight ≥ τ_w, while WeLT needs MNI ≥
+> minSup in G and one appearance inside that subgraph; so every ALL pattern is a WeLT pattern.
+> `ExportResumMain` writes a dataset in ReSuM's input format, `ResumMain` imports its pattern
+> files and computes the ALL result set from that definition.
 
 > Every algorithm shares ONE engine (`core/`) and a single MNI counter, so any
 > difference in candidate count / runtime reflects the algorithm itself, not an
@@ -178,7 +185,7 @@ results/v2_revision/<YYYYMMDD_HHMM>_<host>/
     SC<n>_<scenario>.csv           one row per (dataset, minSup, algorithm) cell
     meta_<datetime>_<command>.json machine, OS, CPU, RAM, JVM and its arguments, commit, clean tree, start/end
     topology.csv                   size, density, degree and weight statistics of every dataset
-    patterns/                      result set of every completed cell (exact MNI and W)
+    patterns/                      result set of every completed cell (canonical code, size, W)
 ```
 
 Set `RUN_DIR=<that directory>` to add scenarios to an existing campaign. `results/v1_submission/`
@@ -244,20 +251,21 @@ use the degree-only pivot without weight-aware order.
 
 **Ablation.** `AblationMain` measures, one JVM per variant (`ABLATION_VARIANT`), the variants
 `full`, `noP1`, `noP2`, `noP2single`, `noP3`, `p3R` (P3 checks the result set instead of the
-MNI-frequent set), `noWext`, `voteDeg`, `noWorder`, and the combination `noTable` (P1 and P2
-off). Each differs from `full` in exactly one factor except `noTable`. Every completed variant
+MNI-frequent set), `noWext`, `voteDeg`, `noWorder`, `noBnb` (the weight check without its
+branch-and-bound: the bottleneck is tested on complete embeddings only), and the combination
+`noTable` (P1 and P2 off). Each differs from `full` in exactly one factor except `noTable`. Every completed variant
 must return the result set of `full`, compared by canonical code (`invariant=OK`; exit code 5
 otherwise). Phase timers (`canonMs`, `filterMs`, `mniMs`, `weightMs`) are recorded here only.
 
 **Result sets.** With `DUMP_PATTERNS=<dir>` (on by default in `experiments.sh`) each completed
-cell writes `<dataset>_<algorithm>_<minSup>_<minWeight>.tsv`: canonical code, vertices, edges,
-exact MNI and exact W, computed after the timed runs. `tools/compare_patterns.py <dir> <out.csv>
+cell writes `<dataset>_<algorithm>_<minSup>_<minWeight>.tsv`: canonical code, vertices, edges
+and exact W, computed after the timed runs. `tools/compare_patterns.py <dir> <out.csv>
 [A] [B]` compares two algorithms cell by cell (exit 1 on a difference, 2 if nothing could be
 compared).
 
-**Reading the `weightModel` column:** `none` (GraMi), `edge` (EdgeTypeBound, WeLT: identical
-result sets, the speed-up claim is WeLT versus EdgeTypeBound), `edge-label` (WEGM) and
-`vertex` (OWGraMi): read only the performance metrics of the last two.
+**Reading the `weightModel` column:** `none` (GraMi), `edge` (GraMiFilter, EdgeTypeBound, WeLT:
+identical result sets), `edge-label` (WEGM) and `vertex` (OWGraMi): read only the performance
+metrics of the last two.
 
 > **Measurement machine (Windows).** The scripts run under Git Bash. They keep Windows awake
 > with `tools/keep_awake.ps1` (SetThreadExecutionState, Windows PowerShell 5.1) and print a
@@ -274,12 +282,14 @@ result sets, the speed-up claim is WeLT versus EdgeTypeBound), `edge-label` (WEG
 `prepare` (campaign directory, JDK and `JAVA_OPTS` lock, dataset check, self-tests), `voting`
 (WeLT voting weights fixed in advance at (1,1,1) with the weight-aware order), `b2grid` (voting
 sensitivity over the 21-point simplex grid and (1,1,1)),
-`b4` (ablation), `b1` per dataset (efficiency), `b2hard` and `b4hard` (the same two analyses at
+`b4` (ablation), `b1` per dataset (efficiency) followed by `resum` for the same dataset
+(ReSuM's ALL score on the b1 cells, through `tools/run_resum.py`), `b2hard` and `b4hard` (the same two analyses at
 the smallest B1 support where WeLT completes within 60 s), `b5` per dataset (τ_w sweep at the smallest
 support where GraMi completes, a shared-table WeLT sweep, and a WeLT-only sweep at the smallest
-support where WeLT completes) and `b7` (EdgeTypeBound = WeLT on every completed cell). Running
+support where WeLT completes) and `b7` (on every completed cell: GraMiFilter = WeLT,
+EdgeTypeBound = WeLT, ReSuM-ALL = the ALL set by definition, ReSuM-ALL contained in WeLT). Running
 it again continues: finished steps and cells are skipped. With `CHECKPOINT=1` every cell is
-committed, pushed to the branch `campaign-revision-r1` and reported to a status repository.
+committed, pushed to the branch `campaign-revision-r1b` and reported to a status repository.
 `./revision.sh list` describes each step. The git tree of `src/` is locked at the first step of a
 campaign; a later step on a different measurement code is refused.
 

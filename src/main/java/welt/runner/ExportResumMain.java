@@ -19,6 +19,7 @@ import java.util.Locale;
  *
  * <p>Usage: {@code ExportResumMain <dataset.lg> <outDir>} writes {@code <outDir>/<name>.lg} and
  * {@code <outDir>/<name>.w}, and prints the vertex and edge counts.
+ * {@code ExportResumMain relevance <minWeight>} prints {@link #relevanceFor(double)}.
  *
  * <p>ReSuM's ALL score keeps the appearances whose edges all weigh strictly more than the
  * relevance threshold. {@link #relevanceFor(double)} gives the threshold for which "strictly
@@ -58,8 +59,12 @@ public final class ExportResumMain {
     }
 
     public static void main(String[] args) throws IOException {
+        if (args.length == 2 && args[0].equals("relevance")) {
+            System.out.println(Double.toString(relevanceFor(Double.parseDouble(args[1]))));
+            return;
+        }
         if (args.length != 2) {
-            System.err.println("usage: ExportResumMain <dataset.lg> <outDir>");
+            System.err.println("usage: ExportResumMain <dataset.lg> <outDir> | ExportResumMain relevance <minWeight>");
             System.exit(2);
         }
         Path in = Path.of(args[0]);

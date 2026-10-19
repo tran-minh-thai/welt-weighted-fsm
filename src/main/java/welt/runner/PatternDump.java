@@ -21,13 +21,12 @@ import java.util.TreeMap;
  * Writes the result set of a completed cell to {@code <dir>/<dataset>_<algorithm>_<minSup>_<minWeight>.tsv},
  * one pattern per line, sorted by canonical code:
  * <pre>
- *   code   vertices   edges   mni   weight
+ *   code   vertices   edges   weight
  * </pre>
- * {@code mni} is the EXACT MNI ({@link MniSupportCounter#exactMni}); the value carried by a
- * mining result can be capped at minSup by early stopping. {@code weight} is the exact edge
- * bottleneck W (max over occurrences of the minimum edge weight), or for WEGM (weight-labeled
- * graph) the Max-method weight of the pattern's own edges. Both are computed here, after
- * the timed runs, on a fresh counter: they do not enter any timing or counter of the benchmark.
+ * {@code weight} is the exact edge bottleneck W (max over occurrences of the minimum edge weight),
+ * or for WEGM (weight-labeled graph) the Max-method weight of the pattern's own edges. It is
+ * computed here, after the timed runs, on a fresh counter: it does not enter any timing or counter
+ * of the benchmark. Result sets are compared by canonical code.
  */
 final class PatternDump {
 
@@ -60,11 +59,11 @@ final class PatternDump {
         }
         Path file = dir.resolve(fileName(dataset, algo, minSup, minWeight));
         try (Writer w = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
-            w.write("code\tvertices\tedges\tmni\tweight\n");
+            w.write("code\tvertices\tedges\tweight\n");
             for (Map.Entry<String, Pattern> e : byCode.entrySet()) {
                 Pattern p = e.getValue();
-                w.write(String.format(Locale.ROOT, "%s\t%d\t%d\t%d\t%s\n", e.getKey(), p.nodeCount(), p.edgeCount(),
-                        exact.exactMni(p), weightLabels ? welt.strategy.WEGMStrategy.weightMax(p, minWeight)
+                w.write(String.format(Locale.ROOT, "%s\t%d\t%d\t%s\n", e.getKey(), p.nodeCount(), p.edgeCount(),
+                        weightLabels ? welt.strategy.WEGMStrategy.weightMax(p, minWeight)
                                 : exact.maxBottleneckWeight(p, weights)));
             }
         }

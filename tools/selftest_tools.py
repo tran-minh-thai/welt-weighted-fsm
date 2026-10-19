@@ -35,7 +35,10 @@ def cells(voter, b1, b2, s1="OK", s2="OK"):
 def main():
     failures = []
 
+    cases = []
+
     def check(name, cond):
+        cases.append(name)
         print(("ok   " if cond else "FAIL ") + name)
         if not cond:
             failures.append(name)
@@ -56,14 +59,18 @@ def main():
 
         pdir = os.path.join(tmp, "patterns")
         os.makedirs(pdir)
-        head = "code\tvertices\tedges\tmni\tweight\n"
+        head = "code\tvertices\tedges\tweight\n"
         for algo, codes in (("EdgeTypeBound", ["a", "b"]), ("WeLT", ["a", "b"]), ("GraMi", ["a", "b", "c"])):
             with open(os.path.join(pdir, f"x_{algo}_10_5.0.tsv"), "w", encoding="utf-8") as fh:
-                fh.write(head + "".join(f"{c}\t2\t1\t10\t5.0\n" for c in codes))
+                fh.write(head + "".join(f"{c}\t2\t1\t5.0\n" for c in codes))
         out = os.path.join(tmp, "cmp.csv")
         check("compare: identical sets exit 0", run("compare_patterns.py", pdir, out).returncode == 0)
         check("compare: different sets exit 1", run("compare_patterns.py", pdir, out, "GraMi", "WeLT").returncode == 1)
         check("compare: nothing comparable exits 2", run("compare_patterns.py", pdir, out, "WEGM", "WeLT").returncode == 2)
+        check("compare --subset: contained set exits 0",
+              run("compare_patterns.py", "--subset", pdir, out, "WeLT", "GraMi").returncode == 0)
+        check("compare --subset: larger set exits 1",
+              run("compare_patterns.py", "--subset", pdir, out, "GraMi", "WeLT").returncode == 1)
 
         b1 = os.path.join(tmp, "b1.csv")
         with open(b1, "w", encoding="utf-8") as fh:
@@ -82,7 +89,7 @@ def main():
         check("hard: smallest completed support within 60 s", out("smallest-ok-within", b1t, "c.lg", "WeLT", "60000") == "200")
         check("hard: nothing within the cap gives nothing", out("smallest-ok-within", b1t, "c.lg", "WeLT", "5") == "")
 
-    print(f"selftest_tools: {14 - len(failures)}/14 cases passed")
+    print(f"selftest_tools: {len(cases) - len(failures)}/{len(cases)} cases passed")
     sys.exit(1 if failures else 0)
 
 

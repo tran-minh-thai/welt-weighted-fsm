@@ -205,7 +205,7 @@ public final class BenchmarkMain {
         String dumpDir = System.getenv("DUMP_PATTERNS");
         if (dumpDir != null && !dumpDir.isBlank()) {
             if (cell.status.equals("OK")) {
-                // after the timed runs: exact MNI and W are recomputed outside every measurement
+                // after the timed runs: W is recomputed outside every measurement
                 boolean labels = RunHarness.usesWeightLabels(algo);
                 int n = PatternDump.write(Path.of(dumpDir), labels ? welt.strategy.WEGMStrategy.weightLabeledGraph(g) : g,
                         labels, ds, algo, minSup, minWeight, cell.runs.get(cell.runs.size() - 1).patterns);

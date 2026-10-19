@@ -6,17 +6,19 @@
 #   ./revision.sh prepare    new campaign directory, environment lock, data check, tests, topology
 #   ./revision.sh voting     record the voting weights: (1,1,1), fixed in advance
 #   ./revision.sh b2dev      optional: calibrate development cells and choose the weights from data
-#   ./revision.sh b1 [ds]    efficiency: GraMi, EdgeTypeBound, WEGM, WeLT over the support ranges
-#                            (optional dataset name, e.g. citeseer, to split b1 into sessions)
+#   ./revision.sh b1 [ds]    efficiency: GraMi, GraMiFilter, EdgeTypeBound, WEGM, WeLT over the support
+#                            ranges (optional dataset name, e.g. citeseer, to split b1 into sessions)
+#   ./revision.sh resum [ds] ReSuM's ALL score (original code, tools/run_resum.py) on the b1 cells
 #   ./revision.sh b2grid     sensitivity of WeLT to the voting weights on the reported datasets
 #   ./revision.sh b4         one-factor ablation of WeLT
 #   ./revision.sh b2hard     voting sensitivity at the hardest cell of each dataset (after b1)
 #   ./revision.sh b4hard     ablation at the hardest cell of citeseer, email_eu, lastfm (after b1)
 #   ./revision.sh b5 [ds]    tau_w sweep: comparison at a support where GraMi completes, a WeLT
 #                            shared-table sweep, and a WeLT-only sweep at the lowest WeLT support
-#   ./revision.sh b7         result-set equivalence EdgeTypeBound = WeLT over every completed cell
+#   ./revision.sh b7         result sets over every completed cell: GraMiFilter = WeLT,
+#                            EdgeTypeBound = WeLT, ReSuM-ALL = its definition, ReSuM-ALL within WeLT
 #
-# Order: prepare, voting (writes voting_choice.json), then b2grid, b4, b1, b5, b7. Every step after
+# Order: prepare, voting (writes voting_choice.json), then b2grid, b4, b1 and resum, b5, b7. Every step after
 # prepare writes into the campaign directory named in results/v2_revision/CURRENT (or RUN_DIR).
 # Peak memory is read from the b1 rows (peakMemMB).
 #
@@ -27,7 +29,7 @@
 # Resume: every step skips the cells that already have a row, so an interrupted step is
 # continued by running the same command again (prepare reuses the current campaign unless
 # NEW_CAMPAIGN=1). CHECKPOINT=1 commits results/ after every cell, pushes it to the branch
-# CAMPAIGN_BRANCH (default campaign-revision-r1) and writes one line to the status repository
+# CAMPAIGN_BRANCH (default campaign-revision-r1b) and writes one line to the status repository
 # (RUN_STATUS_DIR, default $HOME/work/run-status; STATUS_PROJECT).
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -46,7 +48,7 @@ fi
 
 # ---------------------------------------------------------------- whole campaign
 # all: prepare (skipped once prepare.done exists), voting (skipped once voting_choice.json
-# exists), b2grid, b4, b1 per dataset, b2hard, b4hard, b5 per dataset, b7. Every step skips its finished
+# exists), b2grid, b4, b1 and resum per dataset, b2hard, b4hard, b5 per dataset, b7. Every step skips its finished
 # cells. A failing step stops the sequence and reports "all STOPPED at <step>".
 # ALL_DRY=1 prints the steps that would run; ALL_STEPS="b4 b1:citeseer" runs a subset.
 if [ "$CMD" = "all" ]; then
@@ -70,7 +72,7 @@ if [ "$CMD" = "all" ]; then
     if [ -z "$cur" ] || [ ! -f "$cur/voting_choice.json" ]; then all_step voting; fi
     all_step b2grid
     all_step b4
-    for ds in citeseer email_eu string_ecoli lastfm mico github; do all_step b1 "$ds"; done
+    for ds in citeseer email_eu string_ecoli lastfm mico github; do all_step b1 "$ds"; all_step resum "$ds"; done
     all_step b2hard
     all_step b4hard
     for ds in citeseer email_eu lastfm; do all_step b5 "$ds"; done
@@ -178,12 +180,15 @@ require_voting_choice() {
 case "$CMD" in
 prepare)
     $PY tools/fetch_datasets.py
+    $PY tools/build_resum.py
+    cp third_party/resum/build_info.json "$RUN_DIR/resum_build_info.json"
     $PY tools/selftest_tools.py
     echo "=== unit tests -> $RUN_DIR/tests.log"
     ./test.sh > "$RUN_DIR/tests.log" 2>&1 || { echo "ERROR: unit tests failed, see $RUN_DIR/tests.log" >&2; exit 1; }
     grep -E 'tests (successful|failed)' "$RUN_DIR/tests.log"
     tools/check_run_cell.sh
     tools/check_resume.sh
+    tools/check_resum.sh
     $PY tools/topology.py datasets "$RUN_DIR/topology.csv"
     java ${JAVA_OPTS:-} -cp target/classes welt.runner.RunMetaMain machine results/MEASUREMENT_MACHINE.txt
     touch "$RUN_DIR/prepare.done"
@@ -252,9 +257,21 @@ b1)
         if [ -n "${2:-}" ] && [ "$ds" != "$2" ]; then continue; fi
         tw=$(tau_w_of "$ds")
         for s in $sups; do
-            for algo in GraMi EdgeTypeBound WEGM WeLT; do
+            for algo in GraMi GraMiFilter EdgeTypeBound WEGM WeLT; do
                 run_cell "$OUT" "datasets/$ds.lg" "$s" "$tw" "$algo" "$LIMIT" "$WARMUP" "$MEASURED"
             done
+        done
+    done
+    ;;
+resum)
+    # ReSuM's ALL score on the b1 cells, relevance threshold = the largest double below tau_w.
+    OUT="$RUN_DIR/B1_resum.csv"
+    for row in "${B1_CELLS[@]}"; do
+        read -r ds sups <<< "$row"
+        if [ -n "${2:-}" ] && [ "$ds" != "$2" ]; then continue; fi
+        tw=$(tau_w_of "$ds")
+        for s in $sups; do
+            run_resum_cell "$OUT" "datasets/$ds.lg" "$s" "$tw" "$LIMIT" "$WARMUP" "$MEASURED"
         done
     done
     ;;
@@ -311,7 +328,8 @@ b5)
     #  comparison sweep  minSup = smallest support of the B1 range at which GraMi completed (the
     #                    tau_w -> 0 limit, so every tau_w point is at most as hard); if none, the
     #                    first value of the extension list at which a GraMi probe completes in 60 s.
-    #                    Algorithms EdgeTypeBound, WEGM, WeLT per point, plus WeLT with one shared table.
+    #                    Algorithms GraMiFilter, EdgeTypeBound, WEGM, WeLT and ReSuM-ALL per point, plus
+    #                    WeLT with one shared table.
     #  WeLT-only sweep   minSup = smallest support of the B1 range at which WeLT completed; result
     #                    counts and sizes only (no baseline at that support).
     #  tau_w grid        rho = 0.1 ... 0.9 of the weight range, plus the dataset's tau_w.
@@ -359,9 +377,10 @@ b5)
         } >> "$CHOICES"
         echo "=== B5 $ds comparison minSup=$s, WeLT-only minSup=${sw:-none}, tau_w=$taus"
         for t in ${taus//,/ }; do
-            for algo in EdgeTypeBound WEGM WeLT; do
+            for algo in GraMiFilter EdgeTypeBound WEGM WeLT; do
                 run_cell "$OUT" "datasets/$ds.lg" "$s" "$t" "$algo" "$LIMIT" "$WARMUP" "$MEASURED"
             done
+            run_resum_cell "$RUN_DIR/B5_resum.csv" "datasets/$ds.lg" "$s" "$t" "$LIMIT" "$WARMUP" "$MEASURED"
         done
         if cell_done "$SWEEP" "dataset=$ds.lg" "minSup=$s" "row=sweep"; then
             echo "--- skip (already in $(basename "$SWEEP")): shared-table sweep $ds minSup=$s"
@@ -382,10 +401,27 @@ b5)
     done
     ;;
 b7)
+    # The ALL result set by its definition, for every cell where ReSuM completed (untimed).
+    P="$RUN_DIR/patterns"
+    for f in "$P"/*_ReSuM-ALL_*.tsv; do
+        [ -e "$f" ] || continue
+        base=$(basename "$f" .tsv)
+        tw=${base##*_}; rest=${base%_*}; s=${rest##*_}; ds=${rest%_ReSuM-ALL_*}
+        [ -e "$P/${ds}_ALL-definition_${s}_${tw}.tsv" ] || \
+            java ${JAVA_OPTS:-} -cp target/classes welt.runner.ResumMain definition "datasets/$ds.lg" "$s" "$tw" "$P"
+    done
     status=0
-    $PY tools/compare_patterns.py "$RUN_DIR/patterns" "$RUN_DIR/B7_equivalence.csv" EdgeTypeBound WeLT || status=$?
-    if [ "$status" -eq 1 ]; then echo "ERROR: EdgeTypeBound and WeLT differ on some cell (see B7_equivalence.csv)" >&2; fi
-    if [ "$status" -eq 2 ]; then echo "ERROR: no cell could be compared" >&2; fi
+    b7_compare() { # <out.csv> <flag or -> <A> <B> <what>
+        local code=0
+        if [ "$2" = "-" ]; then $PY tools/compare_patterns.py "$P" "$1" "$3" "$4" || code=$?
+        else $PY tools/compare_patterns.py "$2" "$P" "$1" "$3" "$4" || code=$?; fi
+        if [ "$code" -eq 1 ]; then echo "ERROR: $5 fails on some cell (see $(basename "$1"))" >&2; status=1; fi
+        if [ "$code" -eq 2 ]; then echo "ERROR: $5: no cell could be compared" >&2; status=1; fi
+    }
+    b7_compare "$RUN_DIR/B7_equivalence.csv" - GraMiFilter WeLT "GraMiFilter = WeLT"
+    b7_compare "$RUN_DIR/B7_equivalence_edgetypebound.csv" - EdgeTypeBound WeLT "EdgeTypeBound = WeLT"
+    b7_compare "$RUN_DIR/B7_resum_definition.csv" - ReSuM-ALL ALL-definition "ReSuM-ALL = ALL definition"
+    b7_compare "$RUN_DIR/B7_resum_within_welt.csv" --subset ReSuM-ALL WeLT "ReSuM-ALL within WeLT"
     ;;
 *)
     echo "unknown command: $CMD" >&2

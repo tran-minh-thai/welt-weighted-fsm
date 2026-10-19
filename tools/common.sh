@@ -108,7 +108,7 @@ report_status() {
 }
 
 # checkpoint <message>: with CHECKPOINT=1, commit results/ and push it to the campaign branch
-# (CAMPAIGN_BRANCH, default campaign-revision-r1), then report the message. Runs BETWEEN cells
+# (CAMPAIGN_BRANCH, default campaign-revision-r1b), then report the message. Runs BETWEEN cells
 # only, never while a measurement runs. A failed push is reported and retried at the next
 # checkpoint; the run continues. Without CHECKPOINT=1 it only prints the message.
 checkpoint() {
@@ -116,7 +116,7 @@ checkpoint() {
         echo "[checkpoint] $1"
         return 0
     fi
-    local branch="${CAMPAIGN_BRANCH:-campaign-revision-r1}" pushed="pushed"
+    local branch="${CAMPAIGN_BRANCH:-campaign-revision-r1b}" pushed="pushed"
     git add -- results >/dev/null 2>&1 || true
     git commit -q -m "Results: $1" >/dev/null 2>&1 || true
     git push -q origin "HEAD:refs/heads/$branch" >/dev/null 2>&1 || pushed="PUSH FAILED (retried at the next checkpoint)"
@@ -154,6 +154,23 @@ run_ablation_cell() {
         rm -f "$tmp"
         checkpoint "ablation $v $(basename "$ds") minSup=$s: $(last_status "$out")"
     done
+}
+
+# run_resum_cell <out.csv> <dataset.lg> <minSup> <minWeight> <limitMs> <warmup> <measured>
+# ReSuM's ALL score on one cell (tools/run_resum.py: one JVM per run, same protocol as run_cell);
+# its result set goes to $DUMP_PATTERNS. A cell with a row is skipped (resume).
+run_resum_cell() {
+    local out="$1" ds="$2" s="$3" tw="$4" lim="$5" wu="$6" me="$7" py
+    py=$(find_python)
+    if [ "${RESUME:-1}" = "1" ] && cell_done "$out" "dataset=$(basename "$ds")" "algorithm=ReSuM-ALL" "minSup=$s" "minWeight=$tw"; then
+        echo "--- skip (already in $(basename "$out")): ReSuM-ALL $ds minSup=$s tau_w=$tw"
+        return 0
+    fi
+    "$py" tools/run_resum.py "$out" "$ds" "$s" "$tw" "$lim" "$wu" "$me" "${DUMP_PATTERNS:-patterns}" || {
+        echo "ERROR: tools/run_resum.py failed on $ds minSup=$s (no row written)" >&2
+        exit 1
+    }
+    checkpoint "ReSuM-ALL $(basename "$ds") minSup=$s tau_w=$tw: $(last_status "$out")"
 }
 
 # append_failure_row <out.csv> <dataset> <algorithm> <minSup> <minWeight> <limitMs> <budget> <status>

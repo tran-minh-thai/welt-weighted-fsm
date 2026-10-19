@@ -17,7 +17,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Exact MNI and W of dumped result sets. */
+/** Exact MNI of the counter, and the dumped result sets (canonical code, size, W). */
 class PatternDumpTest {
 
     /** Definition: the exact MNI is the largest k for which support(p, k) is not INFREQUENT. */
@@ -51,13 +51,12 @@ class PatternDumpTest {
         int n = PatternDump.write(dir, g, "citeseer.lg", "WeLT", 300, 96, r.patterns);
         assertEquals(r.patterns.size(), n);
         List<String> lines = Files.readAllLines(dir.resolve("citeseer_WeLT_300_96.0.tsv"));
-        assertEquals("code\tvertices\tedges\tmni\tweight", lines.get(0));
+        assertEquals("code\tvertices\tedges\tweight", lines.get(0));
         assertEquals(n + 1, lines.size());
         for (String line : lines.subList(1, lines.size())) {
             String[] f = line.split("\t");
-            assertEquals(5, f.length, line);
-            assertTrue(Integer.parseInt(f[3]) >= 300, "MNI of a result must reach minSup: " + line);
-            assertTrue(Double.parseDouble(f[4]) >= 96, "W of a result must reach tau_w: " + line);
+            assertEquals(4, f.length, line);
+            assertTrue(Double.parseDouble(f[3]) >= 96, "W of a result must reach tau_w: " + line);
         }
     }
 }

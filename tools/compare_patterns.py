@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compare the result sets of two algorithms from pattern dumps (DUMP_PATTERNS).
 
-Usage:  python3 tools/compare_patterns.py <patterns-dir> <out.csv> [algoA] [algoB]
+Usage:  python3 tools/compare_patterns.py [--subset] <patterns-dir> <out.csv> [algoA] [algoB]
 
 Defaults: algoA = EdgeTypeBound, algoB = WeLT (the same problem, so the sets must be equal). For every (dataset, minSup, minWeight) for which BOTH
 files <dataset>_<algo>_<minSup>_<minWeight>.tsv exist (a file is written only for a completed
@@ -12,7 +12,9 @@ cell), one row:
 
 Patterns are matched by canonical code. The script prints how many cells it could compare;
 zero comparable cells is reported as such, not as agreement. Exit code 1 when a compared cell
-has different result sets, 2 when no cell could be compared. Standard library only.
+has different result sets, 2 when no cell could be compared. With --subset the check is that
+the result set of algoA is contained in the one of algoB (exit 1 when some cell has onlyA > 0).
+Standard library only.
 """
 import csv
 import os
@@ -37,11 +39,13 @@ def size_stats(patterns):
 
 
 def main():
-    if len(sys.argv) not in (3, 4, 5):
+    args = [x for x in sys.argv[1:] if x != "--subset"]
+    subset = len(args) != len(sys.argv) - 1
+    if len(args) not in (2, 3, 4):
         sys.exit(__doc__)
-    src, out = sys.argv[1], sys.argv[2]
-    a = sys.argv[3] if len(sys.argv) > 3 else "EdgeTypeBound"
-    b = sys.argv[4] if len(sys.argv) > 4 else "WeLT"
+    src, out = args[0], args[1]
+    a = args[2] if len(args) > 2 else "EdgeTypeBound"
+    b = args[3] if len(args) > 3 else "WeLT"
     files = {}
     for f in os.listdir(src):
         m = NAME.match(f)
@@ -57,7 +61,7 @@ def main():
         pa, pb = load(fa), load(fb)
         only_a, only_b = len(pa.keys() - pb.keys()), len(pb.keys() - pa.keys())
         same = int(only_a == 0 and only_b == 0)
-        differing += 1 - same
+        differing += int(only_a > 0) if subset else 1 - same
         rows.append([ds, sup, w, a, b, len(pa), len(pb), only_a, only_b, same,
                      *size_stats(pa), *size_stats(pb)])
     header = ["dataset", "minSup", "minWeight", "algoA", "algoB", "R_A", "R_B", "onlyA", "onlyB", "sameSet",
@@ -67,7 +71,9 @@ def main():
         w = csv.writer(fh)
         w.writerow(header)
         w.writerows(rows)
-    print(f"compare_patterns: {len(rows)} cell(s) compared ({a} vs {b}), {differing} with different result sets; "
+    relation = f"{a} contained in {b}" if subset else f"{a} vs {b}"
+    failure = "not contained" if subset else "with different result sets"
+    print(f"compare_patterns: {len(rows)} cell(s) compared ({relation}), {differing} {failure}; "
           f"{single} cell(s) have only one of the two files -> {out}")
     if not rows:
         print("compare_patterns: NOTHING COMPARED (no cell has both files)")

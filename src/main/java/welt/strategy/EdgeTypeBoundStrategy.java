@@ -9,13 +9,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * EdgeTypeBound — a baseline for the SAME problem as WeLT (edge-bottleneck weight
+ * EdgeTypeBound — an ablation variant of WeLT for the SAME problem (edge-bottleneck weight
  * W(S) = max over occurrences of the minimum edge weight; S is a result iff MNI(S) ≥ minSup
- * and W(S) ≥ minWeight), WITHOUT WeLT's lookup table and voting:
+ * and W(S) ≥ minWeight), WITHOUT WeLT's lookup table, voting and weight-aware order:
  * <ul>
  *   <li>pre-filter: a pattern containing an edge type (labelA, edgeLabel, labelB) whose
  *       heaviest edge in G is below minWeight cannot reach the threshold and is pruned before
- *       MNI counting (the per-edge-type bound);</li>
+ *       MNI counting (the per-edge-type bound, the 1-edge part of WeLT's P2);</li>
  *   <li>acceptance: exact check that S embeds into G restricted to edges of weight ≥ minWeight;</li>
  *   <li>extension: by default only patterns that pass the weight check are extended (W is
  *       anti-monotone, so no result is lost). {@code gateExtension=false} extends every
@@ -23,13 +23,8 @@ import java.util.Map;
  * </ul>
  * Its result set must equal WeLT's (same problem), which the oracle tests verify.
  *
- * <p><b>This is not WEGM.</b> The WEGM
- * paper (Nguyen et al., J. Inf. Telecommun. 9(4):543-558, 2025) treats an edge weight as part
- * of the pattern: isomorphism requires equal weights (Definition 3(b)), support counts only
- * occurrences with those weights, and W_E(S) is computed from the pattern's own edges
- * (Definition 6). See {@link WEGMStrategy} for that algorithm. The per-edge-type bound used
- * here plays the role of WEGM's early pruning of the frequent-edge list, transferred to the
- * bottleneck model.
+ * <p>WEGM (Nguyen et al., J. Inf. Telecommun. 9(4):543-558, 2025) is a different model and is
+ * implemented by {@link WEGMStrategy}.
  */
 public final class EdgeTypeBoundStrategy implements MiningStrategy {
 
