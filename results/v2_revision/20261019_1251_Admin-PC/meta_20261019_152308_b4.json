@@ -18,5 +18,6 @@
   "command": "revision.sh b4",
   "limitMs": "3600000",
   "warmup": "1",
-  "measured": "5"
+  "measured": "5",
+  "endTime": "2026-10-19T18:31:41.5519013+07:00"
 }
