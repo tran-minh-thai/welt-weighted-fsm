@@ -251,3 +251,4 @@ esac
 
 java ${JAVA_OPTS:-} -cp target/classes welt.runner.RunMetaMain finish "$META"
 echo "Done: $CMD -> $RUN_DIR"
+if [ "$CMD" = "b7" ]; then exit "$status"; fi
