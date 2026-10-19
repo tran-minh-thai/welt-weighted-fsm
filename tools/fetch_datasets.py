@@ -15,6 +15,8 @@ import hashlib
 import os
 import subprocess
 import sys
+import time
+import urllib.error
 import urllib.request
 import zipfile
 
@@ -48,16 +50,25 @@ def sha256(path):
     return h.hexdigest()
 
 
-def download(url, dest):
-    print(f"  downloading {url}")
+def download(url, dest, attempts=5):
+    """Download with retries: waits of 10, 20, 40 and 80 s between attempts."""
     tmp = dest + ".part"
-    with urllib.request.urlopen(url, timeout=120) as r, open(tmp, "wb") as out:
-        while True:
-            block = r.read(1 << 20)
-            if not block:
-                break
-            out.write(block)
-    os.replace(tmp, dest)
+    for attempt in range(1, attempts + 1):
+        print(f"  downloading {url} (attempt {attempt}/{attempts})")
+        try:
+            with urllib.request.urlopen(url, timeout=120) as r, open(tmp, "wb") as out:
+                while True:
+                    block = r.read(1 << 20)
+                    if not block:
+                        break
+                    out.write(block)
+            os.replace(tmp, dest)
+            return
+        except (OSError, urllib.error.URLError) as e:
+            print(f"  download failed: {e}")
+            if attempt == attempts:
+                sys.exit(f"ERROR: could not download {url} after {attempts} attempts")
+            time.sleep(10 * 2 ** (attempt - 1))
 
 
 def rebuild(name):
