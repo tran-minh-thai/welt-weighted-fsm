@@ -271,8 +271,9 @@ result sets, the speed-up claim is WeLT versus EdgeTypeBound), `edge-label` (WEG
 > OOM, JVM that cannot start) in about a minute.
 
 **Full campaign (`revision.sh`).** `JAVA_OPTS="-Xmx48g" ./revision.sh all` runs, in order:
-`prepare` (campaign directory, JDK and `JAVA_OPTS` lock, dataset check, self-tests), `b2dev`
-(choice of the voting weights on calibrated `bitcoin_otc` cells), `b2grid` (voting sensitivity),
+`prepare` (campaign directory, JDK and `JAVA_OPTS` lock, dataset check, self-tests), `voting`
+(WeLT voting weights fixed in advance at (1,1,1) with the weight-aware order), `b2grid` (voting
+sensitivity over the 21-point simplex grid and (1,1,1)),
 `b4` (ablation), `b1` per dataset (efficiency), `b5` per dataset (τ_w sweep at the smallest
 support where GraMi completes, a shared-table WeLT sweep, and a WeLT-only sweep at the smallest
 support where WeLT completes) and `b7` (EdgeTypeBound = WeLT on every completed cell). Running

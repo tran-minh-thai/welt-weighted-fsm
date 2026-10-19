@@ -4,7 +4,8 @@
 #   ./revision.sh all        the whole campaign, resumable: run it again to continue
 #   ./revision.sh list       describe the steps and exit
 #   ./revision.sh prepare    new campaign directory, environment lock, data check, tests, topology
-#   ./revision.sh b2dev      calibrate the development cells and choose the voting weights
+#   ./revision.sh voting     record the voting weights: (1,1,1), fixed in advance
+#   ./revision.sh b2dev      optional: calibrate development cells and choose the weights from data
 #   ./revision.sh b1 [ds]    efficiency: GraMi, EdgeTypeBound, WEGM, WeLT over the support ranges
 #                            (optional dataset name, e.g. citeseer, to split b1 into sessions)
 #   ./revision.sh b2grid     sensitivity of WeLT to the voting weights on the reported datasets
@@ -13,7 +14,7 @@
 #                            shared-table sweep, and a WeLT-only sweep at the lowest WeLT support
 #   ./revision.sh b7         result-set equivalence EdgeTypeBound = WeLT over every completed cell
 #
-# Order: prepare, b2dev (writes voting_choice.json), then b1, b2grid, b4, b5, b7. Every step after
+# Order: prepare, voting (writes voting_choice.json), then b2grid, b4, b1, b5, b7. Every step after
 # prepare writes into the campaign directory named in results/v2_revision/CURRENT (or RUN_DIR).
 # Peak memory is read from the b1 rows (peakMemMB).
 #
@@ -42,7 +43,7 @@ if [ "$CMD" = "list" ] || [ "$CMD" = "-h" ] || [ "$CMD" = "--help" ]; then
 fi
 
 # ---------------------------------------------------------------- whole campaign
-# all: prepare (skipped once prepare.done exists), b2dev (skipped once voting_choice.json
+# all: prepare (skipped once prepare.done exists), voting (skipped once voting_choice.json
 # exists), b2grid, b4, b1 per dataset, b5 per dataset, b7. Every step skips its finished
 # cells. A failing step stops the sequence and reports "all STOPPED at <step>".
 # ALL_DRY=1 prints the steps that would run; ALL_STEPS="b4 b1:citeseer" runs a subset.
@@ -64,7 +65,7 @@ if [ "$CMD" = "all" ]; then
     cur="$(cat "$CURRENT_FILE" 2>/dev/null || true)"
     if [ -z "$cur" ] || [ ! -f "$cur/prepare.done" ]; then all_step prepare; fi
     cur="$(cat "$CURRENT_FILE" 2>/dev/null || true)"
-    if [ -z "$cur" ] || [ ! -f "$cur/voting_choice.json" ]; then all_step b2dev; fi
+    if [ -z "$cur" ] || [ ! -f "$cur/voting_choice.json" ]; then all_step voting; fi
     all_step b2grid
     all_step b4
     for ds in citeseer email_eu string_ecoli lastfm mico github; do all_step b1 "$ds"; done
@@ -171,6 +172,15 @@ prepare)
     $PY tools/topology.py datasets "$RUN_DIR/topology.csv"
     java ${JAVA_OPTS:-} -cp target/classes welt.runner.RunMetaMain machine results/MEASUREMENT_MACHINE.txt
     touch "$RUN_DIR/prepare.done"
+    ;;
+voting)
+    # The voting weights are fixed in advance: (1,1,1), the WeLT default, with the weight-aware
+    # order. b2grid measures the sensitivity to them; no weight is chosen from data.
+    VC="$RUN_DIR/voting_choice.json"
+    if [ ! -f "$VC" ]; then
+        printf '{\n  "voter": "1,1,1",\n  "worder": "on",\n  "source": "fixed in advance (the WeLT default); b2grid is a sensitivity analysis, no weight is chosen from data"\n}\n' > "$VC"
+    fi
+    cat "$VC"
     ;;
 b2dev)
     # Development cells on bitcoin_otc (not reported in the paper). tau_w = median edge weight
