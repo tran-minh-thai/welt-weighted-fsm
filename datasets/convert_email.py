@@ -20,13 +20,13 @@ def main():
     thr = int(thr_s)
 
     dept = {}
-    with open(dept_path) as f:
+    with open(dept_path, encoding='utf-8') as f:
         for line in f:
             a, b = line.split()
             dept[int(a)] = int(b)
 
     cnt = defaultdict(int)
-    with open(email_path) as f:
+    with open(email_path, encoding='utf-8') as f:
         for line in f:
             p = line.split()
             a, b = int(p[0]), int(p[1])
@@ -53,7 +53,7 @@ def main():
 
     wmin = min(e[2] for e in edges); wmax = max(e[2] for e in edges)
     wsum = sum(e[2] for e in edges)
-    with open(out_path, 'w') as out:
+    with open(out_path, 'w', newline='\n', encoding='utf-8') as out:
         out.write('t # 1\n')
         for i in range(n):
             out.write('v %d %d\n' % (i, labels[i]))

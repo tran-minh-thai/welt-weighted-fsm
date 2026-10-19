@@ -17,11 +17,11 @@ import sys
 def main():
     edges_path, feats_path, target_path, out_path = sys.argv[1:5]
 
-    feats = json.load(open(feats_path))
+    feats = json.load(open(feats_path, encoding='utf-8'))
     feats = {int(k): set(v) for k, v in feats.items()}
 
     labels = {}
-    with open(target_path) as f:
+    with open(target_path, encoding='utf-8') as f:
         r = csv.reader(f)
         next(r)  # header (id,target) or (id,name,ml_target)
         for row in r:
@@ -29,7 +29,7 @@ def main():
 
     n = len(labels)
     edges = []
-    with open(edges_path) as f:
+    with open(edges_path, encoding='utf-8') as f:
         r = csv.reader(f)
         next(r)  # header
         for a, b in r:
@@ -47,7 +47,7 @@ def main():
         wmin, wmax, wsum = min(wmin, w), max(wmax, w), wsum + w
         out_edges.append((a, b, w))
 
-    with open(out_path, 'w') as out:
+    with open(out_path, 'w', newline='\n', encoding='utf-8') as out:
         out.write('t # 1\n')
         for v in range(n):
             out.write('v %d %d\n' % (v, labels.get(v, 0)))

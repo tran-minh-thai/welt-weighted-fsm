@@ -23,7 +23,7 @@ def main():
 
     # collapse to undirected: (min,max) -> [ratings]
     und = defaultdict(list)
-    with open(in_path) as f:
+    with open(in_path, encoding='utf-8') as f:
         for src, tgt, rating, _t in csv.reader(f):
             a, b = int(src), int(tgt)
             if a == b:
@@ -56,7 +56,7 @@ def main():
 
     wmin = min(e[2] for e in edges); wmax = max(e[2] for e in edges)
     wsum = sum(e[2] for e in edges)
-    with open(out_path, 'w') as out:
+    with open(out_path, 'w', newline='\n', encoding='utf-8') as out:
         out.write('t # 1\n')
         for v in range(n):
             out.write('v %d %d\n' % (v, label[v]))

@@ -28,7 +28,7 @@ def main():
 
     # collect localization terms per protein
     loc_terms = {}
-    with open(enrich_path) as f:
+    with open(enrich_path, encoding='utf-8') as f:
         next(f)
         for line in f:
             p = line.rstrip('\n').split('\t')
@@ -46,7 +46,7 @@ def main():
     # read filtered edges (protein1 protein2 score), dense id mapping
     idmap = {}
     edges = []
-    with open(edges_path) as f:
+    with open(edges_path, encoding='utf-8') as f:
         for line in f:
             a, b, s = line.split()
             for x in (a, b):
@@ -60,7 +60,7 @@ def main():
 
     smin = min(e[2] for e in edges); smax = max(e[2] for e in edges)
     ssum = sum(e[2] for e in edges)
-    with open(out_path, 'w') as out:
+    with open(out_path, 'w', newline='\n', encoding='utf-8') as out:
         out.write('t # 1\n')
         for i in range(n):
             out.write('v %d %d\n' % (i, labels[i]))
