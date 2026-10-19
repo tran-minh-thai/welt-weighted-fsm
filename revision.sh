@@ -51,7 +51,7 @@ require_clean_tree
 if [ "$CMD" = "prepare" ]; then
     HOST=$(hostname | tr -c 'A-Za-z0-9_.-\n' '_')
     RUN_DIR="${RUN_DIR:-results/v2_revision/$(date +%Y%m%d_%H%M)_${HOST}}"
-    mkdir -p "$RUN_DIR"
+    mkdir -p "$RUN_DIR" "$(dirname "$CURRENT_FILE")"
     echo "$RUN_DIR" > "$CURRENT_FILE"
     jdk_identity > "$RUN_DIR/environment.lock"
 else
