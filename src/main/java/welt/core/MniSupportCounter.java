@@ -338,6 +338,41 @@ public final class MniSupportCounter {
     }
 
     /**
+     * EXACT MNI without early stopping: every value of every variable is decided (valid if
+     * some embedding maps the variable to it), so the result is min_i |image(v_i)| even above
+     * any support threshold. Returns 0 when the pattern does not embed. Meant for
+     * post-processing a result set (pattern statistics), not for mining: it is much slower
+     * than {@link #support}. Uses the same domains, AC-3 and embedding search as support().
+     */
+    public int exactMni(Pattern p) {
+        int n = p.nodeCount();
+        List<int[]> domains = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            int[] dom = buildDomain(p, i);
+            if (dom.length == 0) return 0;
+            domains.add(dom);
+        }
+        if (arcConsistencyOn && !arcConsistency(p, domains, 1, n)) return 0; // a domain became empty
+        @SuppressWarnings("unchecked")
+        Set<Integer>[] valid = new Set[n];
+        for (int i = 0; i < n; i++) valid[i] = new HashSet<>();
+        int[] assign = new int[n];
+        int mni = Integer.MAX_VALUE;
+        for (int i = 0; i < n; i++) {
+            int[] matchOrder = bfsOrder(p, i);
+            for (int u : domains.get(i)) {
+                if (valid[i].contains(u)) continue;
+                Arrays.fill(assign, -1);
+                if (findEmbedding(p, i, u, assign, matchOrder)) {
+                    for (int j = 0; j < n; j++) valid[j].add(assign[j]);
+                }
+            }
+            mni = Math.min(mni, valid[i].size());
+        }
+        return mni;
+    }
+
+    /**
      * Arc consistency (AC-3) for the binary constraints of the embedding problem: for
      * each pattern edge {@code (i,j)} labeled {@code el}, remove {@code u} from domain i
      * if u has no G neighbor in domain j via an edge labeled el. Iterate to a fixed

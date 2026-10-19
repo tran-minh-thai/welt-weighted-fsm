@@ -195,6 +195,8 @@ HOST=$(hostname | tr -c 'A-Za-z0-9_.-\n' '_')
 RUN_DIR="${RUN_DIR:-results/v2_revision/$(date +%Y%m%d_%H%M)_${HOST}}"
 mkdir -p "$RUN_DIR"
 echo "=== run directory: $RUN_DIR"
+# Result sets of completed cells (exact MNI and W, written after the timed runs).
+export DUMP_PATTERNS="${DUMP_PATTERNS:-$RUN_DIR/patterns}"
 META="$RUN_DIR/meta_$(date +%Y%m%d_%H%M%S)_${CMD}.json"
 java ${JAVA_OPTS:-} -cp target/classes welt.runner.RunMetaMain start "$META" \
     "command=experiments.sh $*" "limitMs=$LIMIT" "warmup=$WARMUP" "measured=$MEASURED"

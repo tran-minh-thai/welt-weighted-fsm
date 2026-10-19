@@ -27,6 +27,8 @@ import java.util.function.ToDoubleFunction;
  *
  * <p>With {@code BENCH_CSV} set, the header and one row per algorithm are printed with the
  * prefix {@code CSV,}. {@code BENCH_ALGOS} selects the algorithms (comma or space separated).
+ * With {@code DUMP_PATTERNS=<dir>} the result set of every completed cell is written by
+ * {@link PatternDump} after the measured runs.
  */
 public final class BenchmarkMain {
 
@@ -192,12 +194,24 @@ public final class BenchmarkMain {
     }
 
     private static void benchmark(String algo, LabeledWeightedGraph g, String ds,
-                                  int minSup, double minWeight, long budget, long limitMs) {
+                                  int minSup, double minWeight, long budget, long limitMs) throws java.io.IOException {
         RunHarness.Config cfg = configure(new RunHarness.Config(algo, minSup, minWeight));
         cfg.budget = budget;
         cfg.limitMs = limitMs;
         Cell cell = measureCell(g, cfg, ds, WARMUP, MEASURED);
         report(algo, ds, minSup, minWeight, budget, limitMs, cell.runs, cell.status, cell.nonOk);
+        String dumpDir = System.getenv("DUMP_PATTERNS");
+        if (dumpDir != null && !dumpDir.isBlank()) {
+            if (cell.status.equals("OK")) {
+                // after the timed runs: exact MNI and W are recomputed outside every measurement
+                int n = PatternDump.write(Path.of(dumpDir), g, ds, algo, minSup, minWeight,
+                        cell.runs.get(cell.runs.size() - 1).patterns);
+                System.out.println("patterns: " + n + " -> " + Path.of(dumpDir).resolve(
+                        PatternDump.fileName(ds, algo, minSup, minWeight)));
+            } else {
+                System.out.println("patterns: not written (status " + cell.status + ", the result set is partial)");
+            }
+        }
     }
 
     private static void report(String algo, String ds, int minSup, double minWeight, long budget, long limitMs,
