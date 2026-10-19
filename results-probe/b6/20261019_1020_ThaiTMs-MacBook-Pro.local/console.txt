@@ -1,0 +1,15 @@
+== B6 downstream classification | kind=probe | out=results-probe/b6/20261019_1020_ThaiTMs-MacBook-Pro.local
+  downstream selftest: 14/14 cases passed
+  WeLT voting: runner default (WELT_VOTER unset)
+== 1. data
+  raw LastFM Asia files: SHA-256 verified
+  <out>/lastfm_struct.rebuilt.lg: 7624 vertices, 27806 edges | degree cut points [1, 3, 5, 10] | class sizes [1754, 1979, 1083, 1369, 1439]
+  check against <repo>/datasets/lastfm.lg: 7624 vertices, 27806 edge lines compared byte by byte; 352 vertices share their label
+  lastfm_struct.lg rebuilt from the raw files: identical to the committed file
+  leakage check: {"vertices": 7624, "edges_compared": 27806, "edges_equal": true, "vertex_count_equal": true, "labels_are_degree_classes": true, "distinct_labels": 5, "vertices_whose_label_equals_target": 352}
+== 2. threshold selection
+  tau_w = min + rho_w * (max - min): {"0.5": "28.7720", "0.7": "40.2807"}
+  tau_s=1600  rho_w=0.5 tau_w=28.7720: status=OK |R|=0
+  tau_s=1600  rho_w=0.7 tau_w=40.2807: status=OK |R|=0
+  tau_s=1200  rho_w=0.5 tau_w=28.7720: status=TO |R|=2374
+ERROR: cell tau_s=1200 rho_w=0.5 ended with status TO; the scan stops without a choice

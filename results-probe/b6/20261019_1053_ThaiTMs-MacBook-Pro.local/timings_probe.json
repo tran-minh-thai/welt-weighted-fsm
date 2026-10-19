@@ -1,0 +1,71 @@
+{
+  "kind": "probe",
+  "note": "feasibility probe: timings from a development machine, not a measurement",
+  "host": "ThaiTMs-MacBook-Pro.local",
+  "mining": {
+    "runs": "3",
+    "warmup": "1",
+    "voteMs": "0.375",
+    "indexMs": "5.239",
+    "prepMs": "14.898",
+    "tableBuildMs": "14.891",
+    "mineMs": "390.463",
+    "totalMs": "411.627",
+    "totalMinMs": "400.530",
+    "totalMaxMs": "422.407",
+    "totalSdMs": "10.939",
+    "peakMemMB": "74.936",
+    "peakMemMaxMB": "75.004"
+  },
+  "selection_runs": [
+    {
+      "tau_s": 1600,
+      "rho_w": 0.5,
+      "status": "OK",
+      "totalMs": "9.151"
+    },
+    {
+      "tau_s": 1600,
+      "rho_w": 0.7,
+      "status": "OK",
+      "totalMs": "8.427"
+    },
+    {
+      "tau_s": 1200,
+      "rho_w": 0.5,
+      "status": "TO",
+      "totalMs": "600000.493"
+    },
+    {
+      "tau_s": 1200,
+      "rho_w": 0.7,
+      "status": "OK",
+      "totalMs": "100.508"
+    },
+    {
+      "tau_s": 1000,
+      "rho_w": 0.7,
+      "status": "OK",
+      "totalMs": "386.685"
+    }
+  ],
+  "mining_command": "java <repo>/target/classes welt.runner.BenchmarkMain <repo>/datasets/lastfm_struct.lg 1000 40.2807 0 600000 1 3",
+  "feature_building": {
+    "imageSetMs": 25.2,
+    "imageSetProcessWallMs": 146.2,
+    "matrixAssemblyMs": 0.7,
+    "patternFeaturesTotalMs": 25.9
+  },
+  "classification_wall_ms": 105979.3,
+  "feature_dimension": {
+    "baseline": 7844,
+    "baseline_binary": 7842,
+    "baseline_structural": 2,
+    "patterns": 100,
+    "patterns_distinct_columns": 30,
+    "patterns_count": 26,
+    "patterns_nonzeros": 264,
+    "vertices_with_a_pattern_feature": 44,
+    "baseline+patterns": 7944
+  }
+}

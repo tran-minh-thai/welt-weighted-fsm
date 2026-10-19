@@ -1,0 +1,50 @@
+# Fault injection: each mutation is applied to one source file of commit 14ebeb6, the tests run, the file is restored.
+# date 2026-10-19; a mutation must make at least one test fail, except a declared equivalent mutant.
+
+## mutation in src/main/java/welt/runner/ImageSetMain.java: 'e.weight >= tauW' -> 'e.weight > tauW' (occurrences after anchor: 1)
+-                if (a < e.to && e.weight >= tauW) f.addUndirectedEdge(a, e.to, e.edgeLabel, e.weight);
++                if (a < e.to && e.weight > tauW) f.addUndirectedEdge(a, e.to, e.edgeLabel, e.weight);
+image sets vs brute force: 1008 cases, 454 with an occurrence, 572 where the filter changed an image, 404 mismatches
+MethodSource [className = 'welt.runner.ImageSetMainTest', methodName = 'imageSetsEqualBruteForceOnTheFilteredGraph', methodParameterTypes = '']
+=> org.opentest4j.AssertionFailedError: mismatches between the export and the brute-force image sets ==> expected: <0> but was: <404>
+[         5 tests successful      ]
+[         1 tests failed          ]
+
+## mutation in src/main/java/welt/core/MniSupportCounter.java: 'if (valid[i].contains(u)) continue;' -> 'if (!valid[i].isEmpty()) continue;' (occurrences after anchor: 1)
+-                if (valid[i].contains(u)) continue;
++                if (!valid[i].isEmpty()) continue;
+image sets vs brute force: 1008 cases, 454 with an occurrence, 572 where the filter changed an image, 448 mismatches
+MethodSource [className = 'welt.runner.ImageSetMainTest', methodName = 'imageSetsEqualBruteForceOnTheFilteredGraph', methodParameterTypes = '']
+=> org.opentest4j.AssertionFailedError: mismatches between the export and the brute-force image sets ==> expected: <0> but was: <448>
+[         5 tests successful      ]
+[         1 tests failed          ]
+
+## mutation in src/main/java/welt/core/MniSupportCounter.java: 'for (int j = 0; j < n; j++) valid[j].add(assign[j]);' -> 'valid[i].add(assign[i]);' (occurrences after anchor: 1)
+-                    for (int j = 0; j < n; j++) valid[j].add(assign[j]);
++                    valid[i].add(assign[i]);
+image sets vs brute force: 1008 cases, 454 with an occurrence, 572 where the filter changed an image, 0 mismatches
+[         6 tests successful      ]
+[         0 tests failed          ]
+(equivalent mutant: it only removes the push-down of a found embedding to the other variables; every domain value still gets its own search, so the image sets cannot change; performance only)
+
+## mutation in tools/downstream/b6lib.py: 'elif n >= lo:' -> 'elif n > lo:' (occurrences: 1)
+  FAIL  selection: window bounds 20 and 300 are inclusive, 19 and 301 are not: KeyError: (1200, 'a')
+downstream selftest: 15/16 cases passed
+
+## mutation in tools/downstream/b6lib.py: 'if n > hi:' -> 'if n > hi and status == "OK":' (occurrences: 1)
+  FAIL  selection: an incomplete run above the window decides, below it stops the scan: AssertionError: 
+  FAIL  selection: every rho_w above the window, or a grid without a window cell, gives no choice: AssertionError: cell tau_s=1600 rho_w=0.7 ended with status TO at |R|=3
+downstream selftest: 14/16 cases passed
+
+## mutation in tools/downstream/b6lib.py: 'if d > q)' -> 'if d >= q)' (occurrences: 1)
+  FAIL  degree classes: quintile cuts with ties, all-equal degrees, single class sizes: AssertionError: 
+  FAIL  leakage report: accepts the structural graph: AssertionError: {'vertices': 6, 'edges_compared': 5, 'edges_equal': True, 'vertex_count_equal': True, 'labels_are_de
+downstream selftest: 14/16 cases passed
+
+## mutation in tools/downstream/b6lib.py: 'facts["edges_equal"] and facts["vertex_count_equal"]' -> 'facts["vertex_count_equal"]' (occurrences: 1)
+  FAIL  leakage report: rejects one changed edge weight: AssertionError: 
+downstream selftest: 15/16 cases passed
+
+## mutation in tools/downstream/b6lib.py: 'rows.extend(img)' -> 'rows.extend(img[1:])' (occurrences: 1)
+  FAIL  image sets: matrix entries are exactly the images; bad lines are rejected: ValueError: all index and data arrays must have the same length
+downstream selftest: 15/16 cases passed

@@ -1,0 +1,74 @@
+{
+  "per_set": {
+    "baseline": {
+      "folds": 30,
+      "not_converged": 0,
+      "macro_f1_mean": 0.5567330250933451,
+      "macro_f1_sd": 0.02884685442621509,
+      "accuracy_mean": 0.7377120291156266,
+      "accuracy_sd": 0.01729663965846782
+    },
+    "baseline+patterns": {
+      "folds": 30,
+      "not_converged": 0,
+      "macro_f1_mean": 0.5577639037695892,
+      "macro_f1_sd": 0.024953513028138904,
+      "accuracy_mean": 0.738019272820255,
+      "accuracy_sd": 0.0163047738831798
+    },
+    "patterns": {
+      "folds": 30,
+      "not_converged": 0,
+      "macro_f1_mean": 0.0042904457659833995,
+      "macro_f1_sd": 0.003162167467265686,
+      "accuracy_mean": 0.024397867697730447,
+      "accuracy_sd": 0.02582544294037864
+    }
+  },
+  "wilcoxon": {
+    "macro_f1": {
+      "pairs": 30,
+      "zero_differences": 0,
+      "b_better": 16,
+      "a_better": 14,
+      "mean_difference": 0.0010308786762439014,
+      "median_difference": 0.0005169568533227586,
+      "statistic": 212.0,
+      "p_value": 0.685047073289752,
+      "compared": "baseline+patterns minus baseline"
+    },
+    "accuracy": {
+      "pairs": 30,
+      "zero_differences": 5,
+      "b_better": 13,
+      "a_better": 12,
+      "mean_difference": 0.0003072437046286569,
+      "median_difference": 0.0,
+      "statistic": 157.0,
+      "p_value": 0.8822781716061909,
+      "compared": "baseline+patterns minus baseline"
+    }
+  },
+  "dimensions": {
+    "baseline": 7844,
+    "baseline_binary": 7842,
+    "baseline_structural": 2,
+    "patterns": 100,
+    "patterns_distinct_columns": 30,
+    "patterns_count": 26,
+    "patterns_nonzeros": 264,
+    "vertices_with_a_pattern_feature": 44,
+    "baseline+patterns": 7944
+  },
+  "classes": {
+    "count": 18,
+    "smallest": 16,
+    "largest": 1572
+  },
+  "chosen_cell": {
+    "tau_s": 1000,
+    "rho_w": 0.7,
+    "tau_w": "40.2807",
+    "R": 26
+  }
+}

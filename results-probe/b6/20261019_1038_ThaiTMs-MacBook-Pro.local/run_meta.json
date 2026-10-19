@@ -1,0 +1,106 @@
+{
+  "experiment": "B6 downstream node classification",
+  "kind": "probe",
+  "command": "python tools/downstream/b6.py --limit-ms 600000 --warmup 1 --measured 3",
+  "started": "2026-10-19T10:38:32",
+  "git_commit": "5d19d45c79244858e266e17767f25b205a0572c7",
+  "tree": "MODIFIED (4 files)",
+  "host": "ThaiTMs-MacBook-Pro.local",
+  "os": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "python": "3.14.6",
+  "packages": {
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "scikit-learn": "1.9.1",
+    "joblib": "1.6.0",
+    "threadpoolctl": "3.7.0"
+  },
+  "java": {
+    "java.runtime.version": "26.0.1+8-34",
+    "java.vendor": "Oracle Corporation"
+  },
+  "java_opts": "-Xmx8g",
+  "tool_sha256": {
+    "tools/downstream/b6.py": "5fe125e95d9cea7d4e53e38f2952a3e32d754f8da6c053b003a57bc77b27a898",
+    "tools/downstream/b6lib.py": "05519238b8db9c2b424d8af7ad28ec48f39b036eb15d9db0a44c9062f78ec838",
+    "tools/downstream/selftest.py": "0fe1251a0e4d2fcbb6639c5fa0f35f99f973e137e4535bdfc62be306383da4ac",
+    "tools/downstream/requirements.txt": "809b17ebec6bdd02528f45e6b825eff9de9f2e02623e99396ff696d35709fe67",
+    "datasets/convert_musae_struct.py": "9e575b05222b866c62b8697c56339c81a77eb9e483bdabb5d609ec00c56fc7cd",
+    "src/main/java/welt/runner/ImageSetMain.java": "5fcbb2f120e255786e4613fb0d8e6482f4b1392680dd10cf1ba95de14bd470e2",
+    "src/main/java/welt/core/MniSupportCounter.java": "2da20d9c6652210d472d31aaaf813f21fdcbe7329b635d32e5dcbc9ce096aa0b",
+    "src/main/java/welt/runner/BenchmarkMain.java": "b13ae9c7aa646c52d58ce9bb45445ce7fefdf626491c4badb0c20d07c10826b2",
+    "src/main/java/welt/runner/PatternDump.java": "e571cc521085a8c854ed5a4d924a48c139df656c295455032fc687401603c1ee"
+  },
+  "design": {
+    "tau_s_grid": [
+      1600,
+      1200,
+      1000,
+      800,
+      600,
+      500,
+      400,
+      300,
+      250,
+      200,
+      150,
+      100,
+      75,
+      50,
+      30,
+      20,
+      10
+    ],
+    "rho_w": [
+      0.5,
+      0.7
+    ],
+    "pattern_window": [
+      20,
+      300
+    ],
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "folds": 10,
+    "max_iter": 5000,
+    "limit_ms": 600000,
+    "selection_limit_ms": 600000,
+    "warmup": 1,
+    "measured": 3
+  },
+  "data_sha256": {
+    "datasets/lastfm_struct.lg": "f80c68853ba6bea9f2f133b853ec114c197025b03a4e478741f229fbaec5d44c",
+    "datasets/lastfm.lg": "be77963234648e22e998b703b2418f9d5dd030926713665fd049e7053c8ed3b7",
+    "datasets/raw/lasftm_asia/lastfm_asia_edges.csv": "548eacff61bff564ab5007831fa4a7a30e1a3956075ffd24e43310ed33555842",
+    "datasets/raw/lasftm_asia/lastfm_asia_features.json": "93fe84c96ffa9f0081ab37085979641062393895925de6c344df0f829c8ed2e7",
+    "datasets/raw/lasftm_asia/lastfm_asia_target.csv": "91f19215f6eca8321feec038bd32900cf13fd4f7e041a9976cf202807c72ac16"
+  },
+  "leakage_check": {
+    "vertices": 7624,
+    "edges_compared": 27806,
+    "edges_equal": true,
+    "vertex_count_equal": true,
+    "labels_are_degree_classes": true,
+    "distinct_labels": 5,
+    "vertices_whose_label_equals_target": 352
+  },
+  "finished": "2026-10-19T10:50:27",
+  "outputs": [
+    "folds.csv",
+    "image_sets.tsv",
+    "mining.csv",
+    "patterns/lastfm_struct_WeLT_1000_40.2807.tsv",
+    "run.log",
+    "selection.json",
+    "selection_patterns/1000_0.7/lastfm_struct_WeLT_1000_40.2807.tsv",
+    "selection_patterns/1200_0.7/lastfm_struct_WeLT_1200_40.2807.tsv",
+    "selection_patterns/1600_0.5/lastfm_struct_WeLT_1600_28.772.tsv",
+    "selection_patterns/1600_0.7/lastfm_struct_WeLT_1600_40.2807.tsv",
+    "summary.json",
+    "timings_probe.json"
+  ]
+}

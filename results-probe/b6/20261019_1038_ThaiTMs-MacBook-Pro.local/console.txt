@@ -1,0 +1,60 @@
+== B6 downstream classification | kind=probe | out=results-probe/b6/20261019_1038_ThaiTMs-MacBook-Pro.local
+  downstream selftest: 16/16 cases passed
+  WeLT voting: runner default (WELT_VOTER unset)
+== 1. data
+  raw LastFM Asia files: SHA-256 verified
+  <out>/lastfm_struct.rebuilt.lg: 7624 vertices, 27806 edges | degree cut points [1, 3, 5, 10] | class sizes [1754, 1979, 1083, 1369, 1439]
+  check against <repo>/datasets/lastfm.lg: 7624 vertices, 27806 edge lines compared byte by byte; 352 vertices share their label
+  lastfm_struct.lg rebuilt from the raw files: identical to the committed file
+  leakage check: {"vertices": 7624, "edges_compared": 27806, "edges_equal": true, "vertex_count_equal": true, "labels_are_degree_classes": true, "distinct_labels": 5, "vertices_whose_label_equals_target": 352}
+== 2. threshold selection
+  tau_w = min + rho_w * (max - min): {"0.5": "28.7720", "0.7": "40.2807"}
+  tau_s=1600  rho_w=0.5 tau_w=28.7720: status=OK |R|=0
+  tau_s=1600  rho_w=0.7 tau_w=40.2807: status=OK |R|=0
+  tau_s=1200  rho_w=0.5 tau_w=28.7720: status=TO |R|=2197
+  tau_s=1200  rho_w=0.7 tau_w=40.2807: status=OK |R|=9
+  tau_s=1000  rho_w=0.7 tau_w=40.2807: status=OK |R|=26
+  1 cells skipped: a higher tau_s at their rho_w is already above the window
+  chosen: first cell with 20 <= |R| <= 300: tau_s=1000 rho_w=0.7 |R|=26
+== 3. mining the chosen cell
+  |R|=26 totalMs median=390.529 over 3 runs (warmup 1)
+== 4. image sets
+  patterns=26 featureColumns=100 nonzeros=264 filteredEdges=61 of 27806 imageSetMs=21.7 -> <out>/image_sets.tsv
+== 5. features and classification
+  dimensions: {"baseline": 7844, "baseline_binary": 7842, "baseline_structural": 2, "patterns": 100, "patterns_distinct_columns": 30, "patterns_count": 26, "patterns_nonzeros": 264, "vertices_with_a_pattern_feature": 44, "baseline+patterns": 7944}
+  seed 0 fold 0: baseline F1=0.5575  baseline+patterns F1=0.5507  patterns F1=0.0019
+  seed 0 fold 1: baseline F1=0.5698  baseline+patterns F1=0.5526  patterns F1=0.0003
+  seed 0 fold 2: baseline F1=0.5756  baseline+patterns F1=0.5687  patterns F1=0.0022
+  seed 0 fold 3: baseline F1=0.5986  baseline+patterns F1=0.6076  patterns F1=0.0026
+  seed 0 fold 4: baseline F1=0.5648  baseline+patterns F1=0.5656  patterns F1=0.0055
+  seed 0 fold 5: baseline F1=0.5469  baseline+patterns F1=0.5466  patterns F1=0.0008
+  seed 0 fold 6: baseline F1=0.4951  baseline+patterns F1=0.5173  patterns F1=0.0070
+  seed 0 fold 7: baseline F1=0.5309  baseline+patterns F1=0.5505  patterns F1=0.0103
+  seed 0 fold 8: baseline F1=0.5715  baseline+patterns F1=0.5717  patterns F1=0.0019
+  seed 0 fold 9: baseline F1=0.5520  baseline+patterns F1=0.5512  patterns F1=0.0003
+  seed 1 fold 0: baseline F1=0.5300  baseline+patterns F1=0.5260  patterns F1=0.0030
+  seed 1 fold 1: baseline F1=0.5629  baseline+patterns F1=0.5661  patterns F1=0.0022
+  seed 1 fold 2: baseline F1=0.5788  baseline+patterns F1=0.5602  patterns F1=0.0040
+  seed 1 fold 3: baseline F1=0.5052  baseline+patterns F1=0.5240  patterns F1=0.0054
+  seed 1 fold 4: baseline F1=0.5489  baseline+patterns F1=0.5374  patterns F1=0.0007
+  seed 1 fold 5: baseline F1=0.5026  baseline+patterns F1=0.5191  patterns F1=0.0063
+  seed 1 fold 6: baseline F1=0.5561  baseline+patterns F1=0.5458  patterns F1=0.0076
+  seed 1 fold 7: baseline F1=0.6105  baseline+patterns F1=0.6194  patterns F1=0.0037
+  seed 1 fold 8: baseline F1=0.5838  baseline+patterns F1=0.5912  patterns F1=0.0054
+  seed 1 fold 9: baseline F1=0.4958  baseline+patterns F1=0.5200  patterns F1=0.0057
+  seed 2 fold 0: baseline F1=0.5739  baseline+patterns F1=0.5502  patterns F1=0.0028
+  seed 2 fold 1: baseline F1=0.5578  baseline+patterns F1=0.5620  patterns F1=0.0079
+  seed 2 fold 2: baseline F1=0.5708  baseline+patterns F1=0.5826  patterns F1=0.0003
+  seed 2 fold 3: baseline F1=0.5459  baseline+patterns F1=0.5390  patterns F1=0.0118
+  seed 2 fold 4: baseline F1=0.5777  baseline+patterns F1=0.5641  patterns F1=0.0071
+  seed 2 fold 5: baseline F1=0.5709  baseline+patterns F1=0.5662  patterns F1=0.0080
+  seed 2 fold 6: baseline F1=0.5890  baseline+patterns F1=0.5906  patterns F1=0.0016
+  seed 2 fold 7: baseline F1=0.5443  baseline+patterns F1=0.5471  patterns F1=0.0074
+  seed 2 fold 8: baseline F1=0.5599  baseline+patterns F1=0.5692  patterns F1=0.0001
+  seed 2 fold 9: baseline F1=0.5745  baseline+patterns F1=0.5703  patterns F1=0.0049
+  baseline           macro-F1 0.5567 (0.0288)   accuracy 0.7377 (0.0173)   not converged 0/30
+  baseline+patterns  macro-F1 0.5578 (0.0250)   accuracy 0.7380 (0.0163)   not converged 0/30
+  patterns           macro-F1 0.0043 (0.0032)   accuracy 0.0244 (0.0258)   not converged 0/30
+  Wilcoxon macro_f1: baseline+patterns minus baseline: mean diff +0.0010, 16/30 folds better, 0 ties, p=0.685047073289752
+  Wilcoxon accuracy: baseline+patterns minus baseline: mean diff +0.0003, 13/30 folds better, 5 ties, p=0.8822781716061909
+== done -> results-probe/b6/20261019_1038_ThaiTMs-MacBook-Pro.local
