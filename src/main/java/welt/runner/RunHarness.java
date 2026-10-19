@@ -5,6 +5,7 @@ import welt.core.LabeledWeightedGraph;
 import welt.core.Metrics;
 import welt.core.MiningEngine;
 import welt.core.MniSupportCounter;
+import welt.core.PivotVoter;
 import welt.strategy.GraMiStrategy;
 import welt.strategy.MiningStrategy;
 import welt.strategy.OWGraMiStrategy;
@@ -55,6 +56,10 @@ public final class RunHarness {
         public final double minWeight;
         public long budget = 0;   // 0 = exact mode
         public long limitMs = 0;  // 0 = no time limit
+        /** Voting for the MNI variable order and the weight-check pivot (both counters). */
+        public PivotVoter voter = PivotVoter.DEGREE_ONLY;
+        /** Weight-aware matching order inside the edge-weight check. */
+        public boolean weightOrder = false;
 
         public Config(String algo, int minSup, double minWeight) {
             this.algo = algo;
@@ -144,9 +149,12 @@ public final class RunHarness {
         MniSupportCounter counter = new MniSupportCounter(g, m); // strategy counter (table / weight checks)
         counter.setSearchBudget(cfg.budget);
         counter.setDeadline(deadline);
-        MiningEngine engine = new MiningEngine(g, m);
+        counter.setVoter(cfg.voter);
+        counter.setWeightAwareOrdering(cfg.weightOrder);
+        MiningEngine engine = new MiningEngine(g, m);    // engine counter (MNI of the mining phase)
         engine.setSearchBudget(cfg.budget);
         engine.setDeadline(deadline);
+        engine.setVoter(cfg.voter);
 
         GraphIndex index = new GraphIndex(g, cfg.minSup);
         long t1 = System.nanoTime();

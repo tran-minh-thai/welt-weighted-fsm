@@ -15,7 +15,10 @@ public final class Metrics {
     public long isoCallCount = 0;     // TOTAL embedding searches (top-level) = mni + weight
     public long mniIsoCalls = 0;      // EXPENSIVE iso-calls: MNI counting (findEmbedding in support)
     public long weightIsoCalls = 0;   // CHEAP iso-calls: weight checks (embedsWithMinWeight/VertexWeight)
-    public long backtrackNodes = 0;   // backtracking tree nodes (auxiliary detail)
+    public long backtrackNodes = 0;   // backtracking tree nodes, total = backtrackMni + backtrackWeight
+    public long backtrackMni = 0;     // backtracking nodes inside MNI embedding searches
+    public long backtrackWeight = 0;  // backtracking nodes inside weight checks (edge or vertex)
+    public long voteNanos = 0;        // time spent in PivotVoter (variable order + pivot choice)
     public long budgetExceeded = 0;   // MNI embedding searches ABORTED by the budget (approximate mode only; 0 in exact mode)
     public long frequentCount = 0;    // FWS patterns found (set when mining completes)
     public long resultCount = 0;      // FWS patterns accepted so far (incremental: valid after TO/OOM too)

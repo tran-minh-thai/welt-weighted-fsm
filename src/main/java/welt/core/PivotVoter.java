@@ -57,6 +57,24 @@ public final class PivotVoter {
         this.gamma = gamma;
     }
 
+    /**
+     * Parse {@code "α,β,γ"} (three non-negative numbers, e.g. {@code "0.2,0.6,0.2"}).
+     */
+    public static PivotVoter parse(String spec) {
+        String[] parts = spec.trim().split("\\s*,\\s*");
+        if (parts.length != 3) throw new IllegalArgumentException("expected alpha,beta,gamma, got '" + spec + "'");
+        return new PivotVoter(Double.parseDouble(parts[0]), Double.parseDouble(parts[1]), Double.parseDouble(parts[2]));
+    }
+
+    /** {@code "α;β;γ"}: a CSV-safe label of the weights. */
+    public String label() {
+        return fmt(alpha) + ";" + fmt(beta) + ";" + fmt(gamma);
+    }
+
+    private static String fmt(double x) {
+        return x == Math.rint(x) ? String.valueOf((long) x) : String.valueOf(x);
+    }
+
     public double alpha() { return alpha; }
     public double beta()  { return beta; }
     public double gamma() { return gamma; }

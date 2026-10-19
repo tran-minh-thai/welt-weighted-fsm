@@ -2,6 +2,7 @@ package welt.runner;
 
 import welt.core.LabeledWeightedGraph;
 import welt.core.LgGraphReader;
+import welt.core.PivotVoter;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -39,6 +40,33 @@ public final class BenchmarkMain {
     private static int MEASURED = 5;
 
     private static final boolean CSV = System.getenv("BENCH_CSV") != null;
+
+    /**
+     * Matching-order configuration of each algorithm. WeLT uses {@code WELT_VOTER=α,β,γ} and
+     * {@code WELT_WORDER=on|off} (default when unset: (1,1,1) and on; the CSV column
+     * voterSource tells which). GraMi, WEGM and OWGraMi keep the shared default: degree-only
+     * pivot, no weight-aware order.
+     */
+    static RunHarness.Config configure(RunHarness.Config cfg) {
+        if (cfg.algo.equals("WeLT")) {
+            String v = System.getenv("WELT_VOTER");
+            String w = System.getenv("WELT_WORDER");
+            cfg.voter = (v == null || v.isBlank()) ? PivotVoter.WELT_DEFAULT : PivotVoter.parse(v);
+            if (w != null && !w.isBlank() && !w.equals("on") && !w.equals("off"))
+                throw new IllegalArgumentException("WELT_WORDER must be on or off, got " + w);
+            cfg.weightOrder = w == null || w.isBlank() || w.equals("on");
+        } else {
+            cfg.voter = PivotVoter.DEGREE_ONLY;
+            cfg.weightOrder = false;
+        }
+        return cfg;
+    }
+
+    static String voterSource(String algo) {
+        if (!algo.equals("WeLT")) return "baseline";
+        String v = System.getenv("WELT_VOTER");
+        return (v == null || v.isBlank()) ? "default" : "env";
+    }
     private static boolean headerPrinted = false;
 
     /**
@@ -107,7 +135,7 @@ public final class BenchmarkMain {
 
     private static RunHarness.Result run(String algo, LabeledWeightedGraph g, String ds,
                                          int minSup, double minWeight, long budget, long limitMs) {
-        RunHarness.Config cfg = new RunHarness.Config(algo, minSup, minWeight);
+        RunHarness.Config cfg = configure(new RunHarness.Config(algo, minSup, minWeight));
         cfg.budget = budget;
         cfg.limitMs = limitMs;
         RunHarness.Result r = RunHarness.runOnce(g, cfg);
@@ -226,6 +254,13 @@ public final class BenchmarkMain {
                 .put("tableBuildMniIsoCalls", none ? "" : last.m.tableBuildMniIsoCalls)
                 .put("tableBuildWeightIsoCalls", none ? "" : last.m.tableBuildWeightIsoCalls)
                 .put("budgetExceeded", none ? "" : last.m.budgetExceeded)
+                .put("voter", none ? "" : last.cfg.voter.label())
+                .put("worder", none ? "" : (last.cfg.weightOrder ? "on" : "off"))
+                .put("voterSource", none ? "" : voterSource(algo))
+                .put("backtrack", none ? "" : last.m.backtrackNodes)
+                .put("backtrackMni", none ? "" : last.m.backtrackMni)
+                .put("backtrackWeight", none ? "" : last.m.backtrackWeight)
+                .put("voteMs", none ? "" : median(runs, r -> r.m.voteNanos / 1e6))
                 .put("deterministic", none ? "" : deterministic ? 1 : 0)
                 .put("indexMs", none ? "" : median(runs, r -> r.indexMs))
                 .put("prepMs", none ? "" : median(runs, r -> r.prepMs))

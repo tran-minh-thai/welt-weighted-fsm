@@ -80,6 +80,10 @@ public final class MniSupportCounter {
         this.weightAwareOrdering = on;
     }
 
+    public boolean weightAwareOrdering() {
+        return weightAwareOrdering;
+    }
+
     /**
      * Enable/disable arc-consistency (AC-3) domain filtering before the embedding search.
      * Enabled by default. Disable to measure this optimization's contribution in isolation
@@ -134,7 +138,7 @@ public final class MniSupportCounter {
     private long searchBudget = Long.MAX_VALUE;
     private long searchNodes = 0;
     private boolean searchAborted = false;
-    private boolean budgetApplies = false; // true only inside an MNI embedding search
+    private boolean inMniSearch = false; // true only inside an MNI embedding search (budget applies)
 
     public void setSearchBudget(long maxBacktrackPerSearch) {
         this.searchBudget = maxBacktrackPerSearch <= 0 ? Long.MAX_VALUE : maxBacktrackPerSearch;
@@ -268,7 +272,9 @@ public final class MniSupportCounter {
             }
             wUB[i] = ub;
         }
+        long voteStart = System.nanoTime();
         Integer[] order = voter.order(domSize, deg, wUB);
+        metrics.voteNanos += System.nanoTime() - voteStart;
 
         // ---- OPTIMIZATION: restrict backtrack candidates BY DOMAIN (reduced by AC). Bit
         //      mask: bit i of domMask[v] is set ⇔ v belongs to variable i's domain. During
@@ -495,11 +501,11 @@ public final class MniSupportCounter {
         usedStamp[fixedVal] = usedGen;
         // structural MNI: no weight constraint ⇒ minW = -∞ (every edge valid)
         boolean ok;
-        budgetApplies = true;              // the budget (approximate mode) applies to MNI searches only
+        inMniSearch = true;                // the budget (approximate mode) applies to MNI searches only
         try {
             ok = backtrack(p, matchOrder, 1, assign, Double.NEGATIVE_INFINITY);
         } finally {
-            budgetApplies = false;
+            inMniSearch = false;
         }
         if (searchAborted) metrics.budgetExceeded++; // embedding search aborted by the budget
         if (!ok) {
@@ -531,7 +537,8 @@ public final class MniSupportCounter {
 
     private boolean backtrack(Pattern p, int[] matchOrder, int pos, int[] assign, double minW) {
         metrics.backtrackNodes++;
-        if (budgetApplies && ++searchNodes > searchBudget) { searchAborted = true; return false; } // MNI budget
+        if (inMniSearch) metrics.backtrackMni++; else metrics.backtrackWeight++;
+        if (inMniSearch && ++searchNodes > searchBudget) { searchAborted = true; return false; } // MNI budget
         if (deadlineExceeded()) return false; // time limit: the run is reported as TO, results are partial
         int n = p.nodeCount();
         if (pos == n) return true;
@@ -755,6 +762,7 @@ public final class MniSupportCounter {
      */
     private boolean backtrackVW(Pattern p, int[] matchOrder, int pos, int[] assign, double minVW) {
         metrics.backtrackNodes++; // weight check: never budgeted (exact in every mode)
+        metrics.backtrackWeight++;
         if (deadlineExceeded()) return false; // time limit
         int n = p.nodeCount();
         if (pos == n) return true;
@@ -812,7 +820,10 @@ public final class MniSupportCounter {
             }
             weightUB[v] = ub;
         }
-        return voter.choosePivot(domainSize, degree, weightUB);
+        long voteStart = System.nanoTime();
+        int pivot = voter.choosePivot(domainSize, degree, weightUB);
+        metrics.voteNanos += System.nanoTime() - voteStart;
+        return pivot;
     }
 
     /** Count of G vertices per label (domain-size proxy for PivotVoter); built once. */
