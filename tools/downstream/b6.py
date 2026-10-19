@@ -45,7 +45,6 @@ RAW = os.path.join(DATA, "raw")
 LASTFM_RAW = os.path.join(RAW, "lasftm_asia")
 STRUCT_LG = os.path.join(DATA, "lastfm_struct.lg")
 REF_LG = os.path.join(DATA, "lastfm.lg")
-CPSEP = ";" if os.name == "nt" else ":"
 TOOL_FILES = [
     "tools/downstream/b6.py", "tools/downstream/b6lib.py", "tools/downstream/selftest.py",
     "tools/downstream/requirements.txt", "datasets/convert_musae_struct.py",
