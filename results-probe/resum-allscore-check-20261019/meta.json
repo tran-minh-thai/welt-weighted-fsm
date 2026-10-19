@@ -1,0 +1,22 @@
+{
+  "startTime": "2026-10-19T19:32:26.845718+07:00",
+  "hostname": "ThaiTMs-MacBook-Pro.local",
+  "os": "Mac OS X 27.0.1",
+  "arch": "aarch64",
+  "cpu": "Apple M5",
+  "physicalCores": "10",
+  "logicalProcessors": "10",
+  "ramGB": "32.0",
+  "javaVendor": "Oracle Corporation",
+  "javaRuntimeVersion": "26.0.1+8-34",
+  "javaVmName": "OpenJDK 64-Bit Server VM",
+  "jvmArgs": "",
+  "maxHeapMB": "8192",
+  "JAVA_OPTS": "-Xmx8g",
+  "gitCommit": "0ecd979657ccb7a7f57712e6732f9cb2a1a5ef9c",
+  "gitTree": "clean",
+  "command": "results-probe/resum-allscore-check-20261019/run.sh",
+  "kind": "probe (counts only; times are not measurements)",
+  "limitMs": "600000",
+  "endTime": "2026-10-19T20:03:59.542853+07:00"
+}
