@@ -79,3 +79,61 @@ append_failure_row() {
     fi
     rm -f "$hdrtmp"
 }
+
+# keep_awake: prevent idle sleep for the lifetime of the calling script.
+#   macOS: caffeinate; Windows (Git Bash): tools/keep_awake.ps1 via Windows PowerShell;
+#   elsewhere: a warning (disable sleep manually).
+keep_awake() {
+    if command -v caffeinate >/dev/null 2>&1; then
+        caffeinate -i -w $$ &
+        echo "[keep_awake] caffeinate holds an idle-sleep assertion for PID $$"
+    elif [ -r "/proc/$$/winpid" ] && command -v powershell.exe >/dev/null 2>&1; then
+        local winpid
+        winpid=$(cat "/proc/$$/winpid")
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(cygpath -w "$PWD/tools/keep_awake.ps1")" \
+            -ParentPid "$winpid" &
+        echo "[keep_awake] Windows: SetThreadExecutionState held while Windows PID $winpid runs"
+    else
+        echo "WARNING: no keep-awake mechanism found; disable sleep manually for the whole run." >&2
+    fi
+}
+
+# require_clean_tree: refuse to run when tracked or untracked files (outside results/)
+# differ from HEAD, because the commit hash recorded in meta.json would then describe
+# code that did not run. Set ALLOW_DIRTY=1 only for trial runs that will not be reported.
+require_clean_tree() {
+    local dirty
+    dirty=$(git status --porcelain -- . ':(exclude)results' 2>/dev/null || echo "git-unavailable")
+    if [ -n "$dirty" ]; then
+        if [ "${ALLOW_DIRTY:-0}" = "1" ]; then
+            echo "WARNING: working tree differs from HEAD (ALLOW_DIRTY=1); results are not reportable:" >&2
+            echo "$dirty" >&2
+        else
+            echo "ERROR: working tree differs from HEAD; commit, push and pull first:" >&2
+            echo "$dirty" >&2
+            exit 1
+        fi
+    fi
+}
+
+# print_checklist: what the scripts cannot enforce on the measurement machine.
+print_checklist() {
+    cat <<'TXT'
+Before a measurement run (not enforced by the scripts):
+  - Windows Update paused for the whole campaign (a restart loses the batch silently).
+  - Power plan "High performance", laptop plugged in, lid-close action "Do nothing".
+  - The repository folder excluded from Defender real-time scanning.
+  - No other heavy process running; Google Drive / OneDrive sync paused.
+TXT
+}
+
+# find_python: prints a working Python 3 command (python3, python or py -3), or nothing.
+find_python() {
+    local c
+    for c in python3 python "py -3"; do
+        if $c -c 'import sys; sys.exit(0 if sys.version_info[0] == 3 else 1)' >/dev/null 2>&1; then
+            echo "$c"
+            return 0
+        fi
+    done
+}

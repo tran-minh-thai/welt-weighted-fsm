@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 # Scenario-based experiment driver. The full comparison is split into independent SCENARIOS
 # so it can be run in parts (one evening / one overnight at a time) instead of one very long
-# unattended session. Each scenario writes its OWN timestamped CSV under results/:
+# unattended session. All scenarios of a campaign write into ONE run directory:
 #
-#       results/SC<n>_<YYYYMMDD_HHMMSS>_<scenario-name>.csv
+#       results/v2_revision/<YYYYMMDD_HHMM>_<host>/SC<n>_<scenario-name>.csv
+#       results/v2_revision/<YYYYMMDD_HHMM>_<host>/meta_<datetime>_<command>.json  (machine, JVM, commit)
+#       results/v2_revision/<YYYYMMDD_HHMM>_<host>/topology.csv                    (dataset properties)
+#
+# Set RUN_DIR=<that directory> to add scenarios to an existing campaign. The script refuses
+# to run from a modified working tree (the commit in meta.json must be the code that ran).
 #
 # Scenarios:
 #   sc1  efficiency          GraMi,WEGM,WeLT   citeseer, email_eu, lastfm
@@ -92,7 +97,7 @@ scenario_def() {
 
 print_list() {
     cat <<'EOF'
-Scenarios (each writes results/SC<n>_<YYYYMMDD_HHMMSS>_<name>.csv):
+Scenarios (each writes results/v2_revision/<YYYYMMDD_HHMM>_<host>/SC<n>_<name>.csv):
 
   sc1  efficiency           GraMi,WEGM,WeLT   citeseer, email_eu, lastfm
                             the advantage: at low support WeLT completes while baselines time out.
@@ -114,10 +119,7 @@ EOF
 run_scenario() {
     local sc="$1" filter="${2:-}"
     scenario_def "$sc" || exit 1
-    local stamp out
-    stamp=$(date +%Y%m%d_%H%M%S)
-    out="results/SC${SC_NUM}_${stamp}_${SC_NAME}.csv"
-    mkdir -p results
+    local out="$RUN_DIR/SC${SC_NUM}_${SC_NAME}.csv"
     echo "=== Scenario SC${SC_NUM} (${SC_NAME}) | algos=${SC_ALGOS} | limit=${LIMIT}ms ==="
     echo "    -> $out"
     for cfg in "${SC_CONFIGS[@]}"; do
@@ -135,11 +137,9 @@ run_scenario() {
 
 # Ablation study (RQ4): per-component contribution of WeLT, via AblationMain. Each config is
 # chosen so that removing the lookup table ('no-table') is slow-but-completable, exposing the
-# table's contribution. Writes results/SC4_<datetime>_ablation.csv.
+# table's contribution. Writes $RUN_DIR/SC4_ablation.csv.
 run_ablation() {
-    local stamp out; stamp=$(date +%Y%m%d_%H%M%S)
-    out="results/SC4_${stamp}_ablation.csv"
-    mkdir -p results
+    local out="$RUN_DIR/SC4_ablation.csv"
     echo "=== Ablation (RQ4) | limit=${LIMIT}ms ==="
     echo "    -> $out"
     # <dataset> <minWeight tau_w> <minSup>
@@ -162,11 +162,9 @@ run_ablation() {
 }
 
 # Peak-memory comparison (RQ3): GraMi/WEGM/WeLT at COMPLETABLE supports (all three finish, so
-# the peak heap is comparable). Writes results/SC5_<datetime>_memory.csv (peakMemMB column).
+# the peak heap is comparable). Writes $RUN_DIR/SC5_memory.csv (peakMemMB column).
 run_memory() {
-    local stamp out; stamp=$(date +%Y%m%d_%H%M%S)
-    out="results/SC5_${stamp}_memory.csv"
-    mkdir -p results
+    local out="$RUN_DIR/SC5_memory.csv"
     echo "=== Memory (RQ3) | limit=${LIMIT}ms ==="
     echo "    -> $out"
     local CFG=(
@@ -190,13 +188,27 @@ if [ "$CMD" = "list" ] || [ "$CMD" = "-h" ] || [ "$CMD" = "--help" ]; then
     exit 0
 fi
 
-[ -d target/classes ] || ./build.sh
+# Every run starts from a clean tree and a fresh build, so the commit in meta.json is the
+# code that ran (no stale target/classes).
+require_clean_tree
+./build.sh
+keep_awake
+print_checklist
 
-# Keep the machine awake for the whole (possibly multi-hour) run. On macOS, caffeinate holds
-# an idle-sleep assertion and exits automatically when this script (PID $$) ends. No-op on
-# systems without caffeinate (e.g. Linux).
-if command -v caffeinate >/dev/null 2>&1; then
-    caffeinate -i -w $$ &
+# One directory per campaign: results/v2_revision/<YYYYMMDD_HHMM>_<host>/. Set RUN_DIR to an
+# existing directory to add scenarios to the same campaign (rows are appended).
+HOST=$(hostname | tr -c 'A-Za-z0-9_.-\n' '_')
+RUN_DIR="${RUN_DIR:-results/v2_revision/$(date +%Y%m%d_%H%M)_${HOST}}"
+mkdir -p "$RUN_DIR"
+echo "=== run directory: $RUN_DIR"
+META="$RUN_DIR/meta_$(date +%Y%m%d_%H%M%S)_${CMD}.json"
+java ${JAVA_OPTS:-} -cp target/classes welt.runner.RunMetaMain start "$META" \
+    "command=experiments.sh $*" "limitMs=$LIMIT" "warmup=$WARMUP" "measured=$MEASURED"
+PY=$(find_python)
+if [ -n "$PY" ] && [ ! -f "$RUN_DIR/topology.csv" ]; then
+    $PY tools/topology.py datasets "$RUN_DIR/topology.csv" || echo "WARNING: topology.py failed" >&2
+elif [ -z "$PY" ]; then
+    echo "WARNING: no Python 3 found; topology.csv not written (it can be generated on any machine)." >&2
 fi
 
 case "$CMD" in
@@ -207,4 +219,5 @@ case "$CMD" in
     *) echo "Unknown command: $CMD" >&2; print_list; exit 1 ;;
 esac
 
-echo "Done."
+java ${JAVA_OPTS:-} -cp target/classes welt.runner.RunMetaMain finish "$META"
+echo "Done. Results in $RUN_DIR"
