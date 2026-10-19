@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Experiment campaign (steps below).
 #
+#   ./revision.sh all        the whole campaign, resumable: run it again to continue
 #   ./revision.sh list       describe the steps and exit
 #   ./revision.sh prepare    new campaign directory, environment lock, data check, tests, topology
 #   ./revision.sh b2dev      calibrate the development cells and choose the voting weights
@@ -37,6 +38,39 @@ CMD="${1:-list}"
 
 if [ "$CMD" = "list" ] || [ "$CMD" = "-h" ] || [ "$CMD" = "--help" ]; then
     sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+
+# ---------------------------------------------------------------- whole campaign
+# all: prepare (skipped once prepare.done exists), b2dev (skipped once voting_choice.json
+# exists), b2grid, b4, b1 per dataset, b5 per dataset, b7. Every step skips its finished
+# cells. A failing step stops the sequence and reports "all STOPPED at <step>".
+# ALL_DRY=1 prints the steps that would run; ALL_STEPS="b4 b1:citeseer" runs a subset.
+if [ "$CMD" = "all" ]; then
+    all_step() {
+        local code=0
+        echo "=== all: $*"
+        if [ "${ALL_DRY:-0}" = "1" ]; then return 0; fi
+        bash "$0" "$@" || code=$?
+        if [ "$code" -ne 0 ]; then
+            report_status "all STOPPED at $* (exit $code)"
+            exit "$code"
+        fi
+    }
+    if [ -n "${ALL_STEPS:-}" ]; then
+        for st in $ALL_STEPS; do all_step ${st/:/ }; done
+        exit 0
+    fi
+    cur="$(cat "$CURRENT_FILE" 2>/dev/null || true)"
+    if [ -z "$cur" ] || [ ! -f "$cur/prepare.done" ]; then all_step prepare; fi
+    cur="$(cat "$CURRENT_FILE" 2>/dev/null || true)"
+    if [ -z "$cur" ] || [ ! -f "$cur/voting_choice.json" ]; then all_step b2dev; fi
+    all_step b2grid
+    all_step b4
+    for ds in citeseer email_eu string_ecoli lastfm mico github; do all_step b1 "$ds"; done
+    for ds in citeseer email_eu lastfm; do all_step b5 "$ds"; done
+    all_step b7
+    [ "${ALL_DRY:-0}" = "1" ] || report_status "all done"
     exit 0
 fi
 
@@ -136,7 +170,7 @@ prepare)
     tools/check_resume.sh
     $PY tools/topology.py datasets "$RUN_DIR/topology.csv"
     java ${JAVA_OPTS:-} -cp target/classes welt.runner.RunMetaMain machine results/MEASUREMENT_MACHINE.txt
-    echo "=== results/MEASUREMENT_MACHINE.txt written: commit and push it with the results"
+    touch "$RUN_DIR/prepare.done"
     ;;
 b2dev)
     # Development cells on bitcoin_otc (not reported in the paper). tau_w = median edge weight
