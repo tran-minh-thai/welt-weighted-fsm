@@ -1,0 +1,7 @@
+# Exact versions for the downstream classification experiment (python -m pip install -r ...).
+# The mining itself is Java; the rest of the repository's Python tools need the standard library only.
+numpy==2.5.4
+scipy==1.18.1
+scikit-learn==1.9.1
+joblib==1.6.0
+threadpoolctl==3.7.0

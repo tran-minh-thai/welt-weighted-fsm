@@ -25,6 +25,8 @@
 #   ./revision.sh wegmrange  WEGM, the exact ALL score and WeLT at the supports where WEGM returns patterns
 #   ./revision.sh b5 [ds]    tau_w sweep: comparison at a support where GraMi completes, a WeLT
 #                            shared-table sweep, and a WeLT-only sweep at the lowest WeLT support
+#   ./revision.sh downstream node classification with pattern features (tools/downstream; not part of all;
+#                            DOWNSTREAM_PYTHON is the interpreter with tools/downstream/requirements.txt)
 #   ./revision.sh b7         result sets over every completed cell: GraMiFilter = WeLT,
 #                            exact ALL = its definition and within WeLT; WEGM within ALL within WeLT
 #
@@ -55,7 +57,7 @@ CURRENT_FILE="results/v2_revision/CURRENT"
 CMD="${1:-list}"
 
 if [ "$CMD" = "list" ] || [ "$CMD" = "-h" ] || [ "$CMD" = "--help" ]; then
-    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'
     exit 0
 fi
 
@@ -547,6 +549,11 @@ b5)
             done
         fi
     done
+    ;;
+downstream)
+    require_voting_choice
+    "${DOWNSTREAM_PYTHON:-$PY}" tools/downstream/b6.py --out "$RUN_DIR/B8_downstream" --kind measurement \
+        --voting "$RUN_DIR/voting_choice.json" --limit-ms "$LIMIT" --warmup "$WARMUP" --measured "$MEASURED" --skip-build
     ;;
 b7)
     # Required (exit 1 on failure): GraMiFilter = WeLT; the exact ALL result

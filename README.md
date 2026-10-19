@@ -163,6 +163,7 @@ exact-mode run that reports an aborted search stops with exit code 4. The result
 | `string_ecoli.lg` | 4,137 | 76,330 | 5 | STRING combined-score ∈[500,999] | native (STRING E. coli) |
 | `bitcoin_otc.lg` | 5,881 | 21,492 | 5 | trust rating shifted to [1,21] | native (SNAP Bitcoin-OTC) |
 | `lastfm.lg` | 7,624 | 27,806 | 18 | Jaccard of node features ×100 | derived (MUSAE LastFM) |
+| `lastfm_struct.lg` | 7,624 | 27,806 | 5 (degree classes) | the weights of `lastfm.lg` | derived (MUSAE LastFM), downstream experiment only |
 | `test1/2.lg` | — | — | — | GraMi toy graphs | — |
 
 Two large graphs are not committed (regenerate them with the converters): `mico.lg`
