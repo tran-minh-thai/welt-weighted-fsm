@@ -18,5 +18,6 @@
   "command": "revision.sh allexact string_ecoli",
   "limitMs": "3600000",
   "warmup": "1",
-  "measured": "5"
+  "measured": "5",
+  "endTime": "2026-10-20T23:43:45.6875703+07:00"
 }
