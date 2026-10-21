@@ -89,6 +89,31 @@ def main():
         check("hard: smallest completed support within 60 s", out("smallest-ok-within", b1t, "c.lg", "WeLT", "60000") == "200")
         check("hard: nothing within the cap gives nothing", out("smallest-ok-within", b1t, "c.lg", "WeLT", "5") == "")
 
+        # retry_cells.py: move an interrupted cell's CRASH row out, keep every other row byte for byte
+        for eol in ("\n", "\r\n"):
+            rc = os.path.join(tmp, "retry" + str(len(eol)) + ".csv")
+            lines = ["dataset,algorithm,minSup,minWeight,status,partial", "e.lg,GraMi,6,336.000,TO,1",
+                     "e.lg,GraMiFilter,6,336.000,CRASH,1", "e.lg,WeLT,6,336.000,OK,0", "c.lg,GraMiFilter,6,336.000,CRASH,1"]
+            with open(rc, "wb") as fh:
+                fh.write((eol.join(lines) + eol).encode())
+            keys = ["dataset=e.lg", "algorithm=GraMiFilter", "minSup=6", "minWeight=336"]
+            r = run("retry_cells.py", rc, *keys)
+            after = open(rc, "rb").read()
+            expect = (eol.join(lines[:2] + lines[3:]) + eol).encode()
+            check(f"retry: the CRASH row is moved, other rows unchanged byte for byte (eol {len(eol)})",
+                  r.returncode == 0 and after == expect)
+            audit = open(rc + ".retried.csv", encoding="utf-8").read().splitlines()
+            check(f"retry: the moved row is kept in the audit file (eol {len(eol)})",
+                  len(audit) == 2 and audit[0].endswith(",retriedAt") and audit[1].startswith(lines[2] + ","))
+            check(f"retry: the cell is no longer done, the others still are (eol {len(eol)})",
+                  run("cell_done.py", rc, *keys).returncode == 1
+                  and run("cell_done.py", rc, "dataset=c.lg", "algorithm=GraMiFilter", "minSup=6").returncode == 0)
+            r2 = run("retry_cells.py", rc, *keys)
+            check(f"retry: a second call changes nothing (eol {len(eol)})", r2.returncode == 1 and open(rc, "rb").read() == expect)
+            r3 = run("retry_cells.py", rc, "dataset=e.lg", "algorithm=GraMi", "minSup=6")
+            check(f"retry: a row with another status is refused (eol {len(eol)})",
+                  r3.returncode == 1 and "none has status CRASH" in r3.stderr and open(rc, "rb").read() == expect)
+
     print(f"selftest_tools: {len(cases) - len(failures)}/{len(cases)} cases passed")
     sys.exit(1 if failures else 0)
 
