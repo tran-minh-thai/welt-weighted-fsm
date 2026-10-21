@@ -26,7 +26,8 @@ import java.util.function.Consumer;
  *   noP2single  the k = 1 part of P2 off
  *   p3R       P3 against R      noWext   wext off          voteDeg  voter = degree only
  *   noWorder  worder off        noBnb    weight branch-and-bound off
- *   noTable   p1 off and p2 off
+ *   noTable   p1 off and p2 off (the table is still built)
+ *   noTableBuild  no table built: the per-edge-type bound on every edge replaces P1 and P2
  *   noTableReuse  the miner counts the 1- and 2-edge patterns again
  *   noTableThreshold  the table stores exact MaxW values
  *   noTableOptions    both table cost options off
@@ -80,6 +81,7 @@ public final class AblationMain {
             new Variant("noWorder", "worder=off", c -> c.weightOrder = false),
             new Variant("noBnb", "bnb=off", c -> c.bnb = false),
             new Variant("noTable", "p1=off+p2=off (combination)", c -> { c.p1 = false; c.p2 = false; }),
+            new Variant("noTableBuild", "tableBuild=off", c -> c.tableBuild = false),
             new Variant("noTableReuse", "tableReuse=off", c -> c.tableReuse = false),
             new Variant("noTableThreshold", "tableThreshold=off", c -> c.tableThreshold = false),
             new Variant("noTableOptions", "tableReuse=off+tableThreshold=off (combination)",
@@ -189,6 +191,7 @@ public final class AblationMain {
                     .put("bnb", cfg.bnb ? "on" : "off")
                     .put("tableReuse", cfg.tableReuse ? "on" : "off")
                     .put("tableThreshold", cfg.tableThreshold ? "on" : "off")
+                    .put("tableBuild", cfg.tableBuild ? "on" : "off")
                     .put("voterSource", BenchmarkMain.voterSource("WeLT"))
                     .put("status", cell.status)
                     .put("partial", ok ? 0 : 1)

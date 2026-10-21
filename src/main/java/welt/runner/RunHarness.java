@@ -72,6 +72,13 @@ public final class RunHarness {
         public boolean tableReuse = true;
         /** WeLT: the table stores the weight test at minWeight instead of exact MaxW values. */
         public boolean tableThreshold = true;
+        /**
+         * WeLT only: build the lookup table. Off, no table is built and P1/P2 give way to the
+         * per-edge-type bound on every edge of every candidate (EdgeTypeBoundStrategy), with the
+         * voter, the weight-aware order, the weight-gated extension and the branch-and-bound of
+         * this configuration.
+         */
+        public boolean tableBuild = true;
         /** Ablation flags (every algorithm): P3 closure, and P3 against R instead of F. */
         public boolean p3 = true, p3AgainstResults = false;
         /** Record per-phase times of the mining phase (ablation runs only). */
@@ -200,6 +207,10 @@ public final class RunHarness {
             case "WEGM": strategy = new WEGMStrategy(cfg.minWeight, m); break;
             case "OWGraMi": strategy = new OWGraMiStrategy(g, cfg.minWeight, counter, m); break;
             case "WeLT": {
+                if (!cfg.tableBuild) {
+                    strategy = new EdgeTypeBoundStrategy(g, cfg.minWeight, counter, m, cfg.wext);
+                    break;
+                }
                 long tb = System.nanoTime();
                 WeightedLookupTable.Options opt = new WeightedLookupTable.Options();
                 opt.keepSupports = cfg.tableReuse;

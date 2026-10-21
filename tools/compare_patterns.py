@@ -3,7 +3,7 @@
 
 Usage:  python3 tools/compare_patterns.py [--subset] <patterns-dir> <out.csv> [algoA] [algoB]
 
-Defaults: algoA = EdgeTypeBound, algoB = WeLT (the same problem, so the sets must be equal). For every (dataset, minSup, minWeight) for which BOTH
+Defaults: algoA = GraMiFilter, algoB = WeLT (the same problem, so the sets must be equal). For every (dataset, minSup, minWeight) for which BOTH
 files <dataset>_<algo>_<minSup>_<minWeight>.tsv exist (a file is written only for a completed
 cell), one row:
 
@@ -44,7 +44,7 @@ def main():
     if len(args) not in (2, 3, 4):
         sys.exit(__doc__)
     src, out = args[0], args[1]
-    a = args[2] if len(args) > 2 else "EdgeTypeBound"
+    a = args[2] if len(args) > 2 else "GraMiFilter"
     b = args[3] if len(args) > 3 else "WeLT"
     files = {}
     for f in os.listdir(src):

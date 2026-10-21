@@ -21,7 +21,7 @@ subgraph-mining algorithms on a single large graph:
 | **WEGM** | edge weights are pattern labels (Max method) | published edge-weight method; **different result set** | *reimplementation* of Nguyen et al., J. Inf. Telecommun. 9(4):543-558, 2025 |
 | **OWGraMi** | vertex-bottleneck weight | vertex-weight method; **different result set** | *reimplementation* from the paper |
 | **WeLT** | edge-bottleneck weight | **proposed** — lookup-table filters P1+P2, voting, bnb | new |
-| **EdgeTypeBound**, **EdgeTypeBound-ungated** | the same problem as WeLT | **ablation variants of WeLT**: no lookup table, no voting, no weight-aware order | the per-edge-type bound (the 1-edge part of P2) and the exact weight check; with and without weight-gated extension |
+| **EdgeTypeBound**, **EdgeTypeBound-ungated** | the same problem as WeLT | not in the campaign; the strategy also serves the ablation variant `noTableBuild` | the per-edge-type bound (the 1-edge part of P2) and the exact weight check; with and without weight-gated extension |
 
 > **WEGM.** In WEGM an edge weight is part of the pattern: an isomorphism must map edges to
 > edges of equal weight (Definition 3(b) of the WEGM article), so support counts only
@@ -283,8 +283,10 @@ use the degree-only pivot without weight-aware order.
 `full`, `noP1`, `noP2`, `noP2single`, `noP3`, `p3R` (P3 checks the result set instead of the
 MNI-frequent set), `noWext`, `voteDeg`, `noWorder`, `noBnb` (the weight check without its
 branch-and-bound: the bottleneck is tested on complete embeddings only), the combination
-`noTable` (P1 and P2 off), `noTableReuse` and `noTableThreshold` (one table cost option off, see
-below) and the combination `noTableOptions` (both off). Each differs from `full` in exactly one factor except `noTable`. Every completed variant
+`noTable` (P1 and P2 off, the table still built), `noTableBuild` (no table built: the per-edge-type
+bound on every edge replaces P1 and P2, the vote and the weight-aware order of WeLT kept),
+`noTableReuse` and `noTableThreshold` (one table cost option off, see
+below) and the combination `noTableOptions` (both off). Each differs from `full` in exactly one factor except `noTable` and `noTableOptions`. Every completed variant
 must return the result set of `full`, compared by canonical code (`invariant=OK`; exit code 5
 otherwise). Phase timers (`canonMs`, `filterMs`, `mniMs`, `weightMs`) are recorded here only.
 
@@ -315,15 +317,17 @@ metrics of the last two.
 sensitivity over the 21-point simplex grid and (1,1,1)),
 `b4` (ablation), `b1` per dataset (efficiency) followed by `allexact` for the same dataset
 (ReSuM's ALL score computed exactly on the b1 cells), `b2hard` and `b4hard` (the same two analyses at
-the smallest B1 support where WeLT completes within 60 s), `b1low` and `b4low` (WeLT and
-EdgeTypeBound, and the ablation of the lookup table, the vote and the table cost options, at
-email_eu 4 and 3 and lastfm 100 and 50, below the B1 ranges), `b3live` and `b3heap` (peak live
-heap and smallest heap, at email_eu 12 and 10 for every algorithm and at the four low cells for WeLT
-and EdgeTypeBound), `b5` per dataset (τ_w sweep at the smallest
+the smallest B1 support where WeLT completes within 60 s), `b1low` and `b4low` (WeLT, and the
+ablation of the lookup table, the vote and the table cost options, at email_eu 4 and 3 and lastfm
+100 and 50, below the B1 ranges), `b3live` (peak live heap at email_eu 12 and 10 for every algorithm
+and at the four low cells for WeLT), `wegmrange` (WEGM, the exact ALL score and WeLT at the supports
+where WEGM returns patterns: email_eu 2, citeseer 5 and 3, lastfm 12 and 6, string_ecoli 345,
+github 5352, mico 14826), `b5` per dataset (τ_w sweep at the smallest
 support where GraMi completes, a shared-table WeLT sweep, and a WeLT-only sweep at the smallest
-support where WeLT completes) and `b7` (on every completed cell: GraMiFilter = WeLT,
-EdgeTypeBound = WeLT, the exact ALL result equal to the ALL set computed from its definition and
-contained in WeLT). Running
+support where WeLT completes) and `b7` (on every completed cell: GraMiFilter = WeLT, the exact
+ALL result equal to the ALL set computed from its definition and contained in WeLT; at the
+`wegmrange` cells, the skeleton of every WEGM pattern is an ALL pattern and every ALL pattern a WeLT
+pattern, `NestingCheckMain`). `b3heap` (smallest heap, `tools/min_heap.py`) runs on request only. Running
 it again continues: finished steps and cells are skipped. With `CHECKPOINT=1` every cell is
 committed, pushed to the branch `campaign-revision-r2` and reported to a status repository.
 `./revision.sh list` describes each step. The git tree of `src/` is locked at the first step of a

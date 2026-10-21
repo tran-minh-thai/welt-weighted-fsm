@@ -6,7 +6,7 @@
 #   ./revision.sh prepare    new campaign directory, environment lock, data check, tests, topology
 #   ./revision.sh voting     record the voting weights: (1,1,1), fixed in advance
 #   ./revision.sh b2dev      optional: calibrate development cells and choose the weights from data
-#   ./revision.sh b1 [ds]    efficiency: GraMi, GraMiFilter, EdgeTypeBound, WEGM, WeLT over the support
+#   ./revision.sh b1 [ds]    efficiency: GraMi, GraMiFilter, WEGM, WeLT over the support
 #                            ranges (optional dataset name, e.g. citeseer, to split b1 into sessions)
 #   ./revision.sh allexact [ds]  the ALL score of ReSuM computed exactly (GraMi on the edges of
 #                            weight >= tau_w) on the b1 cells
@@ -15,15 +15,16 @@
 #   ./revision.sh b4         one-factor ablation of WeLT
 #   ./revision.sh b2hard     voting sensitivity at the hardest cell of each dataset (after b1)
 #   ./revision.sh b4hard     ablation at the hardest cell of citeseer, email_eu, lastfm (after b1)
-#   ./revision.sh b1low      WeLT and EdgeTypeBound below the b1 ranges (email_eu 4, 3; lastfm 100, 50)
+#   ./revision.sh b1low      WeLT below the b1 ranges (email_eu 4, 3; lastfm 100, 50)
 #   ./revision.sh b4low      ablation of the lookup table, the vote and the table cost options at those cells
-#   ./revision.sh b3live     peak live heap, one untimed run per cell with forced collections (the b3heap cells)
-#   ./revision.sh b3heap     smallest heap at which a cell completes (email_eu 12, 10: every algorithm;
-#                            email_eu 4, 3 and lastfm 100, 50: WeLT and EdgeTypeBound; graph-only floors)
+#   ./revision.sh b3live     peak live heap, one untimed run per cell with forced collections (email_eu 12,
+#                            10: every algorithm; email_eu 4, 3 and lastfm 100, 50: WeLT)
+#   ./revision.sh b3heap     smallest heap at which a cell completes (not part of all)
+#   ./revision.sh wegmrange  WEGM, the exact ALL score and WeLT at the supports where WEGM returns patterns
 #   ./revision.sh b5 [ds]    tau_w sweep: comparison at a support where GraMi completes, a WeLT
 #                            shared-table sweep, and a WeLT-only sweep at the lowest WeLT support
 #   ./revision.sh b7         result sets over every completed cell: GraMiFilter = WeLT,
-#                            EdgeTypeBound = WeLT, exact ALL = its definition and within WeLT
+#                            exact ALL = its definition and within WeLT; WEGM within ALL within WeLT
 #
 # Order: prepare, voting (writes voting_choice.json), then b2grid, b4, b1 and allexact, b5, b7. Every step after
 # prepare writes into the campaign directory named in results/v2_revision/CURRENT (or RUN_DIR).
@@ -58,7 +59,7 @@ fi
 
 # ---------------------------------------------------------------- whole campaign
 # all: prepare (skipped once prepare.done exists), voting (skipped once voting_choice.json
-# exists), b2grid, b4, b1 and allexact per dataset, b2hard, b4hard, b1low, b4low, b3live, b3heap, b5 per dataset, b7. Every step skips its finished
+# exists), b2grid, b4, b1 and allexact per dataset, b2hard, b4hard, b1low, b4low, b3live, wegmrange, b5 per dataset, b7. Every step skips its finished
 # cells. A failing step stops the sequence and reports "all STOPPED at <step>".
 # ALL_DRY=1 prints the steps that would run; ALL_STEPS="b4 b1:citeseer" runs a subset.
 if [ "$CMD" = "all" ]; then
@@ -88,7 +89,7 @@ if [ "$CMD" = "all" ]; then
     all_step b1low
     all_step b4low
     all_step b3live
-    all_step b3heap
+    all_step wegmrange
     for ds in citeseer email_eu lastfm; do all_step b5 "$ds"; done
     all_step b7
     [ "${ALL_DRY:-0}" = "1" ] || report_status "all done"
@@ -272,7 +273,7 @@ b1)
         if [ -n "${2:-}" ] && [ "$ds" != "$2" ]; then continue; fi
         tw=$(tau_w_of "$ds")
         for s in $sups; do
-            for algo in GraMi GraMiFilter EdgeTypeBound WEGM WeLT; do
+            for algo in GraMi GraMiFilter WEGM WeLT; do
                 run_cell "$OUT" "datasets/$ds.lg" "$s" "$tw" "$algo" "$LIMIT" "$WARMUP" "$MEASURED"
             done
         done
@@ -323,23 +324,22 @@ b4)
 b1low|b4low)
     # Cells below the b1 ranges, fixed before any run of this campaign from the lower-support
     # count probe (results-probe/l*-support-counts-20261019): at email_eu 4 and 3 and lastfm 100
-    # and 50 both WeLT and EdgeTypeBound completed within 10 minutes on the development machine,
-    # in about 1 s to 2.5 min per run there, where the b1 cells take milliseconds. The other
-    # algorithms are not run there: GraMi, GraMiFilter and WEGM already exceed the limit at
-    # higher supports of these datasets. b4low runs the variants that bear on the lookup table,
-    # the vote and the table cost options; noWext, noBnb, noP3 and p3R are left out (noWext and
-    # noBnb already exceed the limit in b4 at higher supports).
+    # and 50 WeLT completed within 10 minutes on the development machine, in about 1 s to 2.5 min
+    # per run there, where the b1 cells take milliseconds. The other algorithms are not run there:
+    # GraMi and GraMiFilter already exceed the limit at higher supports of these datasets, and WEGM
+    # returns no pattern there (results-invariant/wegm-single-edge-support-20261021). b4low runs
+    # the variants that bear on the lookup table (noTableBuild: no table at all), the vote and the
+    # table cost options; noWext, noBnb, noP3 and p3R are left out (noWext and noBnb already
+    # exceed the limit in b4 at higher supports).
     require_voting_choice
     LOW_CELLS=("email_eu 4" "email_eu 3" "lastfm 100" "lastfm 50")
     for cell in "${LOW_CELLS[@]}"; do
         read -r ds s <<< "$cell"
         tw=$(tau_w_of "$ds")
         if [ "$CMD" = "b1low" ]; then
-            for algo in EdgeTypeBound WeLT; do
-                run_cell "$RUN_DIR/B1_low.csv" "datasets/$ds.lg" "$s" "$tw" "$algo" "$LIMIT" "$WARMUP" "$MEASURED"
-            done
+            run_cell "$RUN_DIR/B1_low.csv" "datasets/$ds.lg" "$s" "$tw" WeLT "$LIMIT" "$WARMUP" "$MEASURED"
         else
-            ABLATION_ONLY="full noP1 noP2 noP2single noTable voteDeg noWorder noTableReuse noTableThreshold noTableOptions" \
+            ABLATION_ONLY="full noP1 noP2 noP2single noTable noTableBuild voteDeg noWorder noTableReuse noTableThreshold noTableOptions" \
                 run_ablation_cell "$RUN_DIR/B4_low.csv" "datasets/$ds.lg" "$s" "$tw" "$LIMIT" "$WARMUP" "$MEASURED"
         fi
     done
@@ -348,29 +348,26 @@ b3live)
     # Peak live heap: one run per cell with WELT_LIVE_HEAP=on (no warm-up, one run, not timed):
     # a full collection is forced at the start and the end of mining and whenever the retained data
     # exceeds 1.05 times its value at the previous collection; the heap used right after each
-    # collection is the live heap there. Same cells as b3heap (see there).
+    # collection is the live heap there. Cells: email_eu 12 and 10, the b1 cells where GraMi and
+    # GraMiFilter also complete in a non-trivial time (every algorithm), and the b1low cells (WeLT).
     require_voting_choice
     LIVE_OUT="$RUN_DIR/B3_live_heap.csv"
     for s in 12 10; do
-        for algo in GraMi GraMiFilter EdgeTypeBound WEGM WeLT; do
+        for algo in GraMi GraMiFilter WEGM WeLT; do
             WELT_LIVE_HEAP=on run_cell "$LIVE_OUT" datasets/email_eu.lg "$s" "$(tau_w_of email_eu)" "$algo" "$LIMIT" 0 1
         done
     done
     for cell in "email_eu 4" "email_eu 3" "lastfm 100" "lastfm 50"; do
         read -r ds s <<< "$cell"
-        for algo in EdgeTypeBound WeLT; do
-            WELT_LIVE_HEAP=on run_cell "$LIVE_OUT" "datasets/$ds.lg" "$s" "$(tau_w_of "$ds")" "$algo" "$LIMIT" 0 1
-        done
+        WELT_LIVE_HEAP=on run_cell "$LIVE_OUT" "datasets/$ds.lg" "$s" "$(tau_w_of "$ds")" WeLT "$LIMIT" 0 1
     done
     ;;
 b3heap)
-    # Smallest heap at which a cell completes (tools/min_heap.py): bisection on a geometric scale
-    # down to 5% between a failing and a passing -Xmx, the other JVM options of JAVA_OPTS kept; a
-    # probe passes when the cell completes within 5 times its run time at the full heap. Cells
-    # fixed before any run of this campaign: email_eu 12 and 10, the b1 cells where GraMi and
-    # GraMiFilter also complete in a non-trivial time; the four b1low cells for WeLT and
-    # EdgeTypeBound (the other algorithms exceed the limit at higher supports). citeseer is left
-    # out: wherever GraMi completes there, every algorithm uses a few MB. The floor of each dataset
+    # Not part of all. Smallest heap at which a cell completes (tools/min_heap.py): bisection on a
+    # geometric scale down to 5% between a failing and a passing -Xmx, the other JVM options of
+    # JAVA_OPTS kept; a probe passes when the cell runs at most twice as slow as with the full heap.
+    # Cells: those of b3live. citeseer is left out: wherever GraMi completes there, every algorithm
+    # uses a few MB. The floor of each dataset
     # (WeLT at a support no label reaches, so the run only loads the graph and builds the index)
     # separates the graph from the mining.
     require_voting_choice
@@ -390,11 +387,11 @@ b3heap)
     last_status_heap() { awk -F, 'NR == 1 { for (i = 1; i <= NF; i++) h[$i] = i } END { print $h["statusAtMax"] " ok=" $h["heapOkMB"] "MB" }' "$HEAP_OUT"; }
     for ds in email_eu lastfm; do heap_cell "$ds" 1000000000 WeLT; done
     for s in 12 10; do
-        for algo in GraMi GraMiFilter EdgeTypeBound WEGM WeLT; do heap_cell email_eu "$s" "$algo"; done
+        for algo in GraMi GraMiFilter WEGM WeLT; do heap_cell email_eu "$s" "$algo"; done
     done
     for cell in "email_eu 4" "email_eu 3" "lastfm 100" "lastfm 50"; do
         read -r ds s <<< "$cell"
-        for algo in EdgeTypeBound WeLT; do heap_cell "$ds" "$s" "$algo"; done
+        heap_cell "$ds" "$s" WeLT
     done
     ;;
 b2hard|b4hard)
@@ -427,12 +424,33 @@ b2hard|b4hard)
         fi
     done
     ;;
+wegmrange)
+    # WEGM where it returns patterns. WEGM counts only occurrences with the same (integer) edge
+    # weights, so it returns a pattern iff some weighted edge type of weight >= tau_w has MNI >=
+    # minSup (results-invariant/wegm-single-edge-support-20261021); at the b1 supports it returns
+    # none except at mico 14000. Cells, fixed before any run of this campaign: for each dataset
+    # m = the largest MNI of such a type (email_eu 2, citeseer 5, lastfm 12, string_ecoli 345,
+    # github 5352, mico 14826), and ceil(m/2) for citeseer and lastfm, whose heavy subgraphs have
+    # under 100 edges. At each cell: WEGM, the exact ALL score (GraMi on the heavy subgraph) and
+    # WeLT, one run each (no warm-up): the step compares result sets (b7 checks that the skeleton of
+    # every WEGM pattern is an ALL pattern and every ALL pattern a WeLT pattern), not run times. ALL
+    # and WeLT run with the limit WEGM_RANGE_LIMIT_MS (default 600000).
+    require_voting_choice
+    RLIM="${WEGM_RANGE_LIMIT_MS:-600000}"
+    for cell in "email_eu 2" "citeseer 5" "citeseer 3" "lastfm 12" "lastfm 6" "string_ecoli 345" "github 5352" "mico 14826"; do
+        read -r ds s <<< "$cell"
+        tw=$(tau_w_of "$ds")
+        run_cell "$RUN_DIR/B6_wegm_range.csv" "datasets/$ds.lg" "$s" "$tw" WEGM "$LIMIT" 0 1
+        run_all_exact_cell "$RUN_DIR/B6_wegm_range_all.csv" "datasets/$ds.lg" "$s" "$tw" "$RLIM" 0 1 "$RUN_DIR/patterns_wegm_range_all"
+        run_cell "$RUN_DIR/B6_wegm_range.csv" "datasets/$ds.lg" "$s" "$tw" WeLT "$RLIM" 0 1
+    done
+    ;;
 b5)
     # tau_w sweep, rule fixed before any run (see tools/b5_choose.py):
     #  comparison sweep  minSup = smallest support of the B1 range at which GraMi completed (the
     #                    tau_w -> 0 limit, so every tau_w point is at most as hard); if none, the
     #                    first value of the extension list at which a GraMi probe completes in 60 s.
-    #                    Algorithms GraMiFilter, EdgeTypeBound, WEGM, WeLT and the exact ALL score per
+    #                    Algorithms GraMiFilter, WEGM, WeLT and the exact ALL score per
     #                    point, plus WeLT with one shared table.
     #  WeLT-only sweep   minSup = smallest support of the B1 range at which WeLT completed; result
     #                    counts and sizes only (no baseline at that support).
@@ -481,7 +499,7 @@ b5)
         } >> "$CHOICES"
         echo "=== B5 $ds comparison minSup=$s, WeLT-only minSup=${sw:-none}, tau_w=$taus"
         for t in ${taus//,/ }; do
-            for algo in GraMiFilter EdgeTypeBound WEGM WeLT; do
+            for algo in GraMiFilter WEGM WeLT; do
                 run_cell "$OUT" "datasets/$ds.lg" "$s" "$t" "$algo" "$LIMIT" "$WARMUP" "$MEASURED"
             done
             run_all_exact_cell "$RUN_DIR/B5_all_exact.csv" "datasets/$ds.lg" "$s" "$t" "$LIMIT" "$WARMUP" "$MEASURED" "$RUN_DIR/patterns_all_exact"
@@ -505,9 +523,12 @@ b5)
     done
     ;;
 b7)
-    # Required (exit 1 on failure): GraMiFilter = WeLT, EdgeTypeBound = WeLT; the exact ALL result
+    # Required (exit 1 on failure): GraMiFilter = WeLT; the exact ALL result
     # (GraMi on the heavy subgraph) = the ALL set computed in memory from its definition, and
-    # contained in WeLT (the containment proposition). Recorded only, when present: ReSuM's
+    # contained in WeLT (the containment proposition); at the wegmrange cells, the skeleton of every
+    # WEGM pattern is an ALL pattern and every ALL pattern a WeLT pattern (B7_nesting.csv; a cell
+    # where a dump is missing or empty is listed as not compared, and at least one cell must be
+    # compared). Recorded only, when present: ReSuM's
     # released code against the ALL definition and against WeLT (its weight check differs from the
     # definition on cyclic patterns, see results-probe/resum-cycle-check-20261019).
     P="$RUN_DIR/patterns"
@@ -541,9 +562,27 @@ b7)
         if [ "$code" -eq 2 ]; then echo "ERROR: $6: no cell could be compared" >&2; status=1; fi
     }
     b7_compare "$P" "$RUN_DIR/B7_equivalence.csv" - GraMiFilter WeLT "GraMiFilter = WeLT" required
-    b7_compare "$P" "$RUN_DIR/B7_equivalence_edgetypebound.csv" - EdgeTypeBound WeLT "EdgeTypeBound = WeLT" required
     b7_compare "$Q" "$RUN_DIR/B7_all_exact_definition.csv" - ALL-exact ALL-definition "exact ALL = ALL definition" required
     b7_compare "$Q" "$RUN_DIR/B7_all_within_welt.csv" --subset ALL-exact WeLT "exact ALL within WeLT" required
+    if [ -f "$RUN_DIR/B6_wegm_range.csv" ]; then
+        NEST="$RUN_DIR/B7_nesting.csv"
+        echo "dataset,minSup,minWeight,wegmSkeletons,all,welt,skeletonsNotInAll,allNotInWelt,exit" > "$NEST"
+        compared=0
+        for cell in "email_eu 2" "citeseer 5" "citeseer 3" "lastfm 12" "lastfm 6" "string_ecoli 345" "github 5352" "mico 14826"; do
+            read -r ds s <<< "$cell"
+            tw=$(tau_w_of "$ds")
+            code=0
+            out=$(java ${JAVA_OPTS:-} -cp target/classes welt.runner.NestingCheckMain "$P/${ds}_WEGM_${s}_${tw}.0.tsv" \
+                "$RUN_DIR/patterns_wegm_range_all/${ds}_heavy_${tw}_GraMi_${s}_${tw}.0.tsv" "$P/${ds}_WeLT_${s}_${tw}.0.tsv") || code=$?
+            echo "$ds minSup=$s: $out" | grep -v '^NESTING_CSV' || true
+            line=$(printf '%s\n' "$out" | sed -n 's/^NESTING_CSV,//p')
+            echo "$ds.lg,$s,$tw,${line:-,,,,},$code" >> "$NEST"
+            if [ "$code" -eq 1 ]; then echo "ERROR: nesting fails at $ds minSup=$s (see $(basename "$NEST"))" >&2; status=1; fi
+            if [ "$code" -eq 0 ]; then compared=$((compared + 1)); fi
+        done
+        echo "nesting: $compared cells compared"
+        if [ "$compared" -eq 0 ]; then echo "ERROR: nesting: no cell could be compared" >&2; status=1; fi
+    fi
     if ls "$P"/*_ReSuM-ALL_*.tsv > /dev/null 2>&1; then
         b7_compare "$P" "$RUN_DIR/B7_resum_definition.csv" - ReSuM-ALL ALL-definition "ReSuM code = ALL definition" recorded
         b7_compare "$P" "$RUN_DIR/B7_resum_within_welt.csv" --subset ReSuM-ALL WeLT "ReSuM code within WeLT" recorded

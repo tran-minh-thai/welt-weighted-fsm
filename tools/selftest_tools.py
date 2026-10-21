@@ -60,7 +60,7 @@ def main():
         pdir = os.path.join(tmp, "patterns")
         os.makedirs(pdir)
         head = "code\tvertices\tedges\tweight\n"
-        for algo, codes in (("EdgeTypeBound", ["a", "b"]), ("WeLT", ["a", "b"]), ("GraMi", ["a", "b", "c"])):
+        for algo, codes in (("GraMiFilter", ["a", "b"]), ("WeLT", ["a", "b"]), ("GraMi", ["a", "b", "c"])):
             with open(os.path.join(pdir, f"x_{algo}_10_5.0.tsv"), "w", encoding="utf-8") as fh:
                 fh.write(head + "".join(f"{c}\t2\t1\t5.0\n" for c in codes))
         out = os.path.join(tmp, "cmp.csv")
