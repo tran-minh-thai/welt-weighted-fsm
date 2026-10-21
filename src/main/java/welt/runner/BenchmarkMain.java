@@ -49,10 +49,11 @@ public final class BenchmarkMain {
      * voterSource tells which). The baselines keep the shared default: degree-only
      * pivot, no weight-aware order.
      */
-    /** An on/off environment switch, off when unset. */
-    private static boolean onOff(String name) {
+    /** An on/off environment switch, {@code unset} when the variable is not set. */
+    private static boolean onOff(String name, boolean unset) {
         String v = System.getenv(name);
-        if (v == null || v.isBlank() || v.equals("off")) return false;
+        if (v == null || v.isBlank()) return unset;
+        if (v.equals("off")) return false;
         if (v.equals("on")) return true;
         throw new IllegalArgumentException(name + " must be on or off, got " + v);
     }
@@ -65,8 +66,8 @@ public final class BenchmarkMain {
             if (w != null && !w.isBlank() && !w.equals("on") && !w.equals("off"))
                 throw new IllegalArgumentException("WELT_WORDER must be on or off, got " + w);
             cfg.weightOrder = w == null || w.isBlank() || w.equals("on");
-            cfg.tableReuse = onOff("WELT_TABLE_REUSE");
-            cfg.tableThreshold = onOff("WELT_TABLE_THRESHOLD");
+            cfg.tableReuse = onOff("WELT_TABLE_REUSE", true);
+            cfg.tableThreshold = onOff("WELT_TABLE_THRESHOLD", true);
         } else {
             cfg.voter = PivotVoter.DEGREE_ONLY;
             cfg.weightOrder = false;

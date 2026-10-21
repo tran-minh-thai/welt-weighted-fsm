@@ -69,9 +69,9 @@ public final class RunHarness {
         /** Weight branch-and-bound inside the weight check (off = test complete embeddings only). */
         public boolean bnb = true;
         /** WeLT: the miner takes the 1- and 2-edge support results of the table build. */
-        public boolean tableReuse = false;
+        public boolean tableReuse = true;
         /** WeLT: the table stores the weight test at minWeight instead of exact MaxW values. */
-        public boolean tableThreshold = false;
+        public boolean tableThreshold = true;
         /** Ablation flags (every algorithm): P3 closure, and P3 against R instead of F. */
         public boolean p3 = true, p3AgainstResults = false;
         /** Record per-phase times of the mining phase (ablation runs only). */

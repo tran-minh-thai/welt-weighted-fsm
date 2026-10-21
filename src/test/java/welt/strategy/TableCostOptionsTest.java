@@ -185,6 +185,13 @@ class TableCostOptionsTest {
         return Arrays.stream(c).boxed().toList();
     }
 
+    /** Both options are on by default, in the harness configuration as in the runners' environment switches. */
+    @Test
+    void optionsAreOnByDefault() {
+        RunHarness.Config c = new RunHarness.Config("WeLT", 10, 336);
+        assertTrue(c.tableReuse && c.tableThreshold, "harness default");
+    }
+
     @Test
     void isomorphismOfSmallPatterns() {
         Pattern p = Pattern.of(new int[]{1, 2, 3}, new int[][]{{0, 1, 0}, {1, 2, 5}});

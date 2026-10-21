@@ -17,14 +17,19 @@ import java.util.function.Consumer;
 /**
  * ABLATION of WeLT on one {@code (dataset, minSup, minWeight)} cell. Each variant differs from
  * {@code full} in exactly ONE factor (except {@code noTable}, the combination P1 off + P2 off,
- * which completes the four {P1, P2} combinations with P3 on):
+ * which completes the four {P1, P2} combinations with P3 on, and {@code noTableOptions}, both
+ * table cost options off):
  * <pre>
- *   full      p1 on, p2 on (with its k = 1 part), p3 on, P3 against F, wext on, voter = WELT_VOTER, worder on
+ *   full      p1 on, p2 on (with its k = 1 part), p3 on, P3 against F, wext on, voter = WELT_VOTER, worder on,
+ *             table cost options on (kept supports, threshold table)
  *   noP1      p1 off            noP2     p2 off (k = 1 and k = 2 parts)   noP3     p3 off
  *   noP2single  the k = 1 part of P2 off
  *   p3R       P3 against R      noWext   wext off          voteDeg  voter = degree only
  *   noWorder  worder off        noBnb    weight branch-and-bound off
  *   noTable   p1 off and p2 off
+ *   noTableReuse  the miner counts the 1- and 2-edge patterns again
+ *   noTableThreshold  the table stores exact MaxW values
+ *   noTableOptions    both table cost options off
  * </pre>
  * Every variant is measured with the same protocol as BenchmarkMain (probe, warmup, median of
  * the measured runs). Phase timers (canonical codes, filters, MNI, weight checks) are switched
@@ -74,7 +79,11 @@ public final class AblationMain {
             new Variant("voteDeg", "voter=DEGREE_ONLY", c -> c.voter = PivotVoter.DEGREE_ONLY),
             new Variant("noWorder", "worder=off", c -> c.weightOrder = false),
             new Variant("noBnb", "bnb=off", c -> c.bnb = false),
-            new Variant("noTable", "p1=off+p2=off (combination)", c -> { c.p1 = false; c.p2 = false; }));
+            new Variant("noTable", "p1=off+p2=off (combination)", c -> { c.p1 = false; c.p2 = false; }),
+            new Variant("noTableReuse", "tableReuse=off", c -> c.tableReuse = false),
+            new Variant("noTableThreshold", "tableThreshold=off", c -> c.tableThreshold = false),
+            new Variant("noTableOptions", "tableReuse=off+tableThreshold=off (combination)",
+                    c -> { c.tableReuse = false; c.tableThreshold = false; }));
 
     /** The full WeLT configuration: voter from WELT_VOTER (see BenchmarkMain), every mechanism on. */
     static RunHarness.Config full(int minSup, double minWeight, long limitMs) {
@@ -178,6 +187,8 @@ public final class AblationMain {
                     .put("voter", cfg.voter.label())
                     .put("worder", cfg.weightOrder ? "on" : "off")
                     .put("bnb", cfg.bnb ? "on" : "off")
+                    .put("tableReuse", cfg.tableReuse ? "on" : "off")
+                    .put("tableThreshold", cfg.tableThreshold ? "on" : "off")
                     .put("voterSource", BenchmarkMain.voterSource("WeLT"))
                     .put("status", cell.status)
                     .put("partial", ok ? 0 : 1)

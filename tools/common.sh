@@ -108,7 +108,7 @@ report_status() {
 }
 
 # checkpoint <message>: with CHECKPOINT=1, commit results/ and push it to the campaign branch
-# (CAMPAIGN_BRANCH, default campaign-revision-r1b), then report the message. Runs BETWEEN cells
+# (CAMPAIGN_BRANCH, default campaign-revision-r2), then report the message. Runs BETWEEN cells
 # only, never while a measurement runs. A failed push is reported and retried at the next
 # checkpoint; the run continues. Without CHECKPOINT=1 it only prints the message.
 checkpoint() {
@@ -116,7 +116,7 @@ checkpoint() {
         echo "[checkpoint] $1"
         return 0
     fi
-    local branch="${CAMPAIGN_BRANCH:-campaign-revision-r1b}" pushed="pushed"
+    local branch="${CAMPAIGN_BRANCH:-campaign-revision-r2}" pushed="pushed"
     git add -- results >/dev/null 2>&1 || true
     git commit -q -m "Results: $1" >/dev/null 2>&1 || true
     git push -q origin "HEAD:refs/heads/$branch" >/dev/null 2>&1 || pushed="PUSH FAILED (retried at the next checkpoint)"
@@ -124,12 +124,16 @@ checkpoint() {
 }
 
 # run_ablation_cell <out.csv> <dataset.lg> <minSup> <minWeight> <limitMs> <warmup> <measured>
-# Runs every ablation variant of one cell, each in its own JVM (ABLATION_VARIANT), and appends
+# Runs every ablation variant of one cell (or only the variants named in ABLATION_ONLY), each in its own JVM (ABLATION_VARIANT), and appends
 # the rows. An invariant violation (exit 5) is reported and the campaign continues; a JVM that
 # dies without a row is written to <out.csv>.failures.
 run_ablation_cell() {
-    local out="$1" ds="$2" s="$3" tw="$4" lim="$5" wu="$6" me="$7" v tmp code
-    for v in $(java -cp target/classes welt.runner.AblationMain --variants | tr -d '\r'); do
+    local out="$1" ds="$2" s="$3" tw="$4" lim="$5" wu="$6" me="$7" v tmp code all
+    all=$(java -cp target/classes welt.runner.AblationMain --variants | tr -d '\r')
+    for v in ${ABLATION_ONLY:-}; do
+        case " $(echo $all) " in *" $v "*) ;; *) echo "ERROR: ABLATION_ONLY names an unknown variant: $v" >&2; exit 1 ;; esac
+    done
+    for v in ${ABLATION_ONLY:-$all}; do
         if cell_done "$out" "dataset=$(basename "$ds")" "variant=$v" "minSup=$s" "minWeight=$tw" \
             || grep -q "^$(basename "$ds"),$v,$s,$tw," "$out.failures" 2>/dev/null; then
             echo "--- skip (already recorded): ablation $v $ds minSup=$s"

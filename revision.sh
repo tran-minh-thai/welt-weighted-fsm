@@ -15,6 +15,8 @@
 #   ./revision.sh b4         one-factor ablation of WeLT
 #   ./revision.sh b2hard     voting sensitivity at the hardest cell of each dataset (after b1)
 #   ./revision.sh b4hard     ablation at the hardest cell of citeseer, email_eu, lastfm (after b1)
+#   ./revision.sh b1low      WeLT and EdgeTypeBound below the b1 ranges (email_eu 4, 3; lastfm 100, 50)
+#   ./revision.sh b4low      ablation of the lookup table, the vote and the table cost options at those cells
 #   ./revision.sh b5 [ds]    tau_w sweep: comparison at a support where GraMi completes, a WeLT
 #                            shared-table sweep, and a WeLT-only sweep at the lowest WeLT support
 #   ./revision.sh b7         result sets over every completed cell: GraMiFilter = WeLT,
@@ -31,7 +33,7 @@
 # Resume: every step skips the cells that already have a row, so an interrupted step is
 # continued by running the same command again (prepare reuses the current campaign unless
 # NEW_CAMPAIGN=1). CHECKPOINT=1 commits results/ after every cell, pushes it to the branch
-# CAMPAIGN_BRANCH (default campaign-revision-r1b) and writes one line to the status repository
+# CAMPAIGN_BRANCH (default campaign-revision-r2) and writes one line to the status repository
 # (RUN_STATUS_DIR, default $HOME/work/run-status; STATUS_PROJECT).
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -50,7 +52,7 @@ fi
 
 # ---------------------------------------------------------------- whole campaign
 # all: prepare (skipped once prepare.done exists), voting (skipped once voting_choice.json
-# exists), b2grid, b4, b1 and allexact per dataset, b2hard, b4hard, b5 per dataset, b7. Every step skips its finished
+# exists), b2grid, b4, b1 and allexact per dataset, b2hard, b4hard, b1low, b4low, b5 per dataset, b7. Every step skips its finished
 # cells. A failing step stops the sequence and reports "all STOPPED at <step>".
 # ALL_DRY=1 prints the steps that would run; ALL_STEPS="b4 b1:citeseer" runs a subset.
 if [ "$CMD" = "all" ]; then
@@ -77,6 +79,8 @@ if [ "$CMD" = "all" ]; then
     for ds in citeseer email_eu string_ecoli lastfm mico github; do all_step b1 "$ds"; all_step allexact "$ds"; done
     all_step b2hard
     all_step b4hard
+    all_step b1low
+    all_step b4low
     for ds in citeseer email_eu lastfm; do all_step b5 "$ds"; done
     all_step b7
     [ "${ALL_DRY:-0}" = "1" ] || report_status "all done"
@@ -306,6 +310,30 @@ b4)
     for cell in "citeseer 250" "citeseer 200" "citeseer 150" "email_eu 12" "email_eu 10" "email_eu 8" "lastfm 600" "lastfm 400"; do
         read -r ds s <<< "$cell"
         run_ablation_cell "$OUT" "datasets/$ds.lg" "$s" "$(tau_w_of "$ds")" "$LIMIT" "$WARMUP" "$MEASURED"
+    done
+    ;;
+b1low|b4low)
+    # Cells below the b1 ranges, fixed before any run of this campaign from the lower-support
+    # count probe (results-probe/l*-support-counts-20261019): at email_eu 4 and 3 and lastfm 100
+    # and 50 both WeLT and EdgeTypeBound completed within 10 minutes on the development machine,
+    # in about 1 s to 2.5 min per run there, where the b1 cells take milliseconds. The other
+    # algorithms are not run there: GraMi, GraMiFilter and WEGM already exceed the limit at
+    # higher supports of these datasets. b4low runs the variants that bear on the lookup table,
+    # the vote and the table cost options; noWext, noBnb, noP3 and p3R are left out (noWext and
+    # noBnb already exceed the limit in b4 at higher supports).
+    require_voting_choice
+    LOW_CELLS=("email_eu 4" "email_eu 3" "lastfm 100" "lastfm 50")
+    for cell in "${LOW_CELLS[@]}"; do
+        read -r ds s <<< "$cell"
+        tw=$(tau_w_of "$ds")
+        if [ "$CMD" = "b1low" ]; then
+            for algo in EdgeTypeBound WeLT; do
+                run_cell "$RUN_DIR/B1_low.csv" "datasets/$ds.lg" "$s" "$tw" "$algo" "$LIMIT" "$WARMUP" "$MEASURED"
+            done
+        else
+            ABLATION_ONLY="full noP1 noP2 noP2single noTable voteDeg noWorder noTableReuse noTableThreshold noTableOptions" \
+                run_ablation_cell "$RUN_DIR/B4_low.csv" "datasets/$ds.lg" "$s" "$tw" "$LIMIT" "$WARMUP" "$MEASURED"
+        fi
     done
     ;;
 b2hard|b4hard)

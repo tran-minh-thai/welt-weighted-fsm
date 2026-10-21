@@ -251,6 +251,17 @@ script):
 | `peakMemMB`, `peakMemMaxMB` | peak heap: median and max over the measured runs |
 | `mode`, `budget`, `budgetExceeded`, `deterministic` | exact/approximate mode; counts identical across runs |
 
+**Lookup-table cost options** (WeLT, both on by default; `WELT_TABLE_REUSE=off` and
+`WELT_TABLE_THRESHOLD=off` switch them off). Building the table counts the MNI support of every
+1-edge pattern and every 2-edge path; with *reuse* the miner takes those results instead of counting
+the same patterns again at its first two levels (the domains follow the miner's vertex order through
+an isomorphism). With *threshold* the table stores, for each frequent 2-edge path, whether it embeds
+into the subgraph of the edges weighing at least τ_w (one weight check) instead of its exact MaxW (a
+binary search over the distinct weights); P2 needs only that comparison, and the stored answer also
+serves the weight check of the path during mining. A threshold table is valid for its τ_w only; the
+shared-table τ_w sweep keeps exact MaxW values. Neither option changes the result set or the search
+(`TableCostOptionsTest`; `results-probe/table-cost-options-20261021`).
+
 **Matching order.** WeLT reads `WELT_VOTER=α,β,γ` and `WELT_WORDER=on|off` (default when unset:
 `1,1,1` and `on`, recorded as `voterSource=default`). GraMi, EdgeTypeBound, WEGM and OWGraMi
 use the degree-only pivot without weight-aware order.
@@ -258,8 +269,9 @@ use the degree-only pivot without weight-aware order.
 **Ablation.** `AblationMain` measures, one JVM per variant (`ABLATION_VARIANT`), the variants
 `full`, `noP1`, `noP2`, `noP2single`, `noP3`, `p3R` (P3 checks the result set instead of the
 MNI-frequent set), `noWext`, `voteDeg`, `noWorder`, `noBnb` (the weight check without its
-branch-and-bound: the bottleneck is tested on complete embeddings only), and the combination
-`noTable` (P1 and P2 off). Each differs from `full` in exactly one factor except `noTable`. Every completed variant
+branch-and-bound: the bottleneck is tested on complete embeddings only), the combination
+`noTable` (P1 and P2 off), `noTableReuse` and `noTableThreshold` (one table cost option off, see
+below) and the combination `noTableOptions` (both off). Each differs from `full` in exactly one factor except `noTable`. Every completed variant
 must return the result set of `full`, compared by canonical code (`invariant=OK`; exit code 5
 otherwise). Phase timers (`canonMs`, `filterMs`, `mniMs`, `weightMs`) are recorded here only.
 
@@ -290,13 +302,15 @@ metrics of the last two.
 sensitivity over the 21-point simplex grid and (1,1,1)),
 `b4` (ablation), `b1` per dataset (efficiency) followed by `allexact` for the same dataset
 (ReSuM's ALL score computed exactly on the b1 cells), `b2hard` and `b4hard` (the same two analyses at
-the smallest B1 support where WeLT completes within 60 s), `b5` per dataset (τ_w sweep at the smallest
+the smallest B1 support where WeLT completes within 60 s), `b1low` and `b4low` (WeLT and
+EdgeTypeBound, and the ablation of the lookup table, the vote and the table cost options, at
+email_eu 4 and 3 and lastfm 100 and 50, below the B1 ranges), `b5` per dataset (τ_w sweep at the smallest
 support where GraMi completes, a shared-table WeLT sweep, and a WeLT-only sweep at the smallest
 support where WeLT completes) and `b7` (on every completed cell: GraMiFilter = WeLT,
 EdgeTypeBound = WeLT, the exact ALL result equal to the ALL set computed from its definition and
 contained in WeLT). Running
 it again continues: finished steps and cells are skipped. With `CHECKPOINT=1` every cell is
-committed, pushed to the branch `campaign-revision-r1b` and reported to a status repository.
+committed, pushed to the branch `campaign-revision-r2` and reported to a status repository.
 `./revision.sh list` describes each step. The git tree of `src/` is locked at the first step of a
 campaign; a later step on a different measurement code is refused.
 

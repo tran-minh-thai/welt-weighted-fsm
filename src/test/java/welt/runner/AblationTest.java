@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AblationTest {
 
     private static List<Object> factors(RunHarness.Config c) {
-        return List.of(c.p1, c.p2, c.p2single, c.p3, c.p3AgainstResults, c.wext, c.voter.label(), c.weightOrder, c.bnb);
+        return List.of(c.p1, c.p2, c.p2single, c.p3, c.p3AgainstResults, c.wext, c.voter.label(), c.weightOrder, c.bnb, c.tableReuse, c.tableThreshold);
     }
 
     private static int differences(RunHarness.Config a, RunHarness.Config b) {
@@ -29,12 +29,12 @@ class AblationTest {
     @Test
     void eachVariantChangesTheDeclaredNumberOfFactors() {
         RunHarness.Config full = AblationMain.full(15, 336, 0);
-        assertTrue(full.p1 && full.p2 && full.p2single && full.p3 && !full.p3AgainstResults && full.wext && full.weightOrder && full.bnb,
+        assertTrue(full.p1 && full.p2 && full.p2single && full.p3 && !full.p3AgainstResults && full.wext && full.weightOrder && full.bnb && full.tableReuse && full.tableThreshold,
                 "full has every mechanism on");
         for (AblationMain.Variant v : AblationMain.VARIANTS) {
             RunHarness.Config c = AblationMain.full(15, 336, 0);
             v.change.accept(c);
-            int expected = v.name.equals("full") ? 0 : v.name.equals("noTable") ? 2 : 1;
+            int expected = v.name.equals("full") ? 0 : (v.name.equals("noTable") || v.name.equals("noTableOptions")) ? 2 : 1;
             assertEquals(expected, differences(full, c), v.name);
         }
     }
