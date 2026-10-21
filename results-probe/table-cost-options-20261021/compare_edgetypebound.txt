@@ -1,0 +1,30 @@
+campaign file origin/campaign-revision-r1c:results/v2_revision/20261019_2137_Admin-PC/B1_efficiency.csv
+no search in either method ('string_ecoli.lg', 2000, 750.0): EdgeTypeBound (0, 0), WeLT on (0, 0)
+WeLT counts with both options off reproduce the campaign in 23 cells
+cell                 searches off/ETB  on/ETB backtrack off/ETB  on/ETB searches on-ETB campaign time WeLT/ETB
+citeseer 100                    1.403   1.112             1.612   1.078             360               1.29 tie
+citeseer 150                    1.439   1.105             1.658   1.086             394               1.76 tie
+citeseer 200                    1.551   1.072             1.724   1.040             254               1.50 tie
+citeseer 250                    1.629   1.095             1.749   1.059             328               1.28 tie
+citeseer 300                    1.724   1.111             1.732   1.072             403               1.54 tie
+citeseer 400                    2.225   1.226             2.147   1.212             517               1.30 tie
+email_eu 6                      0.791   0.535             1.109   0.429           -5191               1.13 tie
+email_eu 8                      0.955   0.658             1.330   0.545           -1596               1.08 tie
+email_eu 10                     1.136   0.804             1.488   0.691            -509               1.24 tie
+email_eu 12                     1.403   0.962             1.837   0.822             -45               1.57 tie
+email_eu 15                     1.522   1.018             1.994   0.937              11               1.48 tie
+email_eu 20                     1.906   1.145             2.519   1.101              20               1.00 tie
+github 25000                    2.000   1.000             2.000   1.000               0               1.22 tie
+github 26000                    2.000   1.000             2.000   1.000               0               1.27 tie
+lastfm 200                      1.109   1.000             1.049   1.000              11               1.10 tie
+lastfm 300                      1.128   1.000             1.118   1.000               6               1.00 tie
+lastfm 400                      1.132   1.000             1.088   1.000               6               0.99 tie
+lastfm 500                      1.107   1.000             1.071   1.000              12               1.15 tie
+lastfm 600                      1.093   1.000             1.061   1.000               6               1.12 tie
+mico 15000                      1.388   1.000             1.265   1.000               0               1.07 tie
+mico 16000                      2.000   1.000             2.000   1.000               0               0.94 tie
+string_ecoli 1900               2.000   1.000             2.000   1.000               0               1.19 tie
+compared cells 22; geometric mean searches WeLT/EdgeTypeBound off 1.430, on 0.979; backtracking off 1.560, on 0.935
+options on, searches: WeLT fewer in 4, equal in 5, more in 13 of 22
+options on, backtracking nodes: WeLT fewer in 5, equal in 5, more in 12 of 22
+campaign time verdict (options off): tie in 22 of 22

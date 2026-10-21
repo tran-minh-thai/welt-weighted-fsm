@@ -24,3 +24,20 @@ identical in the four combinations in 23 of 23 cells. Embedding searches over th
 
 On mico, github and string_ecoli the reuse option halves the MNI searches exactly: the table build counted the
 frequent single edges and the miner counted them again.
+
+## Against EdgeTypeBound (counts)
+
+`python compare_edgetypebound.py` compares the WeLT counts of this probe with the EdgeTypeBound counts of the
+campaign B1 file (`origin/campaign-revision-r1c`) and writes `compare_edgetypebound.txt`. It stops unless the run
+with both options off reproduces the campaign counts of WeLT; it does in 23 of 23 cells. One cell (string_ecoli
+2000) has no embedding search in either method and is left out, so 22 cells compare.
+
+| WeLT / EdgeTypeBound, geometric mean over 22 cells | options off | options on |
+|---|---|---|
+| embedding searches | 1.430 | 0.979 |
+| backtracking nodes | 1.560 | 0.935 |
+
+With both options on, WeLT does fewer embedding searches than EdgeTypeBound in 4 cells (email_eu 6 to 12, down to
+0.535), the same number in 5 (github, mico, string_ecoli 1900) and more in 13 (citeseer 1.07 to 1.23, email_eu 15
+and 20, lastfm by 6 to 12 searches). These are counts; whether the time verdict changes is measured by the campaign
+of `revision.sh`, where B1 runs WeLT with both options on.
