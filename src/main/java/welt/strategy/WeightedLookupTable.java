@@ -62,6 +62,8 @@ public final class WeightedLookupTable {
     /** Support results of the evaluated 1- and 2-edge patterns, by canonical code (keepSupports). */
     private final Map<String, Stored> supports = new HashMap<>();
     private int supportsMinSup = -1;
+    /** Vertex ids in the domains of the kept support results. */
+    private long keptDomainInts = 0;
     /** minWeight of a threshold table; NaN for a table of exact MaxW values. */
     private double threshold = Double.NaN;
 
@@ -116,6 +118,15 @@ public final class WeightedLookupTable {
 
     public int size() {
         return maxW.size();
+    }
+
+    /** Number of kept 1- and 2-edge support results (keepSupports), and the vertex ids in their domains. */
+    public int keptPatterns() {
+        return supports.size();
+    }
+
+    public long keptDomainInts() {
+        return keptDomainInts;
     }
 
     /**
@@ -183,6 +194,11 @@ public final class WeightedLookupTable {
             }
         }
 
+        for (Stored st : t.supports.values()) {
+            t.keptDomainInts += st.result.domains == null ? 0 : java.util.Arrays.stream(st.result.domains).mapToLong(d -> d.length).sum();
+        }
+        metrics.tableKeptPatterns += t.supports.size();
+        metrics.tableDomainInts += t.keptDomainInts;
         metrics.tableBuildIsoCalls += (metrics.isoCallCount - isoBefore);
         metrics.tableBuildMniIsoCalls += (metrics.mniIsoCalls - mniBefore);
         metrics.tableBuildWeightIsoCalls += (metrics.weightIsoCalls - weightBefore);

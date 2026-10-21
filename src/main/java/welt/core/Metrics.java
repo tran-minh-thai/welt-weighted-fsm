@@ -46,6 +46,13 @@ public final class Metrics {
     public long extended = 0;         // patterns put on the frontier to be extended
     public long frontierPeak = 0;     // largest frontier size
     public long frequentMemoSize = 0; // size of the memo of frequent canonical codes used by P3
+    // Retained data, counted from its definition (deterministic; independent of the JVM and the GC):
+    public long visitedCodeChars = 0;      // characters of the canonical codes kept for deduplication (one per generated pattern)
+    public long memoCodeChars = 0;         // characters of the canonical codes in the frequent memo used by P3
+    public long frontierDomainInts = 0;    // vertex ids held now in the domains of frontier patterns and of the pattern being extended
+    public long frontierDomainIntsPeak = 0; // largest value of frontierDomainInts
+    public long tableKeptPatterns = 0;     // 1- and 2-edge support results kept by the lookup table (keepSupports)
+    public long tableDomainInts = 0;       // vertex ids in the domains of those kept results
     public long tableBuildIsoCalls = 0;    // total iso-calls while building the lookup table (MNI + weight)
     public long tableBuildMniIsoCalls = 0; // just the MNI iso-calls while building the table (to separate the mining part)
     public long tableBuildWeightIsoCalls = 0; // weight iso-calls while building the table (MaxW binary searches)

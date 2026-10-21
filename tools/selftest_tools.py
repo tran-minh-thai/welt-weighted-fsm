@@ -114,6 +114,40 @@ def main():
             check(f"retry: a row with another status is refused (eol {len(eol)})",
                   r3.returncode == 1 and "none has status CRASH" in r3.stderr and open(rc, "rb").read() == expect)
 
+    # min_heap.search on synthetic cells: a run passes when the heap is at least a threshold
+    sys.path.insert(0, HERE)
+    import min_heap
+
+    def threshold(t, at_max="OK", flaky=False):
+        calls = []
+
+        def run_at(mb):
+            calls.append(mb)
+            if mb == 49152 and at_max != "OK":
+                return at_max, 3600000.0
+            if flaky and calls.count(mb) > 1 and mb != 49152:  # a size that passed fails when run again
+                return "OOM", 1.0
+            return ("OK", 10.0) if mb >= t else ("OOM", 1.0)
+        return run_at
+
+    out, probes = min_heap.search(threshold(1000), 49152, 16, 1.05)
+    check("min heap: the passing size is within 5% above the threshold, the failing one below it",
+          1000 <= out["heapOkMB"] <= 1050 and out["heapFailMB"] < 1000 and out["heapOkMB"] / out["heapFailMB"] <= 1.05
+          and out["confirmed"] == 1)
+    check(f"min heap: at most 12 probes from 16 MB to 48 GB ({len(probes)})", len(probes) <= 12)
+    check("min heap: every probe at or above the passing size passes, every one below fails",
+          all((st == "OK") == (mb >= out["heapOkMB"]) for mb, st, _ in probes))
+    out, probes = min_heap.search(threshold(1000, at_max="TO"), 49152, 16, 1.05)
+    check("min heap: a cell that does not complete at the full heap gets its status and no size",
+          out["statusAtMax"] == "TO" and out["heapOkMB"] == "" and len(probes) == 1)
+    out, _ = min_heap.search(threshold(8), 49152, 16, 1.05)
+    check("min heap: a cell that completes at the smallest probe reports that size, no failing size",
+          out["heapOkMB"] == 16 and out["heapFailMB"] == "")
+    out, probes = min_heap.search(threshold(1000, flaky=True), 49152, 16, 1.05)
+    check("min heap: a confirmation that fails is reported (confirmed=0)", out["confirmed"] == 0)
+    check("min heap: -Xmx parsing", min_heap.heap_mb_of("-Xmx48g -Xss4m") == 49152
+          and min_heap.heap_mb_of("-Xmx512m") == 512 and min_heap.heap_mb_of("-Xss4m") is None)
+
     print(f"selftest_tools: {len(cases) - len(failures)}/{len(cases)} cases passed")
     sys.exit(1 if failures else 0)
 

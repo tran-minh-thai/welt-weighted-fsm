@@ -181,6 +181,7 @@ public final class MiningEngine {
                 considerCandidate(child, parent.domains, minSup, strategy, result, seen, frontier);
                 if (counter.isTimedOut()) { timedOut = true; break; }
             }
+            metrics.frontierDomainInts -= parent.ownInts; // the parent's domains are released after its children
         }
 
         if (counter.isTimedOut()) timedOut = true;
@@ -193,7 +194,20 @@ public final class MiningEngine {
     private static final class FrontierItem {
         final Pattern pattern;
         final int[][] domains;
-        FrontierItem(Pattern pattern, int[][] domains) { this.pattern = pattern; this.domains = domains; }
+        /** Vertex ids in {@code domains}, 0 when the arrays are held by the lookup table (counted there). */
+        final long ownInts;
+        FrontierItem(Pattern pattern, int[][] domains, long ownInts) {
+            this.pattern = pattern;
+            this.domains = domains;
+            this.ownInts = ownInts;
+        }
+    }
+
+    /** Number of vertex ids in a set of domains. */
+    static long domainInts(int[][] domains) {
+        long n = 0;
+        if (domains != null) for (int[] d : domains) n += d.length;
+        return n;
     }
 
     /** Consider a candidate: deduplicate, pre-prune, count MNI (inheriting parent domains), classify. */
@@ -207,6 +221,7 @@ public final class MiningEngine {
         if (timing) metrics.canonNanos += System.nanoTime() - tc;
         if (!fresh) return; // isomorphic pattern already considered
         metrics.generated++;
+        metrics.visitedCodeChars += code.length();
 
         long tf = timing ? System.nanoTime() : 0;
         boolean pruned = strategy.prePrune(p);
@@ -229,6 +244,7 @@ public final class MiningEngine {
         long _bt0 = PROFILE ? metrics.backtrackNodes : 0;
         long tm = timing ? System.nanoTime() : 0;
         MniSupportCounter.SupportResult r = strategy.knownSupport(p, code, minSup);
+        boolean tableHeld = r != null; // a reused result's domain arrays are those kept by the table
         if (r != null) {
             metrics.supportReused++;
         } else {
@@ -250,7 +266,7 @@ public final class MiningEngine {
         }
         if (r.mni == MniSupportCounter.INFREQUENT) return;
 
-        frequentCodes.add(code); // MNI-frequent ⇒ memoize for pruning larger patterns
+        if (frequentCodes.add(code)) metrics.memoCodeChars += code.length(); // MNI-frequent ⇒ memoize for pruning larger patterns
         metrics.mniFrequent++;
         metrics.frequentMemoSize = frequentCodes.size();
         // MNI-frequent ⇒ extendable (if the strategy allows); pass domains to children
@@ -259,9 +275,12 @@ public final class MiningEngine {
         boolean accept = strategy.acceptFrequent(p, r.mni); // accept as FWS (GraMi: always)
         if (timing) metrics.weightNanos += System.nanoTime() - tw;
         if (extend) {
-            frontier.add(new FrontierItem(p, r.domains));
+            long own = tableHeld ? 0 : domainInts(r.domains);
+            frontier.add(new FrontierItem(p, r.domains, own));
             metrics.extended++;
             if (frontier.size() > metrics.frontierPeak) metrics.frontierPeak = frontier.size();
+            metrics.frontierDomainInts += own;
+            if (metrics.frontierDomainInts > metrics.frontierDomainIntsPeak) metrics.frontierDomainIntsPeak = metrics.frontierDomainInts;
         }
         if (accept) {
             result.add(new FrequentPattern(p, r.mni));
