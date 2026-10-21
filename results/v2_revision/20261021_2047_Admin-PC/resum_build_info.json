@@ -1,0 +1,17 @@
+{
+  "repository": "https://github.com/lady-bluecopper/ReSuM.git",
+  "commit": "38307b26df471d261660e4b652782483163f748b",
+  "variant": "ReSuM-UND",
+  "main_class": "sa.edu.kaust.grami.und.main.Main",
+  "javac": "javac 21.0.12.1",
+  "sources": 62,
+  "classes": 69,
+  "jars": {
+    "koloboke-api-jdk8-1.0.0.jar": "536364887d3034844f72da64e2585953dc4110a4677713ef873944bc86f065c7",
+    "koloboke-impl-common-jdk8-1.0.0.jar": "adc525e7734a6da0a5719e6e3d53d73400a6117af07817e06a4d580c9472242d",
+    "koloboke-impl-jdk8-1.0.0.jar": "dd16ed6b0c90aa4ac99b93008f500fad945e5a74cdaf4e32cadc1202a3307248",
+    "guava-19.0.jar": "58d4cc2e05ebb012bbac568b032f75623be1cb6fb096f3c60c72a86f7f057de4",
+    "java-string-similarity-0.12.jar": "2c288063fb654795b956486ff159b5dee8daf0efd1f359f395b8085034032695",
+    "commons-collections4-4.1.jar": "b1fe8b5968b57d8465425357ed2d9dc695504518bed2df5b565c4b8e68c1c8a5"
+  }
+}
