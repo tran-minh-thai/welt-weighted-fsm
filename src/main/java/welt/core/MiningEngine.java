@@ -228,8 +228,12 @@ public final class MiningEngine {
         long _iso0 = PROFILE ? metrics.mniIsoCalls : 0;
         long _bt0 = PROFILE ? metrics.backtrackNodes : 0;
         long tm = timing ? System.nanoTime() : 0;
-        MniSupportCounter.SupportResult r =
-                counter.supportWithDomains(p, minSup, domainInheritance ? parentDomains : null);
+        MniSupportCounter.SupportResult r = strategy.knownSupport(p, code, minSup);
+        if (r != null) {
+            metrics.supportReused++;
+        } else {
+            r = counter.supportWithDomains(p, minSup, domainInheritance ? parentDomains : null);
+        }
         if (timing) metrics.mniNanos += System.nanoTime() - tm;
         if (PROFILE) {
             long ms = (System.nanoTime() - _t0) / 1_000_000;

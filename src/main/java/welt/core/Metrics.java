@@ -50,6 +50,8 @@ public final class Metrics {
     public long tableBuildMniIsoCalls = 0; // just the MNI iso-calls while building the table (to separate the mining part)
     public long tableBuildWeightIsoCalls = 0; // weight iso-calls while building the table (MaxW binary searches)
     public long tableBuildCandidates = 0;  // 1- and 2-edge patterns whose MNI was evaluated while building the table
+    public long supportReused = 0;    // candidates whose support result came from the table build instead of a recount
+    public long weightReused = 0;     // weight checks answered by the threshold table instead of an embedding search
     public long timeMs = 0;
     public double peakMemMB = 0;
 

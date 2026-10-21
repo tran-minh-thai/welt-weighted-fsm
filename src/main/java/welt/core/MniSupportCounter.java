@@ -214,7 +214,7 @@ public final class MniSupportCounter {
     public static final class SupportResult {
         public final int mni;          // MNI or {@link #INFREQUENT}
         public final int[][] domains;  // reduced domain per vertex; null if INFREQUENT
-        SupportResult(int mni, int[][] domains) { this.mni = mni; this.domains = domains; }
+        public SupportResult(int mni, int[][] domains) { this.mni = mni; this.domains = domains; }
     }
 
     /**

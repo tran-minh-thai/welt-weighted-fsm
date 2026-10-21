@@ -1,5 +1,6 @@
 package welt.strategy;
 
+import welt.core.CanonicalCode;
 import welt.core.GraphIndex;
 import welt.core.LabeledWeightedGraph;
 import welt.core.Metrics;
@@ -15,7 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Weighted extension lookup table (Section 4.4 of the paper). During preprocessing,
+ * Weighted extension lookup table. During preprocessing,
  * compute the set {@code F_k} of all connected FREQUENT {@code k}-edge patterns
  * (default k=2: each entry is a 3-vertex path) and store {@code MaxW(p)=W(p)}
  * for each, indexed by {@link WeightedCanonicalCode}. {@code MaxW(p)} is computed
@@ -34,6 +35,21 @@ import java.util.Set;
  * <p>The table is built once per {@code minSup} (independent of {@code minWeight},
  * since it stores the continuous {@code MaxW}), so it is reusable when sweeping
  * {@code minWeight}.
+ *
+ * <p>{@link Options} switch two cost reductions, both off by default:
+ * <ul>
+ *   <li>{@code keepSupports}: the support results computed here for the 1- and 2-edge
+ *       patterns are kept and handed to the miner ({@link #knownSupport}), which then does not
+ *       count those patterns again. The domains are mapped to the miner's vertex order through
+ *       an isomorphism; any isomorphism is valid, since corresponding vertices have the same
+ *       valid images and a stored domain contains every valid image of its vertex.</li>
+ *   <li>{@code threshold}: for a run at a single {@code minWeight}, each frequent 2-edge path
+ *       stores whether it embeds into G restricted to edges of weight &gt;= minWeight (one weight
+ *       check) instead of its exact MaxW (a binary search over the distinct weights). P2 needs
+ *       only that comparison, so its decisions are unchanged; the table then answers the weight
+ *       check of those paths during mining ({@link #knownWeightOk}). Such a table refuses any
+ *       other {@code minWeight}.</li>
+ * </ul>
  */
 public final class WeightedLookupTable {
 
@@ -43,6 +59,28 @@ public final class WeightedLookupTable {
     private final Map<String, Double> maxW = new HashMap<>(); // code -> MaxW(p), frequent patterns only
     /** Heaviest edge of each edge type (GraphIndex triple key): the weight bound of 1-edge patterns. */
     private final Map<Long, Double> maxWByType = new HashMap<>();
+    /** Support results of the evaluated 1- and 2-edge patterns, by canonical code (keepSupports). */
+    private final Map<String, Stored> supports = new HashMap<>();
+    private int supportsMinSup = -1;
+    /** minWeight of a threshold table; NaN for a table of exact MaxW values. */
+    private double threshold = Double.NaN;
+
+    /** Cost options of the full {@code build}; both off by default. */
+    public static final class Options {
+        public boolean keepSupports = false;
+        /** minWeight of a threshold table; NaN builds exact MaxW values. */
+        public double threshold = Double.NaN;
+    }
+
+    private static final class Stored {
+        final Pattern pattern;
+        final MniSupportCounter.SupportResult result;
+
+        Stored(Pattern pattern, MniSupportCounter.SupportResult result) {
+            this.pattern = pattern;
+            this.result = result;
+        }
+    }
 
     private WeightedLookupTable(int k) {
         this.k = k;
@@ -64,7 +102,15 @@ public final class WeightedLookupTable {
      */
     public static WeightedLookupTable build(LabeledWeightedGraph g, GraphIndex index, int minSup,
                                             MniSupportCounter counter, Metrics metrics) {
+        return build(g, index, minSup, counter, metrics, new Options());
+    }
+
+    /** Build with the cost options of {@link Options}. */
+    public static WeightedLookupTable build(LabeledWeightedGraph g, GraphIndex index, int minSup,
+                                            MniSupportCounter counter, Metrics metrics, Options opt) {
         WeightedLookupTable t = new WeightedLookupTable(DEFAULT_K);
+        t.threshold = opt.threshold;
+        if (opt.keepSupports) t.supportsMinSup = minSup;
         long isoBefore = metrics.isoCallCount;
         long mniBefore = metrics.mniIsoCalls;
         long weightBefore = metrics.weightIsoCalls;
@@ -91,7 +137,9 @@ public final class WeightedLookupTable {
             Pattern p = Pattern.singleEdge(lo, hi, el);
             if (!seen1.add(WeightedCanonicalCode.of(p))) continue;
             evaluated++;
-            if (counter.support(p, minSup) != MniSupportCounter.INFREQUENT) freqEdges.add(p);
+            MniSupportCounter.SupportResult r = counter.supportWithDomains(p, minSup, null);
+            if (opt.keepSupports) t.supports.put(CanonicalCode.of(p), new Stored(p, r));
+            if (r.mni != MniSupportCounter.INFREQUENT) freqEdges.add(p);
         }
 
         // extend into 2-edge paths, keep frequent patterns, store W(p)
@@ -101,8 +149,12 @@ public final class WeightedLookupTable {
                 String code = WeightedCanonicalCode.of(child);
                 if (!seen2.add(code)) continue;
                 evaluated++;
-                if (counter.support(child, minSup) == MniSupportCounter.INFREQUENT) continue;
-                double w = counter.maxBottleneckWeight(child, index.sortedDistinctWeightsDesc);
+                MniSupportCounter.SupportResult r = counter.supportWithDomains(child, minSup, null);
+                if (opt.keepSupports) t.supports.putIfAbsent(CanonicalCode.of(child), new Stored(child, r));
+                if (r.mni == MniSupportCounter.INFREQUENT) continue;
+                double w = Double.isNaN(opt.threshold)
+                        ? counter.maxBottleneckWeight(child, index.sortedDistinctWeightsDesc)
+                        : (counter.embedsWithMinWeight(child, opt.threshold) ? Double.POSITIVE_INFINITY : Double.NEGATIVE_INFINITY);
                 t.maxW.put(code, w);
             }
         }
@@ -154,6 +206,7 @@ public final class WeightedLookupTable {
      * bound every edge (MaxW of a path ≤ the heaviest edge of each of its types).
      */
     public boolean prune(Pattern s, double minWeight, Metrics metrics, boolean p1, boolean p2, boolean p2single) {
+        checkThreshold(minWeight);
         if (!p1 && !p2) return false;
         if (s.edgeCount() == 1) {
             if (!p2 || !p2single) return false;
@@ -216,5 +269,71 @@ public final class WeightedLookupTable {
         if (e1[0] == e2[0] || e1[0] == e2[1]) return e1[0];
         if (e1[1] == e2[0] || e1[1] == e2[1]) return e1[1];
         return -1;
+    }
+
+    private void checkThreshold(double minWeight) {
+        if (!Double.isNaN(threshold) && minWeight != threshold) {
+            throw new IllegalStateException("threshold table built for minWeight=" + threshold + ", queried at " + minWeight);
+        }
+    }
+
+    /** minWeight of a threshold table, NaN for exact MaxW values. */
+    public double threshold() {
+        return threshold;
+    }
+
+    /**
+     * The support result computed during the build for a pattern isomorphic to {@code p}, with
+     * its domains in the vertex order of {@code p}; {@code null} when none was kept, or when the
+     * table was built for another minSup.
+     */
+    public MniSupportCounter.SupportResult knownSupport(Pattern p, String code, int minSup) {
+        if (minSup != supportsMinSup) return null;
+        Stored st = supports.get(code);
+        if (st == null) return null;
+        if (st.result.domains == null) return st.result; // INFREQUENT: no domains to map
+        int[] phi = isomorphism(p, st.pattern);
+        if (phi == null) throw new IllegalStateException("canonical code " + code + " matches a non-isomorphic pattern");
+        int[][] mapped = new int[p.nodeCount()][];
+        for (int i = 0; i < mapped.length; i++) mapped[i] = st.result.domains[phi[i]];
+        return new MniSupportCounter.SupportResult(st.result.mni, mapped);
+    }
+
+    /**
+     * Answer of the weight check "p embeds into G restricted to edges of weight >= minWeight" for
+     * a 2-edge path recorded by a threshold table; {@code null} when not recorded.
+     */
+    public Boolean knownWeightOk(Pattern p, double minWeight) {
+        if (Double.isNaN(threshold) || p.edgeCount() != k) return null;
+        checkThreshold(minWeight);
+        Double w = maxW.get(WeightedCanonicalCode.of(p));
+        return w == null ? null : w >= minWeight;
+    }
+
+    /** phi with phi[i] = vertex of q matched to vertex i of p (labels and labelled edges kept), or null. */
+    static int[] isomorphism(Pattern p, Pattern q) {
+        int n = p.nodeCount();
+        if (n != q.nodeCount() || p.edgeCount() != q.edgeCount()) return null;
+        int[] phi = new int[n];
+        boolean[] used = new boolean[n];
+        return extend(p, q, phi, used, 0) ? phi : null;
+    }
+
+    private static boolean extend(Pattern p, Pattern q, int[] phi, boolean[] used, int i) {
+        int n = p.nodeCount();
+        if (i == n) return true;
+        for (int j = 0; j < n; j++) {
+            if (used[j] || p.nodeLabel(i) != q.nodeLabel(j)) continue;
+            boolean ok = true;
+            for (int a = 0; a < i && ok; a++) {
+                if (p.edgeLabelBetween(i, a) != q.edgeLabelBetween(j, phi[a])) ok = false;
+            }
+            if (!ok) continue;
+            phi[i] = j;
+            used[j] = true;
+            if (extend(p, q, phi, used, i + 1)) return true;
+            used[j] = false;
+        }
+        return false;
     }
 }

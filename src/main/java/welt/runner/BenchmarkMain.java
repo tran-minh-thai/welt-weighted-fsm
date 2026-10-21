@@ -49,6 +49,14 @@ public final class BenchmarkMain {
      * voterSource tells which). The baselines keep the shared default: degree-only
      * pivot, no weight-aware order.
      */
+    /** An on/off environment switch, off when unset. */
+    private static boolean onOff(String name) {
+        String v = System.getenv(name);
+        if (v == null || v.isBlank() || v.equals("off")) return false;
+        if (v.equals("on")) return true;
+        throw new IllegalArgumentException(name + " must be on or off, got " + v);
+    }
+
     static RunHarness.Config configure(RunHarness.Config cfg) {
         if (cfg.algo.equals("WeLT")) {
             String v = System.getenv("WELT_VOTER");
@@ -57,6 +65,8 @@ public final class BenchmarkMain {
             if (w != null && !w.isBlank() && !w.equals("on") && !w.equals("off"))
                 throw new IllegalArgumentException("WELT_WORDER must be on or off, got " + w);
             cfg.weightOrder = w == null || w.isBlank() || w.equals("on");
+            cfg.tableReuse = onOff("WELT_TABLE_REUSE");
+            cfg.tableThreshold = onOff("WELT_TABLE_THRESHOLD");
         } else {
             cfg.voter = PivotVoter.DEGREE_ONLY;
             cfg.weightOrder = false;
@@ -297,6 +307,10 @@ public final class BenchmarkMain {
                 .put("tableBuildCandidates", none ? "" : last.m.tableBuildCandidates)
                 .put("tableBuildMniIsoCalls", none ? "" : last.m.tableBuildMniIsoCalls)
                 .put("tableBuildWeightIsoCalls", none ? "" : last.m.tableBuildWeightIsoCalls)
+                .put("tableReuse", none ? "" : (last.cfg.tableReuse ? "on" : "off"))
+                .put("tableThreshold", none ? "" : (last.cfg.tableThreshold ? "on" : "off"))
+                .put("supportReused", none ? "" : last.m.supportReused)
+                .put("weightReused", none ? "" : last.m.weightReused)
                 .put("budgetExceeded", none ? "" : last.m.budgetExceeded)
                 .put("voter", none ? "" : last.cfg.voter.label())
                 .put("worder", none ? "" : (last.cfg.weightOrder ? "on" : "off"))

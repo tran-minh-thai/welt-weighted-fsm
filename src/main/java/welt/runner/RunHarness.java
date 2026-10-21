@@ -68,6 +68,10 @@ public final class RunHarness {
         public boolean p2single = true;
         /** Weight branch-and-bound inside the weight check (off = test complete embeddings only). */
         public boolean bnb = true;
+        /** WeLT: the miner takes the 1- and 2-edge support results of the table build. */
+        public boolean tableReuse = false;
+        /** WeLT: the table stores the weight test at minWeight instead of exact MaxW values. */
+        public boolean tableThreshold = false;
         /** Ablation flags (every algorithm): P3 closure, and P3 against R instead of F. */
         public boolean p3 = true, p3AgainstResults = false;
         /** Record per-phase times of the mining phase (ablation runs only). */
@@ -194,13 +198,17 @@ public final class RunHarness {
             case "OWGraMi": strategy = new OWGraMiStrategy(g, cfg.minWeight, counter, m); break;
             case "WeLT": {
                 long tb = System.nanoTime();
-                WeightedLookupTable table = WeightedLookupTable.build(g, index, cfg.minSup, counter, m);
+                WeightedLookupTable.Options opt = new WeightedLookupTable.Options();
+                opt.keepSupports = cfg.tableReuse;
+                if (cfg.tableThreshold) opt.threshold = cfg.minWeight;
+                WeightedLookupTable table = WeightedLookupTable.build(g, index, cfg.minSup, counter, m, opt);
                 r.tableBuildMs = ms(System.nanoTime() - tb);
                 r.tableSize = table.size();
                 WeLTStrategy welt = new WeLTStrategy(g, cfg.minWeight, counter, table, m);
                 welt.setFilters(cfg.p1, cfg.p2);
                 welt.setWeightExtension(cfg.wext);
                 welt.setSingleEdgeBound(cfg.p2single);
+                welt.setReuseSupports(cfg.tableReuse);
                 strategy = welt;
                 break;
             }

@@ -38,6 +38,7 @@ public final class WeLTStrategy implements MiningStrategy {
     private boolean p2 = true;   // ablation: weight upper-bound filter of the lookup table
     private boolean wext = true; // ablation: extend only patterns that satisfy the weight threshold
     private boolean p2single = true; // ablation: the k = 1 part of P2 (heaviest edge per type)
+    private boolean reuseSupports = false; // take the 1- and 2-edge support results of the table build
 
     public WeLTStrategy(LabeledWeightedGraph g, double minWeight,
                         MniSupportCounter counter, WeightedLookupTable table, Metrics metrics) {
@@ -70,6 +71,16 @@ public final class WeLTStrategy implements MiningStrategy {
         this.wext = on;
     }
 
+    /** Hand the support results kept by the table build to the miner (table built with keepSupports). */
+    public void setReuseSupports(boolean on) {
+        this.reuseSupports = on;
+    }
+
+    @Override
+    public MniSupportCounter.SupportResult knownSupport(Pattern p, String code, int minSup) {
+        return reuseSupports ? table.knownSupport(p, code, minSup) : null;
+    }
+
     @Override
     public String name() {
         return "WeLT";
@@ -89,7 +100,13 @@ public final class WeLTStrategy implements MiningStrategy {
 
     private boolean weightOk(Pattern p) {
         if (p != lastP) {
-            lastWeightOk = counter.embedsWithMinWeight(p, minWeight);
+            Boolean known = table.knownWeightOk(p, minWeight); // threshold table only
+            if (known != null) {
+                metrics.weightReused++;
+                lastWeightOk = known;
+            } else {
+                lastWeightOk = counter.embedsWithMinWeight(p, minWeight);
+            }
             lastP = p;
         }
         return lastWeightOk;

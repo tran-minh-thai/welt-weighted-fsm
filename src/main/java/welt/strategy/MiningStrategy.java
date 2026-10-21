@@ -1,5 +1,6 @@
 package welt.strategy;
 
+import welt.core.MniSupportCounter;
 import welt.core.Pattern;
 
 /**
@@ -43,5 +44,14 @@ public interface MiningStrategy {
      */
     default boolean allowExtension(Pattern p, int support) {
         return true;
+    }
+
+    /**
+     * A support result already computed for this pattern during the strategy's preprocessing
+     * (same minSup, same counter), with the domains indexed by the vertices of {@code p}; or
+     * {@code null} to count it. {@code code} is the canonical code of {@code p}.
+     */
+    default MniSupportCounter.SupportResult knownSupport(Pattern p, String code, int minSup) {
+        return null;
     }
 }
