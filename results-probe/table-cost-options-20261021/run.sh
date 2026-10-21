@@ -21,7 +21,7 @@ for c in $cells; do
             grep '^CSV,' "$D/log.txt.tmp" | sed 's/^CSV,//' > "$D/row.tmp"
             if [ ! -s "$D/raw.csv" ]; then head -1 "$D/row.tmp" > "$D/raw.csv"; fi
             tail -n +2 "$D/row.tmp" >> "$D/raw.csv"
-            echo "[probe] $ds $s reuse=$reuse threshold=$thr: $(tail -n +2 "$D/row.tmp" | cut -d, -f12)"
+            echo "[probe] $ds $s reuse=$reuse threshold=$thr: $(tail -n +2 "$D/row.tmp" | cut -d, -f11)"
         done; done
     done
 done
