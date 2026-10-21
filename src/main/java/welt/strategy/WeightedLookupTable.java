@@ -19,7 +19,7 @@ import java.util.Set;
  * Weighted extension lookup table. During preprocessing,
  * compute the set {@code F_k} of all connected FREQUENT {@code k}-edge patterns
  * (default k=2: each entry is a 3-vertex path) and store {@code MaxW(p)=W(p)}
- * for each, indexed by {@link WeightedCanonicalCode}. {@code MaxW(p)} is computed
+ * for each, indexed by a {@link PathKey}. {@code MaxW(p)} is computed
  * exactly via binary search over the distinct edge-weight set of G
  * ({@link MniSupportCounter#maxBottleneckWeight}).
  *
@@ -56,7 +56,7 @@ public final class WeightedLookupTable {
     public static final int DEFAULT_K = 2;
 
     private final int k;
-    private final Map<String, Double> maxW = new HashMap<>(); // code -> MaxW(p), frequent patterns only
+    private final Map<PathKey, Double> maxW = new HashMap<>(); // path -> MaxW(p), frequent patterns only
     /** Heaviest edge of each edge type (GraphIndex triple key): the weight bound of 1-edge patterns. */
     private final Map<Long, Double> maxWByType = new HashMap<>();
     /** Support results of the evaluated 1- and 2-edge patterns, by canonical code (keepSupports). */
@@ -79,6 +79,30 @@ public final class WeightedLookupTable {
         Stored(Pattern pattern, MniSupportCounter.SupportResult result) {
             this.pattern = pattern;
             this.result = result;
+        }
+    }
+
+    /**
+     * Key of a 3-vertex path a-b-c up to isomorphism: the centre label and the two (end label,
+     * edge label) pairs, in sorted order. Two such paths are isomorphic exactly when these keys are
+     * equal, since an isomorphism maps the only vertex of degree 2 to the only vertex of degree 2
+     * and the two ends to the two ends. The key is computed from the labels directly, without
+     * building the path or its canonical code.
+     */
+    record PathKey(int centre, int end1, int edge1, int end2, int edge2) {
+        static PathKey of(int centre, int a, int ea, int c, int ec) {
+            return (a < c || (a == c && ea <= ec)) ? new PathKey(centre, a, ea, c, ec) : new PathKey(centre, c, ec, a, ea);
+        }
+
+        /** Key of a 2-edge path pattern. */
+        static PathKey of(Pattern p) {
+            if (p.edgeCount() != 2) throw new IllegalArgumentException("not a 2-edge path: " + p);
+            int[] e1 = p.edges().get(0), e2 = p.edges().get(1);
+            int b = sharedVertex(e1, e2);
+            if (b < 0) throw new IllegalArgumentException("not a connected 2-edge path: " + p);
+            int a = (e1[0] == b) ? e1[1] : e1[0];
+            int c = (e2[0] == b) ? e2[1] : e2[0];
+            return of(p.nodeLabel(b), p.nodeLabel(a), e1[2], p.nodeLabel(c), e2[2]);
         }
     }
 
@@ -155,7 +179,7 @@ public final class WeightedLookupTable {
                 double w = Double.isNaN(opt.threshold)
                         ? counter.maxBottleneckWeight(child, index.sortedDistinctWeightsDesc)
                         : (counter.embedsWithMinWeight(child, opt.threshold) ? Double.POSITIVE_INFINITY : Double.NEGATIVE_INFINITY);
-                t.maxW.put(code, w);
+                t.maxW.put(PathKey.of(child), w);
             }
         }
 
@@ -223,16 +247,24 @@ public final class WeightedLookupTable {
         if (s.edgeCount() < k) return false; // UB_k = +∞, no k-edge subpattern exists
 
         double ub = Double.POSITIVE_INFINITY;
-        for (Pattern sub : connectedTwoEdgeSubpatterns(s)) {
-            String code = WeightedCanonicalCode.of(sub);
-            Double w = maxW.get(code);
-            if (w == null) {            // P1: k-edge subpattern not frequent
-                if (!p1) continue;      // P1 off: skip this subpattern in UB_k
-                metrics.prunedByP1++;
-                metrics.prunedByStrategy++;
-                return true;
+        List<int[]> edges = s.edges(); // {u,v,el}
+        // every connected 2-edge subpattern of S: a pair of edges sharing one vertex (a path a-b-c)
+        for (int i = 0; i < edges.size(); i++) {
+            for (int j = i + 1; j < edges.size(); j++) {
+                int[] e1 = edges.get(i), e2 = edges.get(j);
+                int b = sharedVertex(e1, e2);
+                if (b < 0) continue;
+                int a = (e1[0] == b) ? e1[1] : e1[0];
+                int c = (e2[0] == b) ? e2[1] : e2[0];
+                Double w = maxW.get(PathKey.of(s.nodeLabel(b), s.nodeLabel(a), e1[2], s.nodeLabel(c), e2[2]));
+                if (w == null) {            // P1: k-edge subpattern not frequent
+                    if (!p1) continue;      // P1 off: skip this subpattern in UB_k
+                    metrics.prunedByP1++;
+                    metrics.prunedByStrategy++;
+                    return true;
+                }
+                if (w < ub) ub = w;
             }
-            if (w < ub) ub = w;
         }
         if (p2 && ub < minWeight) {     // P2: UB_k(S) < minWeight
             metrics.prunedByP2++;
@@ -240,29 +272,6 @@ public final class WeightedLookupTable {
             return true;
         }
         return false;
-    }
-
-    /**
-     * Enumerate every CONNECTED 2-edge subpattern of S = every pair of adjacent edges
-     * (sharing one vertex) ⇒ a 3-vertex path a-b-c.
-     */
-    private List<Pattern> connectedTwoEdgeSubpatterns(Pattern s) {
-        List<int[]> edges = s.edges(); // {u,v,el}
-        List<Pattern> subs = new ArrayList<>();
-        for (int i = 0; i < edges.size(); i++) {
-            for (int j = i + 1; j < edges.size(); j++) {
-                int[] e1 = edges.get(i), e2 = edges.get(j);
-                int shared = sharedVertex(e1, e2);
-                if (shared < 0) continue; // not adjacent ⇒ not connected
-                int a = (e1[0] == shared) ? e1[1] : e1[0];
-                int c = (e2[0] == shared) ? e2[1] : e2[0];
-                // path a-b-c: vertex labels and the two edge labels
-                int[] labels = {s.nodeLabel(a), s.nodeLabel(shared), s.nodeLabel(c)};
-                int[][] es = {{0, 1, e1[2]}, {1, 2, e2[2]}};
-                subs.add(Pattern.of(labels, es));
-            }
-        }
-        return subs;
     }
 
     private static int sharedVertex(int[] e1, int[] e2) {
@@ -306,7 +315,7 @@ public final class WeightedLookupTable {
     public Boolean knownWeightOk(Pattern p, double minWeight) {
         if (Double.isNaN(threshold) || p.edgeCount() != k) return null;
         checkThreshold(minWeight);
-        Double w = maxW.get(WeightedCanonicalCode.of(p));
+        Double w = maxW.get(PathKey.of(p));
         return w == null ? null : w >= minWeight;
     }
 
