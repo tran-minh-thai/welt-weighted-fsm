@@ -1,0 +1,8 @@
+dataset,edges,distinctIntegerWeights,tauW,heavyWeightedEdgeTypes,largestHeavyMNI
+citeseer,4536,65,96,11,5
+email_eu,2462,378,336,140,2
+github,289003,65,30,87,5352
+lastfm,27806,55,40,46,12
+mico,1080156,106,100,2531,14826
+string_ecoli,76330,500,750,2601,345
+WEGM cells compared: 25; criterion and result count disagree in 0: []
