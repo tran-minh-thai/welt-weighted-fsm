@@ -53,6 +53,41 @@ public final class Metrics {
     public long frontierDomainIntsPeak = 0; // largest value of frontierDomainInts
     public long tableKeptPatterns = 0;     // 1- and 2-edge support results kept by the lookup table (keepSupports)
     public long tableDomainInts = 0;       // vertex ids in the domains of those kept results
+    // Live heap (a separate, untimed run): a full collection is forced whenever the retained data
+    // (retained()) exceeds 1.05 times its value at the previous sample, and at the start and the end
+    // of mining; the heap used right after each collection is the live heap at that point.
+    public boolean liveHeap = false;
+    public double liveHeapGraphMB = Double.NaN; // heap used after the collection before the run starts (graph loaded)
+    public double liveHeapPeakMB = Double.NaN;  // largest live heap over the samples
+    public long liveHeapSamples = 0;
+    private long liveHeapLastRetained = -1;
+
+    /** Retained data in counted units: code characters plus vertex ids (the trigger of the live-heap samples). */
+    public long retained() {
+        return visitedCodeChars + memoCodeChars + frontierDomainInts + tableDomainInts;
+    }
+
+    /** Sample the live heap when the retained data has grown by more than 5% since the last sample. */
+    public void retainedChanged() {
+        if (!liveHeap) return;
+        long r = retained();
+        if (r > liveHeapLastRetained * 1.05) sampleLiveHeap();
+    }
+
+    /** Force a full collection and record the heap used after it. */
+    public void sampleLiveHeap() {
+        if (!liveHeap) return;
+        double mb = usedHeapAfterGcMB();
+        liveHeapLastRetained = retained();
+        liveHeapSamples++;
+        if (Double.isNaN(liveHeapPeakMB) || mb > liveHeapPeakMB) liveHeapPeakMB = mb;
+    }
+
+    /** Heap used (MB) right after a forced collection. */
+    public static double usedHeapAfterGcMB() {
+        System.gc();
+        return java.lang.management.ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() / (1024.0 * 1024.0);
+    }
     public long tableBuildIsoCalls = 0;    // total iso-calls while building the lookup table (MNI + weight)
     public long tableBuildMniIsoCalls = 0; // just the MNI iso-calls while building the table (to separate the mining part)
     public long tableBuildWeightIsoCalls = 0; // weight iso-calls while building the table (MaxW binary searches)

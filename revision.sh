@@ -17,6 +17,7 @@
 #   ./revision.sh b4hard     ablation at the hardest cell of citeseer, email_eu, lastfm (after b1)
 #   ./revision.sh b1low      WeLT and EdgeTypeBound below the b1 ranges (email_eu 4, 3; lastfm 100, 50)
 #   ./revision.sh b4low      ablation of the lookup table, the vote and the table cost options at those cells
+#   ./revision.sh b3live     peak live heap, one untimed run per cell with forced collections (the b3heap cells)
 #   ./revision.sh b3heap     smallest heap at which a cell completes (email_eu 12, 10: every algorithm;
 #                            email_eu 4, 3 and lastfm 100, 50: WeLT and EdgeTypeBound; graph-only floors)
 #   ./revision.sh b5 [ds]    tau_w sweep: comparison at a support where GraMi completes, a WeLT
@@ -27,8 +28,9 @@
 # Order: prepare, voting (writes voting_choice.json), then b2grid, b4, b1 and allexact, b5, b7. Every step after
 # prepare writes into the campaign directory named in results/v2_revision/CURRENT (or RUN_DIR).
 # Memory: the b1 rows count the retained data from its definition (visitedCodeChars, memoCodeChars,
-# frontierDomainIntsPeak, tableKeptPatterns, tableDomainInts); b3heap measures the smallest heap that
-# completes a cell. peakMemMB (heap pools since the run started, garbage included) is kept for reference.
+# frontierDomainIntsPeak, tableKeptPatterns, tableDomainInts); b3live measures the peak live heap and
+# b3heap the smallest heap that completes a cell. peakMemMB (heap pools since the run started, garbage
+# included) is kept for reference.
 #
 # Environment: JAVA_OPTS must set -Xmx (the same value for the whole campaign, e.g. -Xmx48g);
 # TIME_LIMIT_MS (default 3600000), WARMUP (1), MEASURED (5). The JDK (vendor and exact version)
@@ -56,7 +58,7 @@ fi
 
 # ---------------------------------------------------------------- whole campaign
 # all: prepare (skipped once prepare.done exists), voting (skipped once voting_choice.json
-# exists), b2grid, b4, b1 and allexact per dataset, b2hard, b4hard, b1low, b4low, b3heap, b5 per dataset, b7. Every step skips its finished
+# exists), b2grid, b4, b1 and allexact per dataset, b2hard, b4hard, b1low, b4low, b3live, b3heap, b5 per dataset, b7. Every step skips its finished
 # cells. A failing step stops the sequence and reports "all STOPPED at <step>".
 # ALL_DRY=1 prints the steps that would run; ALL_STEPS="b4 b1:citeseer" runs a subset.
 if [ "$CMD" = "all" ]; then
@@ -85,6 +87,7 @@ if [ "$CMD" = "all" ]; then
     all_step b4hard
     all_step b1low
     all_step b4low
+    all_step b3live
     all_step b3heap
     for ds in citeseer email_eu lastfm; do all_step b5 "$ds"; done
     all_step b7
@@ -341,6 +344,25 @@ b1low|b4low)
         fi
     done
     ;;
+b3live)
+    # Peak live heap: one run per cell with WELT_LIVE_HEAP=on (no warm-up, one run, not timed):
+    # a full collection is forced at the start and the end of mining and whenever the retained data
+    # exceeds 1.05 times its value at the previous collection; the heap used right after each
+    # collection is the live heap there. Same cells as b3heap (see there).
+    require_voting_choice
+    LIVE_OUT="$RUN_DIR/B3_live_heap.csv"
+    for s in 12 10; do
+        for algo in GraMi GraMiFilter EdgeTypeBound WEGM WeLT; do
+            WELT_LIVE_HEAP=on run_cell "$LIVE_OUT" datasets/email_eu.lg "$s" "$(tau_w_of email_eu)" "$algo" "$LIMIT" 0 1
+        done
+    done
+    for cell in "email_eu 4" "email_eu 3" "lastfm 100" "lastfm 50"; do
+        read -r ds s <<< "$cell"
+        for algo in EdgeTypeBound WeLT; do
+            WELT_LIVE_HEAP=on run_cell "$LIVE_OUT" "datasets/$ds.lg" "$s" "$(tau_w_of "$ds")" "$algo" "$LIMIT" 0 1
+        done
+    done
+    ;;
 b3heap)
     # Smallest heap at which a cell completes (tools/min_heap.py): bisection on a geometric scale
     # down to 5% between a failing and a passing -Xmx, the other JVM options of JAVA_OPTS kept; a
@@ -365,7 +387,7 @@ b3heap)
         $PY tools/min_heap.py "$HEAP_OUT" "$HEAP_LOG" "datasets/$1.lg" "$2" "$tw" "$3" --first-limit-ms "$LIMIT"
         checkpoint "min heap $3 $1.lg minSup=$2: $(last_status_heap)"
     }
-    last_status_heap() { tail -n 1 "$HEAP_OUT" | awk -F, '{print $5 " ok=" $9 "MB"}'; }
+    last_status_heap() { awk -F, 'NR == 1 { for (i = 1; i <= NF; i++) h[$i] = i } END { print $h["statusAtMax"] " ok=" $h["heapOkMB"] "MB" }' "$HEAP_OUT"; }
     for ds in email_eu lastfm; do heap_cell "$ds" 1000000000 WeLT; done
     for s in 12 10; do
         for algo in GraMi GraMiFilter EdgeTypeBound WEGM WeLT; do heap_cell email_eu "$s" "$algo"; done

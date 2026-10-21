@@ -76,6 +76,8 @@ public final class RunHarness {
         public boolean p3 = true, p3AgainstResults = false;
         /** Record per-phase times of the mining phase (ablation runs only). */
         public boolean phaseTiming = false;
+        /** Untimed live-heap run: forced collections as the retained data grows (see Metrics). */
+        public boolean liveHeap = false;
 
         public Config(String algo, int minSup, double minWeight) {
             this.algo = algo;
@@ -138,7 +140,8 @@ public final class RunHarness {
     /** Run {@code cfg} once on {@code g}. */
     public static Result runOnce(LabeledWeightedGraph g, Config cfg) {
         Result r = new Result(cfg);
-        System.gc();
+        r.m.liveHeapGraphMB = Metrics.usedHeapAfterGcMB(); // the collection that precedes every run
+        r.m.liveHeap = cfg.liveHeap;
         resetPeakHeap();
         long t0 = System.nanoTime();
         try {

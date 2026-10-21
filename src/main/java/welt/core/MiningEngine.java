@@ -162,6 +162,7 @@ public final class MiningEngine {
         List<FrequentPattern> result = new ArrayList<>();
         Set<String> seen = new HashSet<>();
         Deque<FrontierItem> frontier = new ArrayDeque<>();
+        metrics.sampleLiveHeap(); // graph, index and lookup table, before any pattern
 
         // ---- Level 1: single-edge patterns (no parent ⇒ parent domains = null) ----
         for (long key : index.presentTriples) {
@@ -186,6 +187,7 @@ public final class MiningEngine {
 
         if (counter.isTimedOut()) timedOut = true;
         metrics.frequentCount = result.size();
+        metrics.sampleLiveHeap(); // every structure of the search is still reachable here
         metrics.sampleMemory();
         return result;
     }
@@ -222,6 +224,7 @@ public final class MiningEngine {
         if (!fresh) return; // isomorphic pattern already considered
         metrics.generated++;
         metrics.visitedCodeChars += code.length();
+        metrics.retainedChanged();
 
         long tf = timing ? System.nanoTime() : 0;
         boolean pruned = strategy.prePrune(p);
@@ -266,7 +269,10 @@ public final class MiningEngine {
         }
         if (r.mni == MniSupportCounter.INFREQUENT) return;
 
-        if (frequentCodes.add(code)) metrics.memoCodeChars += code.length(); // MNI-frequent ⇒ memoize for pruning larger patterns
+        if (frequentCodes.add(code)) { // MNI-frequent ⇒ memoize for pruning larger patterns
+            metrics.memoCodeChars += code.length();
+            metrics.retainedChanged();
+        }
         metrics.mniFrequent++;
         metrics.frequentMemoSize = frequentCodes.size();
         // MNI-frequent ⇒ extendable (if the strategy allows); pass domains to children
@@ -281,6 +287,7 @@ public final class MiningEngine {
             if (frontier.size() > metrics.frontierPeak) metrics.frontierPeak = frontier.size();
             metrics.frontierDomainInts += own;
             if (metrics.frontierDomainInts > metrics.frontierDomainIntsPeak) metrics.frontierDomainIntsPeak = metrics.frontierDomainInts;
+            metrics.retainedChanged();
         }
         if (accept) {
             result.add(new FrequentPattern(p, r.mni));

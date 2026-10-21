@@ -59,6 +59,7 @@ public final class BenchmarkMain {
     }
 
     static RunHarness.Config configure(RunHarness.Config cfg) {
+        cfg.liveHeap = onOff("WELT_LIVE_HEAP", false);
         if (cfg.algo.equals("WeLT")) {
             String v = System.getenv("WELT_VOTER");
             String w = System.getenv("WELT_WORDER");
@@ -306,6 +307,10 @@ public final class BenchmarkMain {
                 .put("frontierDomainIntsPeak", none ? "" : last.m.frontierDomainIntsPeak)
                 .put("tableKeptPatterns", none ? "" : last.m.tableKeptPatterns)
                 .put("tableDomainInts", none ? "" : last.m.tableDomainInts)
+                .put("liveHeap", none ? "" : (last.cfg.liveHeap ? "on" : "off"))
+                .put("liveHeapGraphMB", none ? "" : last.m.liveHeapGraphMB)
+                .put("liveHeapPeakMB", none || !last.cfg.liveHeap ? "" : last.m.liveHeapPeakMB)
+                .put("liveHeapSamples", none || !last.cfg.liveHeap ? "" : last.m.liveHeapSamples)
                 .put("mniIsoCallsMine", none ? "" : last.mniIsoCallsMine())
                 .put("mniIsoCallsTotal", none ? "" : last.m.mniIsoCalls)
                 .put("weightIsoCalls", none ? "" : last.m.weightIsoCalls)

@@ -3,15 +3,18 @@
 
 Usage:
   python tools/min_heap.py <out.csv> <log_dir> <dataset.lg> <minSup> <minWeight> <algorithm>
-                           [--max-mb N] [--min-mb 16] [--ratio 1.05] [--first-limit-ms F] [--limit-ms L]
+                           [--max-mb N] [--min-mb 4] [--ratio 1.05] [--first-limit-ms F]
+                           [--slowdown 2] [--min-limit-ms 1000] [--limit-ms L]
 
 Each probe is one JVM running the cell once (BenchmarkMain, no warm-up, one measured run) with
 -Xmx set to the probed size; the other options of JAVA_OPTS are kept, -Xmx and -Xms are replaced.
 A probe passes when its status is OK. The first probe runs at --max-mb (default: the -Xmx of
 JAVA_OPTS), with the time limit --first-limit-ms (default 3600000, the campaign limit); a cell that
 does not complete there gets a row with its status and no heap. The time
-limit of the other probes is --limit-ms, by default 5 times the run time at --max-mb and at least
-60 s, so a heap that completes only by collecting garbage for a long time counts as too small.
+limit of the other probes is --limit-ms, by default --slowdown times the run time at --max-mb and at
+least --min-limit-ms: the size found is the smallest heap at which the cell runs at most that much
+slower than with the full heap, so a heap that completes only by collecting garbage most of the
+time counts as too small. Times are the in-process run times of BenchmarkMain (JVM start excluded).
 The search is a bisection on a geometric scale between a failing and a passing size, until their
 ratio is at most --ratio; the passing size found is then run once more (confirmed=1 when it passes
 again). Row: heapOkMB (smallest passing size), heapFailMB (largest failing size), the probes, their
@@ -28,7 +31,7 @@ import subprocess
 import sys
 import time
 
-FIELDS = ["dataset", "algorithm", "minSup", "minWeight", "statusAtMax", "heapMaxMB", "timeAtMaxMs", "limitMs",
+FIELDS = ["dataset", "algorithm", "minSup", "minWeight", "statusAtMax", "heapMaxMB", "timeAtMaxMs", "slowdown", "limitMs",
           "heapOkMB", "heapFailMB", "ratio", "probes", "failStatuses", "timeAtOkMs", "confirmed"]
 
 
@@ -93,9 +96,11 @@ def main():
     for a in ("out", "log_dir", "dataset", "minSup", "minWeight", "algorithm"):
         ap.add_argument(a)
     ap.add_argument("--max-mb", type=int)
-    ap.add_argument("--min-mb", type=int, default=16)
+    ap.add_argument("--min-mb", type=int, default=4)
     ap.add_argument("--ratio", type=float, default=1.05)
     ap.add_argument("--first-limit-ms", type=int, default=3600000)
+    ap.add_argument("--slowdown", type=float, default=2.0)
+    ap.add_argument("--min-limit-ms", type=int, default=1000)
     ap.add_argument("--limit-ms", type=int)
     a = ap.parse_args()
     opts = os.environ.get("JAVA_OPTS", "")
@@ -131,11 +136,11 @@ def main():
             fh.write(" ".join(cmd) + "\n" + p.stdout + p.stderr + "\n")
         print(f"  min heap {a.algorithm} {ds} minSup={a.minSup}: -Xmx{mb}m -> {st} {ms:.0f} ms", flush=True)
         if limit["ms"] is None and mb == max_mb and st == "OK":
-            limit["ms"] = max(60000, int(5 * ms))
+            limit["ms"] = max(a.min_limit_ms, int(math.ceil(a.slowdown * ms)))
         return st, ms
 
     out, probes = search(run_at, max_mb, a.min_mb, a.ratio)
-    out.update(dataset=ds, algorithm=a.algorithm, minSup=a.minSup, minWeight=a.minWeight, ratio=a.ratio,
+    out.update(dataset=ds, algorithm=a.algorithm, minSup=a.minSup, minWeight=a.minWeight, ratio=a.ratio, slowdown=a.slowdown,
                limitMs=limit["ms"] or "", probes=len(probes),
                failStatuses=";".join(sorted({st for _, st, _ in probes if st != "OK"})))
     new = not os.path.exists(a.out) or os.path.getsize(a.out) == 0
