@@ -1,8 +1,8 @@
 package welt.core;
 
 /**
- * WEIGHTED canonical code (Section 4.3 of the paper): an O(1) key for pattern
- * deduplication and lookups into {@link welt.strategy.WeightedLookupTable}.
+ * WEIGHTED canonical code: the key for pattern deduplication while the
+ * {@link welt.strategy.WeightedLookupTable} is built (its entries are then read by a path key).
  *
  * <p><b>Modeling note.</b> In WeLT's bottleneck model, weight is a property of an
  * OCCURRENCE in G (W(S) = max over occurrences of the minimum edge weight), NOT an

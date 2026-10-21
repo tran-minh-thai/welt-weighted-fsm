@@ -248,7 +248,11 @@ script):
 | `backtrack` = `backtrackMni` + `backtrackWeight` | backtracking nodes |
 | `voter`, `worder`, `voterSource`, `voteMs` | matching-order configuration and voting time |
 | `indexMs`, `prepMs`, `tableBuildMs`, `mineMs`, `totalMs`, `totalMinMs`, `totalMaxMs`, `totalSdMs` | phase medians; total median, min, max, sample SD |
-| `peakMemMB`, `peakMemMaxMB` | peak heap: median and max over the measured runs |
+| `visitedCodeChars`, `memoCodeChars` | characters of the canonical codes kept for deduplication (one per generated pattern) and in the P3 memo |
+| `frontierDomainIntsPeak` | largest number of vertex ids held in the domains of the frontier patterns and of the pattern being extended |
+| `tableKeptPatterns`, `tableDomainInts` | support results kept by the lookup table (reuse option) and the vertex ids in their domains; domains the miner takes from the table are counted here, not on the frontier |
+| `liveHeap`, `liveHeapGraphMB`, `liveHeapPeakMB`, `liveHeapSamples` | live-heap run (`WELT_LIVE_HEAP=on`, untimed): heap after the collection before the run, largest heap after a forced collection, number of collections |
+| `peakMemMB`, `peakMemMaxMB` | heap pools in use since the run started, garbage included (median and max over the measured runs); kept for reference, not a measure of the memory a run needs |
 | `mode`, `budget`, `budgetExceeded`, `deterministic` | exact/approximate mode; counts identical across runs |
 
 **Lookup-table cost options** (WeLT, both on by default; `WELT_TABLE_REUSE=off` and
@@ -260,7 +264,16 @@ into the subgraph of the edges weighing at least τ_w (one weight check) instead
 binary search over the distinct weights); P2 needs only that comparison, and the stored answer also
 serves the weight check of the path during mining. A threshold table is valid for its τ_w only; the
 shared-table τ_w sweep keeps exact MaxW values. Neither option changes the result set or the search
-(`TableCostOptionsTest`; `results-probe/table-cost-options-20261021`).
+(`TableCostOptionsTest`; `results-probe/table-cost-options-20261021`). P1 and P2 read the table with a
+key of five labels (centre label and the two sorted (end label, edge label) pairs), which identifies a
+3-vertex path up to isomorphism (`PathKeyTest`), instead of the canonical code of each 2-edge subpattern.
+
+**Memory.** The retained-data columns count, from their definitions, what a run keeps: they are
+deterministic and do not depend on the JVM. The live-heap run (`WELT_LIVE_HEAP=on`, one untimed run)
+forces a full collection at the start and the end of mining and whenever the retained data exceeds
+1.05 times its value at the previous collection, and records the largest heap used after a collection.
+`tools/min_heap.py` finds the smallest `-Xmx` at which a cell runs at most twice as slow as with the
+full heap (bisection on a geometric scale down to 5%, the other JVM options kept).
 
 **Matching order.** WeLT reads `WELT_VOTER=α,β,γ` and `WELT_WORDER=on|off` (default when unset:
 `1,1,1` and `on`, recorded as `voterSource=default`). GraMi, EdgeTypeBound, WEGM and OWGraMi
@@ -304,7 +317,9 @@ sensitivity over the 21-point simplex grid and (1,1,1)),
 (ReSuM's ALL score computed exactly on the b1 cells), `b2hard` and `b4hard` (the same two analyses at
 the smallest B1 support where WeLT completes within 60 s), `b1low` and `b4low` (WeLT and
 EdgeTypeBound, and the ablation of the lookup table, the vote and the table cost options, at
-email_eu 4 and 3 and lastfm 100 and 50, below the B1 ranges), `b5` per dataset (τ_w sweep at the smallest
+email_eu 4 and 3 and lastfm 100 and 50, below the B1 ranges), `b3live` and `b3heap` (peak live
+heap and smallest heap, at email_eu 12 and 10 for every algorithm and at the four low cells for WeLT
+and EdgeTypeBound), `b5` per dataset (τ_w sweep at the smallest
 support where GraMi completes, a shared-table WeLT sweep, and a WeLT-only sweep at the smallest
 support where WeLT completes) and `b7` (on every completed cell: GraMiFilter = WeLT,
 EdgeTypeBound = WeLT, the exact ALL result equal to the ALL set computed from its definition and

@@ -2,7 +2,7 @@ package welt.core;
 
 /**
  * Multi-criteria voting for the matching order, used at two places in the same
- * embedding framework (Section 4.5 of the paper): (i) the start pattern vertex in
+ * embedding framework: (i) the start pattern vertex in
  * the weight-embedding search ({@link MniSupportCounter#embedsWithMinWeight}) and
  * (ii) the variable order in MNI counting ({@link MniSupportCounter#supportWithDomains}).
  *
