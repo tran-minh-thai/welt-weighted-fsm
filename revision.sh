@@ -575,7 +575,7 @@ b7)
             out=$(java ${JAVA_OPTS:-} -cp target/classes welt.runner.NestingCheckMain "$P/${ds}_WEGM_${s}_${tw}.0.tsv" \
                 "$RUN_DIR/patterns_wegm_range_all/${ds}_heavy_${tw}_GraMi_${s}_${tw}.0.tsv" "$P/${ds}_WeLT_${s}_${tw}.0.tsv") || code=$?
             echo "$ds minSup=$s: $out" | grep -v '^NESTING_CSV' || true
-            line=$(printf '%s\n' "$out" | sed -n 's/^NESTING_CSV,//p')
+            line=$(printf '%s\n' "$out" | tr -d '\r' | sed -n 's/^NESTING_CSV,//p')
             echo "$ds.lg,$s,$tw,${line:-,,,,},$code" >> "$NEST"
             if [ "$code" -eq 1 ]; then echo "ERROR: nesting fails at $ds minSup=$s (see $(basename "$NEST"))" >&2; status=1; fi
             if [ "$code" -eq 0 ]; then compared=$((compared + 1)); fi
