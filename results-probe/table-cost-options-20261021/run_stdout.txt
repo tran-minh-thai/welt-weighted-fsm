@@ -1,0 +1,124 @@
+wrote results-probe/table-cost-options-20261021/meta.json
+[probe] citeseer 400 reuse=off threshold=off: OK
+[probe] citeseer 400 reuse=off threshold=on: OK
+[probe] citeseer 400 reuse=on threshold=off: OK
+[probe] citeseer 400 reuse=on threshold=on: OK
+[probe] citeseer 300 reuse=off threshold=off: OK
+[probe] citeseer 300 reuse=off threshold=on: OK
+[probe] citeseer 300 reuse=on threshold=off: OK
+[probe] citeseer 300 reuse=on threshold=on: OK
+[probe] citeseer 250 reuse=off threshold=off: OK
+[probe] citeseer 250 reuse=off threshold=on: OK
+[probe] citeseer 250 reuse=on threshold=off: OK
+[probe] citeseer 250 reuse=on threshold=on: OK
+[probe] citeseer 200 reuse=off threshold=off: OK
+[probe] citeseer 200 reuse=off threshold=on: OK
+[probe] citeseer 200 reuse=on threshold=off: OK
+[probe] citeseer 200 reuse=on threshold=on: OK
+[probe] citeseer 150 reuse=off threshold=off: OK
+[probe] citeseer 150 reuse=off threshold=on: OK
+[probe] citeseer 150 reuse=on threshold=off: OK
+[probe] citeseer 150 reuse=on threshold=on: OK
+[probe] citeseer 100 reuse=off threshold=off: OK
+[probe] citeseer 100 reuse=off threshold=on: OK
+[probe] citeseer 100 reuse=on threshold=off: OK
+[probe] citeseer 100 reuse=on threshold=on: OK
+[probe] email_eu 20 reuse=off threshold=off: OK
+[probe] email_eu 20 reuse=off threshold=on: OK
+[probe] email_eu 20 reuse=on threshold=off: OK
+[probe] email_eu 20 reuse=on threshold=on: OK
+[probe] email_eu 15 reuse=off threshold=off: OK
+[probe] email_eu 15 reuse=off threshold=on: OK
+[probe] email_eu 15 reuse=on threshold=off: OK
+[probe] email_eu 15 reuse=on threshold=on: OK
+[probe] email_eu 12 reuse=off threshold=off: OK
+[probe] email_eu 12 reuse=off threshold=on: OK
+[probe] email_eu 12 reuse=on threshold=off: OK
+[probe] email_eu 12 reuse=on threshold=on: OK
+[probe] email_eu 10 reuse=off threshold=off: OK
+[probe] email_eu 10 reuse=off threshold=on: OK
+[probe] email_eu 10 reuse=on threshold=off: OK
+[probe] email_eu 10 reuse=on threshold=on: OK
+[probe] email_eu 8 reuse=off threshold=off: OK
+[probe] email_eu 8 reuse=off threshold=on: OK
+[probe] email_eu 8 reuse=on threshold=off: OK
+[probe] email_eu 8 reuse=on threshold=on: OK
+[probe] email_eu 6 reuse=off threshold=off: OK
+[probe] email_eu 6 reuse=off threshold=on: OK
+[probe] email_eu 6 reuse=on threshold=off: OK
+[probe] email_eu 6 reuse=on threshold=on: OK
+[probe] lastfm 600 reuse=off threshold=off: OK
+[probe] lastfm 600 reuse=off threshold=on: OK
+[probe] lastfm 600 reuse=on threshold=off: OK
+[probe] lastfm 600 reuse=on threshold=on: OK
+[probe] lastfm 500 reuse=off threshold=off: OK
+[probe] lastfm 500 reuse=off threshold=on: OK
+[probe] lastfm 500 reuse=on threshold=off: OK
+[probe] lastfm 500 reuse=on threshold=on: OK
+[probe] lastfm 400 reuse=off threshold=off: OK
+[probe] lastfm 400 reuse=off threshold=on: OK
+[probe] lastfm 400 reuse=on threshold=off: OK
+[probe] lastfm 400 reuse=on threshold=on: OK
+[probe] lastfm 300 reuse=off threshold=off: OK
+[probe] lastfm 300 reuse=off threshold=on: OK
+[probe] lastfm 300 reuse=on threshold=off: OK
+[probe] lastfm 300 reuse=on threshold=on: OK
+[probe] lastfm 200 reuse=off threshold=off: OK
+[probe] lastfm 200 reuse=off threshold=on: OK
+[probe] lastfm 200 reuse=on threshold=off: OK
+[probe] lastfm 200 reuse=on threshold=on: OK
+[probe] string_ecoli 2000 reuse=off threshold=off: OK
+[probe] string_ecoli 2000 reuse=off threshold=on: OK
+[probe] string_ecoli 2000 reuse=on threshold=off: OK
+[probe] string_ecoli 2000 reuse=on threshold=on: OK
+[probe] string_ecoli 1900 reuse=off threshold=off: OK
+[probe] string_ecoli 1900 reuse=off threshold=on: OK
+[probe] string_ecoli 1900 reuse=on threshold=off: OK
+[probe] string_ecoli 1900 reuse=on threshold=on: OK
+[probe] mico 16000 reuse=off threshold=off: OK
+[probe] mico 16000 reuse=off threshold=on: OK
+[probe] mico 16000 reuse=on threshold=off: OK
+[probe] mico 16000 reuse=on threshold=on: OK
+[probe] mico 15000 reuse=off threshold=off: OK
+[probe] mico 15000 reuse=off threshold=on: OK
+[probe] mico 15000 reuse=on threshold=off: OK
+[probe] mico 15000 reuse=on threshold=on: OK
+[probe] github 26000 reuse=off threshold=off: OK
+[probe] github 26000 reuse=off threshold=on: OK
+[probe] github 26000 reuse=on threshold=off: OK
+[probe] github 26000 reuse=on threshold=on: OK
+[probe] github 25000 reuse=off threshold=off: OK
+[probe] github 25000 reuse=off threshold=on: OK
+[probe] github 25000 reuse=on threshold=off: OK
+[probe] github 25000 reuse=on threshold=on: OK
+cell                 status    R   same    MNI searches off -> reuse   weight searches off -> threshold    all searches off -> both
+citeseer.lg      100     OK    9    yes          4452 -> 3550                       47 -> 17                      4499 -> 3567       
+citeseer.lg      150     OK    7    yes          5332 -> 4117                       44 -> 14                      5376 -> 4131       
+citeseer.lg      200     OK    6    yes          5465 -> 3789                       34 -> 10                      5499 -> 3799       
+citeseer.lg      250     OK    5    yes          5588 -> 3766                       26 -> 8                       5614 -> 3774       
+citeseer.lg      300     OK    5    yes          6226 -> 4018                       19 -> 7                       6245 -> 4025       
+citeseer.lg      400     OK    4    yes          5075 -> 2796                        4 -> 4                       5079 -> 2800       
+email_eu.lg        6     OK  141    yes          5997 -> 5399                     2823 -> 565                     8820 -> 5964       
+email_eu.lg        8     OK   65    yes          3357 -> 2847                     1093 -> 217                     4450 -> 3064       
+email_eu.lg       10     OK   43    yes          2410 -> 1970                      543 -> 120                     2953 -> 2090       
+email_eu.lg       12     OK   25    yes          1424 -> 1085                      237 -> 54                      1661 -> 1139       
+email_eu.lg       15     OK   14    yes           837 -> 593                        79 -> 20                       916 -> 613        
+email_eu.lg       20     OK    4    yes           250 -> 153                        13 -> 5                        263 -> 158        
+github.lg      25000     OK    1    yes         86080 -> 43040                       1 -> 1                      86081 -> 43041      
+github.lg      26000     OK    1    yes         89760 -> 44880                       1 -> 1                      89761 -> 44881      
+lastfm.lg        200     OK   29    yes         41568 -> 37606                     216 -> 88                     41784 -> 37694      
+lastfm.lg        300     OK   26    yes         52039 -> 46217                     169 -> 68                     52208 -> 46285      
+lastfm.lg        400     OK   19    yes         50935 -> 45044                      92 -> 48                     51027 -> 45092      
+lastfm.lg        500     OK   17    yes         63038 -> 56996                      88 -> 44                     63126 -> 57040      
+lastfm.lg        600     OK   14    yes         66677 -> 61042                      81 -> 37                     66758 -> 61079      
+mico.lg        15000     OK    3    yes        191580 -> 137987                      9 -> 3                     191589 -> 137990     
+mico.lg        16000     OK    1    yes         49810 -> 24905                       1 -> 1                      49811 -> 24906      
+string_ecoli.lg   1900     OK    1    yes          6282 -> 3141                        1 -> 1                       6283 -> 3142       
+string_ecoli.lg   2000     OK    0    yes             0 -> 0                           0 -> 0                          0 -> 0          
+
+cells compared 23; identical result set and search counters in all four combinations: 23/23
+  MNI searches (reuse)         744182 -> 534941  (28.1% removed)
+  weight searches (threshold)  5621 -> 1333  (76.3% removed)
+  all searches (both)          749803 -> 536274  (28.5% removed)
+  backtrack nodes (both)       3962717 -> 3264474  (17.6% removed)
+wrote results-probe/table-cost-options-20261021/meta.json
