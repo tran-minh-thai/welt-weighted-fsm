@@ -18,5 +18,6 @@
   "command": "revision.sh allexact lastfm",
   "limitMs": "3600000",
   "warmup": "1",
-  "measured": "5"
+  "measured": "5",
+  "endTime": "2026-10-23T04:04:00.2411311+07:00"
 }
