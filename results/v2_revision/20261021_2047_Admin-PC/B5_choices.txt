@@ -4,3 +4,6 @@ citeseer tau_w=10.0000,20.0000,30.0000,40.0000,50.0000,60.0000,70.0000,80.0000,9
 email_eu comparison minSup=10 (smallest B1 support at which GraMi completed)
 email_eu WeLT-only minSup=6 (smallest B1 support at which WeLT completed)
 email_eu tau_w=521.7000,1018.4000,1515.1000,2011.8000,2508.5000,3005.2000,3501.9000,3998.6000,4495.3000,336
+lastfm comparison minSup=1350 (first support of the extension list (900 1350 2000 3000) at which a GraMi probe completed within 60 s)
+lastfm WeLT-only minSup=200 (smallest B1 support at which WeLT completed)
+lastfm tau_w=5.7544,11.5088,17.2632,23.0176,28.7720,34.5263,40.2807,46.0351,51.7895,40
