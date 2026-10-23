@@ -18,5 +18,6 @@
   "command": "revision.sh b1low",
   "limitMs": "3600000",
   "warmup": "1",
-  "measured": "5"
+  "measured": "5",
+  "endTime": "2026-10-23T16:32:53.6056995+07:00"
 }
