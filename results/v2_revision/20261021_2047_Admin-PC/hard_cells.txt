@@ -1,0 +1,1 @@
+b2hard citeseer minSup=100 (smallest B1 support where WeLT completed within 60 s)
