@@ -1,0 +1,22 @@
+{
+  "startTime": "2026-10-23T07:07:42.0334604+07:00",
+  "hostname": "ADMIN-PC",
+  "os": "Windows 11 10.0",
+  "arch": "amd64",
+  "cpu": "Intel(R) Core(TM) i7-10750H CPU @ 2.60GHz",
+  "physicalCores": "6",
+  "logicalProcessors": "12",
+  "ramGB": "63.8",
+  "javaVendor": "Microsoft",
+  "javaRuntimeVersion": "21.0.12.1+1-LTS",
+  "javaVmName": "OpenJDK 64-Bit Server VM",
+  "jvmArgs": "-Xmx48g",
+  "maxHeapMB": "49152",
+  "JAVA_OPTS": "-Xmx48g",
+  "gitCommit": "aab3bc189b8763eed5cce5279427d2916ce3bce1",
+  "gitTree": "clean",
+  "command": "revision.sh b1 github",
+  "limitMs": "3600000",
+  "warmup": "1",
+  "measured": "5"
+}
