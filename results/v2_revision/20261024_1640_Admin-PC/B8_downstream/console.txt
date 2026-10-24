@@ -1,0 +1,94 @@
+== downstream node classification | kind=measurement | out=results/v2_revision/20261024_1640_Admin-PC/B8_downstream
+  downstream selftest: 23/23 cases passed
+  WeLT voting: {"WELT_VOTER": "1,1,1", "WELT_WORDER": "on"}
+== 1. data
+  downloading https://snap.stanford.edu/data/lastfm_asia.zip
+  raw LastFM Asia files: SHA-256 verified
+  <out>\lastfm_struct.rebuilt.lg: 7624 vertices, 27806 edges | degree cut points [1, 3, 5, 10] | class sizes [1754, 1979, 1083, 1369, 1439]
+  check against <repo>\datasets\lastfm.lg: 7624 vertices, 27806 edge lines compared byte by byte; 352 vertices share their label
+  lastfm_struct.lg rebuilt from the raw files: identical to the committed file
+  leakage check: {"vertices": 7624, "edges_compared": 27806, "edges_equal": true, "vertex_count_equal": true, "labels_are_degree_classes": true, "distinct_labels": 5, "vertices_whose_label_equals_target": 352}
+== 2. threshold selection
+  tau_w = min + rho_w * (max - min): {"0.5": "28.7720", "0.7": "40.2807"}
+  WeLT  tau_s=1600  rho_w=0.5 tau_w=28.7720: status=OK |R|=0
+  WeLT  tau_s=1600  rho_w=0.7 tau_w=40.2807: status=OK |R|=0
+  WeLT  tau_s=1200  rho_w=0.5 tau_w=28.7720: status=TO |R|=2197
+  WeLT  tau_s=1200  rho_w=0.7 tau_w=40.2807: status=OK |R|=9
+  WeLT  tau_s=1000  rho_w=0.7 tau_w=40.2807: status=OK |R|=26
+  GraMi tau_s=1000  max edges=5: status=OK patterns=174
+  1 cells skipped: a higher tau_s at their rho_w is already above the window
+  chosen: first cell with 20 <= |R| <= 300: tau_s=1000 rho_w=0.7 |R|=26; GraMi max edges 5
+== 3. mining at the chosen cell
+  heavy_subgraph: C:/Users/Admin/work/welt-weighted-fsm/results/v2_revision/20261024_1640_Admin-PC/B8_downstream/heavy_edges.lg: 7624 vertices, 61 of 27806 edges with weight >= 40.2807
+  FWS             WeLT   patterns=26     totalMs median=756.442 over 5 runs
+  Frequent (all)  GraMi  patterns=174    totalMs median=992.383 over 5 runs
+  ALL             GraMi  patterns=0      totalMs median=3.090 over 5 runs
+  nesting: {"FWS_in_frequent": 26, "ALL_in_FWS": 0, "FWS": 26, "ALL": 0, "frequent": 174}
+== 4. image sets
+  images=full patterns=26 featureColumns=100 nonzeros=125910 imageGraphEdges=27806 of 27806 imageSetMs=323.0 -> <out>\FWS.tsv
+  images=full patterns=174 featureColumns=914 nonzeros=1192266 imageGraphEdges=27806 of 27806 imageSetMs=2420.8 -> <out>\Frequent_all.tsv
+  images=full patterns=0 featureColumns=0 nonzeros=0 imageGraphEdges=27806 of 27806 imageSetMs=3.4 -> <out>\ALL_G.tsv
+  images=filtered patterns=0 featureColumns=0 nonzeros=0 imageGraphEdges=61 of 27806 imageSetMs=10.6 -> <out>\ALL_heavy_edges.tsv
+== 5. features and classification
+  B0: 2
+  B1: 7844
+  FWS: {"patterns": 26, "columns_before_dedupe": 100, "columns_after_dedupe": 45, "nonzeros": 54598, "vertices_with_a_feature": 2804, "empty": false}
+  Frequent (same count): {"patterns": 26, "columns_before_dedupe": 117, "columns_after_dedupe": 25, "nonzeros": 34814, "vertices_with_a_feature": 2775, "empty": false}
+  Frequent (all): {"patterns": 174, "columns_before_dedupe": 914, "columns_after_dedupe": 190, "nonzeros": 233490, "vertices_with_a_feature": 2804, "empty": false}
+  ALL (images in G): {"patterns": 0, "columns_before_dedupe": 0, "columns_after_dedupe": 0, "empty": true}
+  ALL (images in heavy edges): {"patterns": 0, "columns_before_dedupe": 0, "columns_after_dedupe": 0, "empty": true}
+  seed 1 fold 0: B0=0.0342  B1=0.5450  B0 + FWS=0.0514  B0 + Frequent (same count)=0.0452  B0 + Frequent (all)=0.0508  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5511  B1 + Frequent (same count)=0.5517  B1 + Frequent (all)=0.5520  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 1 fold 1: B0=0.0337  B1=0.6277  B0 + FWS=0.0398  B0 + Frequent (same count)=0.0423  B0 + Frequent (all)=0.0548  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.6020  B1 + Frequent (same count)=0.6033  B1 + Frequent (all)=0.6038  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 1 fold 2: B0=0.0394  B1=0.5910  B0 + FWS=0.0434  B0 + Frequent (same count)=0.0382  B0 + Frequent (all)=0.0515  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5904  B1 + Frequent (same count)=0.5903  B1 + Frequent (all)=0.5925  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 1 fold 3: B0=0.0294  B1=0.5208  B0 + FWS=0.0262  B0 + Frequent (same count)=0.0323  B0 + Frequent (all)=0.0314  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5228  B1 + Frequent (same count)=0.5273  B1 + Frequent (all)=0.5202  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 1 fold 4: B0=0.0300  B1=0.6072  B0 + FWS=0.0335  B0 + Frequent (same count)=0.0427  B0 + Frequent (all)=0.0527  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.6085  B1 + Frequent (same count)=0.6067  B1 + Frequent (all)=0.6512  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 1 fold 5: B0=0.0340  B1=0.5609  B0 + FWS=0.0354  B0 + Frequent (same count)=0.0427  B0 + Frequent (all)=0.0443  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5592  B1 + Frequent (same count)=0.5775  B1 + Frequent (all)=0.5635  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 1 fold 6: B0=0.0375  B1=0.5496  B0 + FWS=0.0486  B0 + Frequent (same count)=0.0382  B0 + Frequent (all)=0.0509  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5309  B1 + Frequent (same count)=0.5455  B1 + Frequent (all)=0.5303  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 1 fold 7: B0=0.0346  B1=0.6067  B0 + FWS=0.0397  B0 + Frequent (same count)=0.0445  B0 + Frequent (all)=0.0474  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5963  B1 + Frequent (same count)=0.5960  B1 + Frequent (all)=0.5910  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 1 fold 8: B0=0.0521  B1=0.6287  B0 + FWS=0.0290  B0 + Frequent (same count)=0.0345  B0 + Frequent (all)=0.0397  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.6138  B1 + Frequent (same count)=0.6196  B1 + Frequent (all)=0.6086  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 1 fold 9: B0=0.0340  B1=0.5292  B0 + FWS=0.0197  B0 + Frequent (same count)=0.0226  B0 + Frequent (all)=0.0319  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5313  B1 + Frequent (same count)=0.5342  B1 + Frequent (all)=0.5299  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 2 fold 0: B0=0.0327  B1=0.6151  B0 + FWS=0.0375  B0 + Frequent (same count)=0.0288  B0 + Frequent (all)=0.0416  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.6089  B1 + Frequent (same count)=0.6075  B1 + Frequent (all)=0.6053  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 2 fold 1: B0=0.0421  B1=0.5985  B0 + FWS=0.0302  B0 + Frequent (same count)=0.0387  B0 + Frequent (all)=0.0425  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5940  B1 + Frequent (same count)=0.5962  B1 + Frequent (all)=0.5965  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 2 fold 2: B0=0.0358  B1=0.6161  B0 + FWS=0.0478  B0 + Frequent (same count)=0.0436  B0 + Frequent (all)=0.0597  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.6119  B1 + Frequent (same count)=0.6165  B1 + Frequent (all)=0.6248  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 2 fold 3: B0=0.0317  B1=0.5429  B0 + FWS=0.0249  B0 + Frequent (same count)=0.0359  B0 + Frequent (all)=0.0274  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5462  B1 + Frequent (same count)=0.5420  B1 + Frequent (all)=0.5434  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 2 fold 4: B0=0.0298  B1=0.5885  B0 + FWS=0.0443  B0 + Frequent (same count)=0.0251  B0 + Frequent (all)=0.0395  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5767  B1 + Frequent (same count)=0.5906  B1 + Frequent (all)=0.5680  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 2 fold 5: B0=0.0277  B1=0.5921  B0 + FWS=0.0281  B0 + Frequent (same count)=0.0276  B0 + Frequent (all)=0.0366  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5958  B1 + Frequent (same count)=0.5933  B1 + Frequent (all)=0.5919  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 2 fold 6: B0=0.0444  B1=0.5970  B0 + FWS=0.0397  B0 + Frequent (same count)=0.0369  B0 + Frequent (all)=0.0485  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.6052  B1 + Frequent (same count)=0.6048  B1 + Frequent (all)=0.6087  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 2 fold 7: B0=0.0431  B1=0.5470  B0 + FWS=0.0309  B0 + Frequent (same count)=0.0325  B0 + Frequent (all)=0.0399  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5322  B1 + Frequent (same count)=0.5433  B1 + Frequent (all)=0.5406  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 2 fold 8: B0=0.0397  B1=0.6038  B0 + FWS=0.0369  B0 + Frequent (same count)=0.0370  B0 + Frequent (all)=0.0430  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.6025  B1 + Frequent (same count)=0.5940  B1 + Frequent (all)=0.6027  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 2 fold 9: B0=0.0441  B1=0.5609  B0 + FWS=0.0360  B0 + Frequent (same count)=0.0391  B0 + Frequent (all)=0.0328  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5559  B1 + Frequent (same count)=0.5571  B1 + Frequent (all)=0.5541  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 3 fold 0: B0=0.0350  B1=0.6327  B0 + FWS=0.0338  B0 + Frequent (same count)=0.0364  B0 + Frequent (all)=0.0368  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.6329  B1 + Frequent (same count)=0.6278  B1 + Frequent (all)=0.6315  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 3 fold 1: B0=0.0249  B1=0.5908  B0 + FWS=0.0388  B0 + Frequent (same count)=0.0368  B0 + Frequent (all)=0.0448  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5819  B1 + Frequent (same count)=0.5807  B1 + Frequent (all)=0.5849  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 3 fold 2: B0=0.0312  B1=0.5452  B0 + FWS=0.0384  B0 + Frequent (same count)=0.0354  B0 + Frequent (all)=0.0378  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5481  B1 + Frequent (same count)=0.5449  B1 + Frequent (all)=0.5482  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 3 fold 3: B0=0.0324  B1=0.5934  B0 + FWS=0.0400  B0 + Frequent (same count)=0.0196  B0 + Frequent (all)=0.0447  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5983  B1 + Frequent (same count)=0.5987  B1 + Frequent (all)=0.6029  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 3 fold 4: B0=0.0437  B1=0.5752  B0 + FWS=0.0366  B0 + Frequent (same count)=0.0515  B0 + Frequent (all)=0.0479  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5615  B1 + Frequent (same count)=0.5722  B1 + Frequent (all)=0.5623  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 3 fold 5: B0=0.0413  B1=0.6094  B0 + FWS=0.0346  B0 + Frequent (same count)=0.0518  B0 + Frequent (all)=0.0466  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.6157  B1 + Frequent (same count)=0.5775  B1 + Frequent (all)=0.6111  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 3 fold 6: B0=0.0400  B1=0.5459  B0 + FWS=0.0487  B0 + Frequent (same count)=0.0443  B0 + Frequent (all)=0.0635  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5400  B1 + Frequent (same count)=0.5455  B1 + Frequent (all)=0.5345  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 3 fold 7: B0=0.0449  B1=0.5778  B0 + FWS=0.0346  B0 + Frequent (same count)=0.0316  B0 + Frequent (all)=0.0472  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5592  B1 + Frequent (same count)=0.5515  B1 + Frequent (all)=0.5500  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 3 fold 8: B0=0.0346  B1=0.5705  B0 + FWS=0.0307  B0 + Frequent (same count)=0.0317  B0 + Frequent (all)=0.0365  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5700  B1 + Frequent (same count)=0.5721  B1 + Frequent (all)=0.5693  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 3 fold 9: B0=0.0300  B1=0.5733  B0 + FWS=0.0399  B0 + Frequent (same count)=0.0375  B0 + Frequent (all)=0.0466  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5831  B1 + Frequent (same count)=0.5839  B1 + Frequent (all)=0.5852  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  B0                                 macro-F1 0.0363 (0.0062)   accuracy 0.0430 (0.0088)   not converged 0/30
+  B1                                 macro-F1 0.5814 (0.0311)   accuracy 0.7747 (0.0158)   not converged 0/30
+  B0 + FWS                           macro-F1 0.0366 (0.0074)   accuracy 0.0395 (0.0069)   not converged 0/30
+  B0 + Frequent (same count)         macro-F1 0.0368 (0.0076)   accuracy 0.0400 (0.0071)   not converged 0/30
+  B0 + Frequent (all)                macro-F1 0.0440 (0.0083)   accuracy 0.0450 (0.0071)   not converged 0/30
+  B0 + ALL (images in G)             empty pattern set
+  B0 + ALL (images in heavy edges)   empty pattern set
+  B1 + FWS                           macro-F1 0.5775 (0.0307)   accuracy 0.7718 (0.0153)   not converged 0/30
+  B1 + Frequent (same count)         macro-F1 0.5784 (0.0280)   accuracy 0.7715 (0.0144)   not converged 0/30
+  B1 + Frequent (all)                macro-F1 0.5786 (0.0337)   accuracy 0.7719 (0.0152)   not converged 0/30
+  B1 + ALL (images in G)             empty pattern set
+  B1 + ALL (images in heavy edges)   empty pattern set
+  B0 + FWS vs B0 [macro_f1]: mean diff +0.0004, t=0.099, df=29, p=0.9217
+  B0 + FWS vs B0 [accuracy]: mean diff -0.0035, t=-0.862, df=29, p=0.3959
+  B0 + FWS vs B0 + Frequent (same count) [macro_f1]: mean diff -0.0002, t=-0.063, df=29, p=0.9503
+  B0 + FWS vs B0 + Frequent (same count) [accuracy]: mean diff -0.0005, t=-0.177, df=29, p=0.8611
+  B0 + FWS vs B0 + Frequent (all) [macro_f1]: mean diff -0.0073, t=-3.492, df=29, p=0.001557
+  B0 + FWS vs B0 + Frequent (all) [accuracy]: mean diff -0.0055, t=-2.704, df=29, p=0.01133
+  B1 + FWS vs B1 [macro_f1]: mean diff -0.0039, t=-1.145, df=29, p=0.2617
+  B1 + FWS vs B1 [accuracy]: mean diff -0.0029, t=-1.458, df=29, p=0.1556
+  B1 + FWS vs B1 + Frequent (same count) [macro_f1]: mean diff -0.0009, t=-0.235, df=29, p=0.8159
+  B1 + FWS vs B1 + Frequent (same count) [accuracy]: mean diff +0.0004, t=0.138, df=29, p=0.8915
+  B1 + FWS vs B1 + Frequent (all) [macro_f1]: mean diff -0.0011, t=-0.313, df=29, p=0.7565
+  B1 + FWS vs B1 + Frequent (all) [accuracy]: mean diff -0.0001, t=-0.054, df=29, p=0.9574
+== done -> results/v2_revision/20261024_1640_Admin-PC/B8_downstream

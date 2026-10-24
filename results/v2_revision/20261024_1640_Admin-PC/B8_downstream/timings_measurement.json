@@ -1,0 +1,150 @@
+{
+  "kind": "measurement",
+  "note": "measurement-machine run (revision.sh downstream)",
+  "host": "Admin-PC",
+  "mining": {
+    "FWS": {
+      "runs": "5",
+      "warmup": "1",
+      "voteMs": "0.584",
+      "indexMs": "5.773",
+      "prepMs": "19.669",
+      "tableBuildMs": "19.659",
+      "mineMs": "727.632",
+      "totalMs": "756.442",
+      "totalMinMs": "699.435",
+      "totalMaxMs": "778.306",
+      "totalSdMs": "32.188",
+      "peakMemMB": "296.140",
+      "peakMemMaxMB": "296.317"
+    },
+    "Frequent (all)": {
+      "runs": "5",
+      "warmup": "1",
+      "voteMs": "0.635",
+      "indexMs": "5.966",
+      "prepMs": "0.008",
+      "tableBuildMs": "0.000",
+      "mineMs": "984.593",
+      "totalMs": "992.383",
+      "totalMinMs": "961.865",
+      "totalMaxMs": "1156.812",
+      "totalSdMs": "79.841",
+      "peakMemMB": "296.570",
+      "peakMemMaxMB": "296.690"
+    },
+    "ALL": {
+      "runs": "5",
+      "warmup": "1",
+      "voteMs": "0.000",
+      "indexMs": "0.887",
+      "prepMs": "0.010",
+      "tableBuildMs": "0.000",
+      "mineMs": "1.636",
+      "totalMs": "3.090",
+      "totalMinMs": "2.267",
+      "totalMaxMs": "3.250",
+      "totalSdMs": "0.410",
+      "peakMemMB": "1.902",
+      "peakMemMaxMB": "1.903"
+    }
+  },
+  "mining_commands": {
+    "FWS": "WELT_MAX_EDGES=0 BENCH_ALGOS=WeLT java <repo>\\target\\classes welt.runner.BenchmarkMain <repo>\\datasets\\lastfm_struct.lg 1000 40.2807 0 3600000 1 5",
+    "Frequent (all)": "WELT_MAX_EDGES=5 BENCH_ALGOS=GraMi java <repo>\\target\\classes welt.runner.BenchmarkMain <repo>\\datasets\\lastfm_struct.lg 1000 40.2807 0 3600000 1 5",
+    "ALL": "WELT_MAX_EDGES=0 BENCH_ALGOS=GraMi java <repo>\\target\\classes welt.runner.BenchmarkMain <repo>\\results\\v2_revision\\20261024_1640_Admin-PC\\B8_downstream\\heavy_edges.lg 1000 40.2807 0 3600000 1 5"
+  },
+  "selection_runs": [
+    {
+      "miner": "WeLT",
+      "tau_s": 1600,
+      "rho_w": 0.5,
+      "status": "OK",
+      "totalMs": "19.098"
+    },
+    {
+      "miner": "WeLT",
+      "tau_s": 1600,
+      "rho_w": 0.7,
+      "status": "OK",
+      "totalMs": "19.337"
+    },
+    {
+      "miner": "WeLT",
+      "tau_s": 1200,
+      "rho_w": 0.5,
+      "status": "TO",
+      "totalMs": "600000.513"
+    },
+    {
+      "miner": "WeLT",
+      "tau_s": 1200,
+      "rho_w": 0.7,
+      "status": "OK",
+      "totalMs": "163.978"
+    },
+    {
+      "miner": "WeLT",
+      "tau_s": 1000,
+      "rho_w": 0.7,
+      "status": "OK",
+      "totalMs": "741.954"
+    },
+    {
+      "miner": "GraMi",
+      "tau_s": 1000,
+      "max_edges": 5,
+      "status": "OK",
+      "totalMs": "1031.016"
+    }
+  ],
+  "image_set_ms": {
+    "FWS": 323.0,
+    "Frequent (all)": 2420.8,
+    "Frequent (same count)": 2420.8,
+    "ALL (images in G)": 3.4,
+    "ALL (images in heavy edges)": 10.6
+  },
+  "matrix_assembly_ms": 1779.1,
+  "classification_wall_ms": 2956853.9,
+  "feature_dimension": {
+    "B0": 2,
+    "B1": 7844,
+    "FWS": {
+      "patterns": 26,
+      "columns_before_dedupe": 100,
+      "columns_after_dedupe": 45,
+      "nonzeros": 54598,
+      "vertices_with_a_feature": 2804,
+      "empty": false
+    },
+    "Frequent (same count)": {
+      "patterns": 26,
+      "columns_before_dedupe": 117,
+      "columns_after_dedupe": 25,
+      "nonzeros": 34814,
+      "vertices_with_a_feature": 2775,
+      "empty": false
+    },
+    "Frequent (all)": {
+      "patterns": 174,
+      "columns_before_dedupe": 914,
+      "columns_after_dedupe": 190,
+      "nonzeros": 233490,
+      "vertices_with_a_feature": 2804,
+      "empty": false
+    },
+    "ALL (images in G)": {
+      "patterns": 0,
+      "columns_before_dedupe": 0,
+      "columns_after_dedupe": 0,
+      "empty": true
+    },
+    "ALL (images in heavy edges)": {
+      "patterns": 0,
+      "columns_before_dedupe": 0,
+      "columns_after_dedupe": 0,
+      "empty": true
+    }
+  }
+}
