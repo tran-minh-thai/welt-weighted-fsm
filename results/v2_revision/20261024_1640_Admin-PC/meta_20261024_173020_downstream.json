@@ -18,5 +18,6 @@
   "command": "revision.sh downstream",
   "limitMs": "3600000",
   "warmup": "1",
-  "measured": "5"
+  "measured": "5",
+  "endTime": "2026-10-24T18:30:30.9794142+07:00"
 }
