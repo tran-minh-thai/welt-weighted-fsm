@@ -1,0 +1,68 @@
+== downstream node classification | dataset=lastfm | kind=probe | out=results-probe/downstream/20261025_mac-probe_lastfm_reuse
+  downstream selftest: 24/24 cases passed
+  WeLT voting: runner default (WELT_VOTER unset)
+== 1. data
+  raw lastfm_asia.zip members: SHA-256 verified
+  <out>/lastfm_struct.rebuilt.lg: 7624 vertices, 27806 edges | degree cut points [1, 3, 5, 10] | class sizes [1754, 1979, 1083, 1369, 1439]
+  check against <repo>/datasets/lastfm.lg: 7624 vertices, 27806 edge lines compared byte by byte; 352 vertices share their label
+  lastfm_struct.lg rebuilt from the raw files: identical to the expected file
+  leakage check: {"vertices": 7624, "edges_compared": 27806, "edges_equal": true, "vertex_count_equal": true, "labels_are_degree_classes": true, "distinct_labels": 5, "vertices_whose_label_equals_target": 352}
+== 2. threshold selection
+  tau_w = min + rho_w * (max - min): {"0.5": "28.7720", "0.7": "40.2807"}
+  WeLT  tau_s=1600  rho_w=0.5 tau_w=28.7720: status=OK |R|=0
+  WeLT  tau_s=1600  rho_w=0.7 tau_w=40.2807: status=OK |R|=0
+  WeLT  tau_s=1200  rho_w=0.5 tau_w=28.7720: status=TO |R|=2726
+  WeLT  tau_s=1200  rho_w=0.7 tau_w=40.2807: status=OK |R|=9
+  WeLT  tau_s=1000  rho_w=0.7 tau_w=40.2807: status=OK |R|=26
+  GraMi tau_s=1000  max edges=5: status=OK patterns=174
+  1 cells skipped: a higher tau_s at their rho_w is already above the window
+  chosen: first cell with 20 <= |R| <= 300: tau_s=1000 rho_w=0.7 |R|=26; GraMi max edges 5
+== 3. mining at the chosen cell
+  heavy_subgraph: <out>/heavy_edges.lg: 7624 vertices, 61 of 27806 edges with weight >= 40.2807
+  WeLT tau_s=1000 tau_w=40.2807 max edges=0: reusing the run of the same settings
+  FWS             WeLT   patterns=26     totalMs median=393.432 over 1 runs
+  GraMi tau_s=1000 tau_w=40.2807 max edges=5: reusing the run of the same settings
+  Frequent (all)  GraMi  patterns=174    totalMs median=496.715 over 1 runs
+  ALL             GraMi  patterns=0      totalMs median=1.587 over 1 runs
+  nesting: {"FWS_in_frequent": 26, "ALL_in_FWS": 0, "FWS": 26, "ALL": 0, "frequent": 174}
+== 4. image sets
+  images=full patterns=26 featureColumns=100 nonzeros=125910 imageGraphEdges=27806 of 27806 imageSetMs=151.0 -> <out>/FWS.tsv
+  images=full patterns=174 featureColumns=914 nonzeros=1192266 imageGraphEdges=27806 of 27806 imageSetMs=1273.2 -> <out>/Frequent_all.tsv
+  images=full patterns=0 featureColumns=0 nonzeros=0 imageGraphEdges=27806 of 27806 imageSetMs=1.3 -> <out>/ALL_G.tsv
+  images=filtered patterns=0 featureColumns=0 nonzeros=0 imageGraphEdges=61 of 27806 imageSetMs=4.6 -> <out>/ALL_heavy_edges.tsv
+== 5. features and classification
+  B0: 2
+  B1: 7844
+  FWS: {"patterns": 26, "columns_before_dedupe": 100, "columns_after_dedupe": 45, "nonzeros": 54598, "vertices_with_a_feature": 2804, "empty": false}
+  Frequent (same count): {"patterns": 26, "columns_before_dedupe": 117, "columns_after_dedupe": 25, "nonzeros": 34814, "vertices_with_a_feature": 2775, "empty": false}
+  Frequent (all): {"patterns": 174, "columns_before_dedupe": 914, "columns_after_dedupe": 190, "nonzeros": 233490, "vertices_with_a_feature": 2804, "empty": false}
+  ALL (images in G): {"patterns": 0, "columns_before_dedupe": 0, "columns_after_dedupe": 0, "empty": true}
+  ALL (images in heavy edges): {"patterns": 0, "columns_before_dedupe": 0, "columns_after_dedupe": 0, "empty": true}
+  seed 1 fold 0: B0=0.0217  B1=0.5706  B0 + FWS=0.0440  B0 + Frequent (same count)=0.0360  B0 + Frequent (all)=0.0448  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5616  B1 + Frequent (same count)=0.5609  B1 + Frequent (all)=0.5604  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 1 fold 1: B0=0.0337  B1=0.5637  B0 + FWS=0.0337  B0 + Frequent (same count)=0.0316  B0 + Frequent (all)=0.0385  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5654  B1 + Frequent (same count)=0.5653  B1 + Frequent (all)=0.5641  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  seed 1 fold 2: B0=0.0175  B1=0.5648  B0 + FWS=0.0244  B0 + Frequent (same count)=0.0253  B0 + Frequent (all)=0.0279  B0 + ALL (images in G)=empty  B0 + ALL (images in heavy edges)=empty  B1 + FWS=0.5690  B1 + Frequent (same count)=0.5693  B1 + Frequent (all)=0.5655  B1 + ALL (images in G)=empty  B1 + ALL (images in heavy edges)=empty
+  B0                                 macro-F1 0.0243 (0.0084)   accuracy 0.0332 (0.0057)   not converged 0/3
+  B1                                 macro-F1 0.5664 (0.0037)   accuracy 0.7579 (0.0140)   not converged 0/3
+  B0 + FWS                           macro-F1 0.0340 (0.0098)   accuracy 0.0338 (0.0086)   not converged 0/3
+  B0 + Frequent (same count)         macro-F1 0.0310 (0.0054)   accuracy 0.0329 (0.0082)   not converged 0/3
+  B0 + Frequent (all)                macro-F1 0.0371 (0.0085)   accuracy 0.0359 (0.0063)   not converged 0/3
+  B0 + ALL (images in G)             empty pattern set
+  B0 + ALL (images in heavy edges)   empty pattern set
+  B1 + FWS                           macro-F1 0.5653 (0.0037)   accuracy 0.7556 (0.0147)   not converged 0/3
+  B1 + Frequent (same count)         macro-F1 0.5652 (0.0042)   accuracy 0.7558 (0.0135)   not converged 0/3
+  B1 + Frequent (all)                macro-F1 0.5633 (0.0027)   accuracy 0.7555 (0.0129)   not converged 0/3
+  B1 + ALL (images in G)             empty pattern set
+  B1 + ALL (images in heavy edges)   empty pattern set
+  B0 + FWS vs B0 [macro_f1]: mean diff +0.0097, t=0.930, df=2, p=0.4507
+  B0 + FWS vs B0 [accuracy]: mean diff +0.0007, t=0.058, df=2, p=0.9588
+  B0 + FWS vs B0 + Frequent (same count) [macro_f1]: mean diff +0.0031, t=0.738, df=2, p=0.5375
+  B0 + FWS vs B0 + Frequent (same count) [accuracy]: mean diff +0.0009, t=0.464, df=2, p=0.6883
+  B0 + FWS vs B0 + Frequent (all) [macro_f1]: mean diff -0.0030, t=-1.600, df=2, p=0.2508
+  B0 + FWS vs B0 + Frequent (all) [accuracy]: mean diff -0.0021, t=-0.877, df=2, p=0.4728
+  B1 + FWS vs B1 [macro_f1]: mean diff -0.0011, t=-0.170, df=2, p=0.8807
+  B1 + FWS vs B1 [accuracy]: mean diff -0.0022, t=-1.536, df=2, p=0.2644
+  B1 + FWS vs B1 + Frequent (same count) [macro_f1]: mean diff +0.0001, t=0.285, df=2, p=0.8022
+  B1 + FWS vs B1 + Frequent (same count) [accuracy]: mean diff -0.0001, t=-0.066, df=2, p=0.9531
+  B1 + FWS vs B1 + Frequent (all) [macro_f1]: mean diff +0.0020, t=1.653, df=2, p=0.2402
+  B1 + FWS vs B1 + Frequent (all) [accuracy]: mean diff +0.0001, t=0.053, df=2, p=0.9622
+== done -> results-probe/downstream/20261025_mac-probe_lastfm_reuse
