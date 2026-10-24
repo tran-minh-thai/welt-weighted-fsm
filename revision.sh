@@ -551,9 +551,23 @@ b5)
     done
     ;;
 downstream)
+    # One run of tools/downstream/run.py (selection, mining, image sets, classification). A finished
+    # run (run_meta.json present) is not repeated; an interrupted one is moved aside and run again.
+    # DOWNSTREAM_FREQUENT_BOUND=none mines the frequent patterns of any size (fallback when the
+    # size-bounded GraMi run does not complete at any cell).
     require_voting_choice
-    "${DOWNSTREAM_PYTHON:-$PY}" tools/downstream/b6.py --out "$RUN_DIR/B8_downstream" --kind measurement \
-        --voting "$RUN_DIR/voting_choice.json" --limit-ms "$LIMIT" --warmup "$WARMUP" --measured "$MEASURED" --skip-build
+    D="$RUN_DIR/B8_downstream"
+    if [ -f "$D/run_meta.json" ]; then
+        echo "=== $D is complete; nothing to do"
+    else
+        if [ -d "$D" ]; then mv "$D" "$D.interrupted_$(date +%Y%m%d_%H%M%S)"; fi
+        rc=0
+        "${DOWNSTREAM_PYTHON:-$PY}" tools/downstream/run.py --out "$D" --kind measurement \
+            --voting "$RUN_DIR/voting_choice.json" --limit-ms "$LIMIT" --warmup "$WARMUP" --measured "$MEASURED" \
+            --frequent-bound "${DOWNSTREAM_FREQUENT_BOUND:-fws-edges}" --skip-build || rc=$?
+        checkpoint "downstream: exit $rc"
+        [ "$rc" -eq 0 ] || exit "$rc"
+    fi
     ;;
 b7)
     # Required (exit 1 on failure): GraMiFilter = WeLT; the exact ALL result
