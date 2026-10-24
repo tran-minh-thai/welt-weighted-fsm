@@ -9,11 +9,9 @@ import welt.core.Pattern;
  * is extended), then keep the patterns that have an occurrence whose edges all weigh at least
  * minWeight (W(S) ≥ minWeight, checked exactly by an embedding into G_{≥minWeight}).
  *
- * <p>This is the design of ReSuM (Preti et al., EDBT 2018; Distrib. Parallel Databases 2019),
- * which mines with GraMi and then validates the appearances of each frequent pattern against the
- * weight constraint, applied here to WeLT's acceptance criterion. Each frequent pattern is checked
- * once, when it is found; checking all of them after mining costs the same. The result set equals
- * WeLT's.
+ * <p>Mine-then-check: the weight condition never gates the extension, so the search space is the
+ * one of unweighted GraMi. Each frequent pattern is checked once, when it is found; checking all of
+ * them after mining costs the same. The result set equals WeLT's.
  */
 public final class GraMiFilterStrategy implements MiningStrategy {
 
