@@ -355,9 +355,9 @@ b4rep)
     # email_eu 4 and 3, where the only time difference of the lookup table rests (full, noTableBuild,
     # noTable, noP2), and lastfm 100, whose b4low full run was slower than every variant with the
     # same search counters (every b4low variant). Reading rule, fixed before the run
-    # (tools/summarise_campaign.py): a variant is slower (faster) than full only if it is slower
-    # (faster) in all three passes and its smallest (largest) ratio to full lies outside the spread
-    # of full itself over the three passes.
+    # (tools/summarise_campaign.py, rep_verdict): a variant is slower (faster) than full only if it
+    # is slower (faster) in all three passes and its smallest (largest) ratio to full lies beyond the
+    # largest of the spread of full over the passes, the spread of the variant, and 1.10.
     require_voting_choice
     REP_EMAIL=(full noTableBuild noTable noP2)
     REP_LASTFM=(full noP1 noP2 noP2single noTable noTableBuild voteDeg noWorder noTableReuse noTableThreshold noTableOptions)

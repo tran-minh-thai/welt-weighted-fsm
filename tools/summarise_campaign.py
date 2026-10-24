@@ -216,20 +216,26 @@ def wegm_range():
     p()
 
 
+MIN_EFFECT = 1.10
+
+
 def rep_verdict(full, var):
     """Verdict of a variant over the JVM passes.
 
     full, var: per-pass median times (same passes, same order). Slower (faster) only if the variant is
-    slower (faster) in every pass and its smallest (largest) ratio to full lies outside the spread of
-    full over the passes (max/min of the full times); otherwise tie.
+    slower (faster) in every pass and its smallest (largest) ratio to full lies beyond a margin: the
+    largest of the spread of full over the passes, the spread of the variant over the passes (max/min),
+    and MIN_EFFECT. Three passes can show a small spread by chance, while the variation between JVMs
+    measured on runs with identical search counters reaches 1.3-1.6 at short cells; the floor keeps a
+    few-percent difference from counting. Otherwise tie.
     """
     ratios = [v / f for f, v in zip(full, var)]
-    spread = max(full) / min(full)
-    if all(r > 1 for r in ratios) and min(ratios) > spread:
-        return "slower", ratios, spread
-    if all(r < 1 for r in ratios) and max(ratios) < 1 / spread:
-        return "faster", ratios, spread
-    return "tie", ratios, spread
+    margin = max(max(full) / min(full), max(var) / min(var), MIN_EFFECT)
+    if all(r > 1 for r in ratios) and min(ratios) > margin:
+        return "slower", ratios, margin
+    if all(r < 1 for r in ratios) and max(ratios) < 1 / margin:
+        return "faster", ratios, margin
+    return "tie", ratios, margin
 
 
 def repeated():
@@ -241,7 +247,7 @@ def repeated():
     for b, rows in zip(by, passes):
         for r in rows:
             b[(r["dataset"][:-3], int(r["minSup"]))][r["variant"]] = r
-    p("| cell | variant | ms per pass | ratio to full per pass | full spread | verdict |")
+    p("| cell | variant | ms per pass | ratio to full per pass | margin | verdict |")
     p("|---|---|---|---|---|---|")
     for k in sorted(by[0], key=lambda k: (k[0], -k[1])):
         if not all(ok(b[k].get("full")) for b in by if k in b):

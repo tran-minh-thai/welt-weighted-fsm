@@ -155,7 +155,9 @@ def main():
             ((100, 130, 98), (125, 140, 120), "tie", "slower in every pass but within the spread of full"),
             ((100, 101, 100), (70, 72, 71), "faster", "faster in every pass, beyond the spread of full"),
             ((100, 100, 100), (101, 99, 102), "tie", "slower in two passes only"),
-            ((100, 100, 100), (101, 101, 101), "slower", "small effect, no spread")):
+            ((100, 100, 100), (101, 101, 101), "tie", "few-percent effect under the floor"),
+            ((100, 101, 100), (140, 141, 112), "tie", "beyond the floor but within the variant's own spread"),
+            ((100, 101, 100), (125, 126, 124), "slower", "beyond the floor and both spreads")):
         check(f"rep verdict: {what}", summarise_campaign.rep_verdict(list(full), list(var))[0] == want)
 
     print(f"selftest_tools: {len(cases) - len(failures)}/{len(cases)} cases passed")
