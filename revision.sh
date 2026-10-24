@@ -17,6 +17,8 @@
 #   ./revision.sh b4hard     ablation at the hardest cell of citeseer, email_eu, lastfm (after b1)
 #   ./revision.sh b1low      WeLT below the b1 ranges (email_eu 4, 3; lastfm 100, 50)
 #   ./revision.sh b4low      ablation of the lookup table, the vote and the table cost options at those cells
+#   ./revision.sh b4rep      three JVM repetitions of the low-support ablation where the table claim rests
+#                            (email_eu 4, 3: full, noTableBuild, noTable, noP2; lastfm 100: every b4low variant)
 #   ./revision.sh b3live     peak live heap, one untimed run per cell with forced collections (email_eu 12,
 #                            10: every algorithm; email_eu 4, 3 and lastfm 100, 50: WeLT)
 #   ./revision.sh b3heap     smallest heap at which a cell completes (not part of all)
@@ -59,7 +61,7 @@ fi
 
 # ---------------------------------------------------------------- whole campaign
 # all: prepare (skipped once prepare.done exists), voting (skipped once voting_choice.json
-# exists), b2grid, b4, b1 and allexact per dataset, b2hard, b4hard, b1low, b4low, b3live, wegmrange, b5 per dataset, b7. Every step skips its finished
+# exists), b2grid, b4, b1 and allexact per dataset, b2hard, b4hard, b1low, b4low, b4rep, b3live, wegmrange, b5 per dataset, b7. Every step skips its finished
 # cells. A failing step stops the sequence and reports "all STOPPED at <step>".
 # ALL_DRY=1 prints the steps that would run; ALL_STEPS="b4 b1:citeseer" runs a subset.
 if [ "$CMD" = "all" ]; then
@@ -88,6 +90,7 @@ if [ "$CMD" = "all" ]; then
     all_step b4hard
     all_step b1low
     all_step b4low
+    all_step b4rep
     all_step b3live
     all_step wegmrange
     for ds in citeseer email_eu lastfm; do all_step b5 "$ds"; done
@@ -344,6 +347,29 @@ b1low|b4low)
         fi
     done
     ;;
+b4rep)
+    # Variation between JVMs, which the within-JVM sd of the tie rule does not include: each cell
+    # is run in three separate passes (B4_rep_jvm1..3.csv, one JVM per variant and pass, the usual
+    # warm-up and measured runs), the passes one after the other so that a slow period of the
+    # machine falls on every variant of a pass, and the variant order rotated between passes. Cells:
+    # email_eu 4 and 3, where the only time difference of the lookup table rests (full, noTableBuild,
+    # noTable, noP2), and lastfm 100, whose b4low full run was slower than every variant with the
+    # same search counters (every b4low variant). Reading rule, fixed before the run
+    # (tools/summarise_campaign.py, rep_verdict): a variant is slower (faster) than full only if it
+    # is slower (faster) in all three passes and its smallest (largest) ratio to full lies beyond the
+    # largest of the spread of full over the passes, the spread of the variant, and 1.10.
+    require_voting_choice
+    REP_EMAIL=(full noTableBuild noTable noP2)
+    REP_LASTFM=(full noP1 noP2 noP2single noTable noTableBuild voteDeg noWorder noTableReuse noTableThreshold noTableOptions)
+    rotate() { local k=$1; shift; local a=("$@"); local n=${#a[@]}; local i; for ((i = 0; i < n; i++)); do printf '%s ' "${a[$(((i + k) % n))]}"; done; }
+    for pass in 1 2 3; do
+        for cell in "email_eu 4" "email_eu 3" "lastfm 100"; do
+            read -r ds s <<< "$cell"
+            if [ "$ds" = email_eu ]; then order=$(rotate $((pass - 1)) "${REP_EMAIL[@]}"); else order=$(rotate $((pass - 1)) "${REP_LASTFM[@]}"); fi
+            ABLATION_ONLY="$order" run_ablation_cell "$RUN_DIR/B4_rep_jvm$pass.csv" "datasets/$ds.lg" "$s" "$(tau_w_of "$ds")" "$LIMIT" "$WARMUP" "$MEASURED"
+        done
+    done
+    ;;
 b3live)
     # Peak live heap: one run per cell with WELT_LIVE_HEAP=on (no warm-up, one run, not timed):
     # a full collection is forced at the start and the end of mining and whenever the retained data
@@ -575,7 +601,7 @@ b7)
             out=$(java ${JAVA_OPTS:-} -cp target/classes welt.runner.NestingCheckMain "$P/${ds}_WEGM_${s}_${tw}.0.tsv" \
                 "$RUN_DIR/patterns_wegm_range_all/${ds}_heavy_${tw}_GraMi_${s}_${tw}.0.tsv" "$P/${ds}_WeLT_${s}_${tw}.0.tsv") || code=$?
             echo "$ds minSup=$s: $out" | grep -v '^NESTING_CSV' || true
-            line=$(printf '%s\n' "$out" | sed -n 's/^NESTING_CSV,//p')
+            line=$(printf '%s\n' "$out" | tr -d '\r' | sed -n 's/^NESTING_CSV,//p')
             echo "$ds.lg,$s,$tw,${line:-,,,,},$code" >> "$NEST"
             if [ "$code" -eq 1 ]; then echo "ERROR: nesting fails at $ds minSup=$s (see $(basename "$NEST"))" >&2; status=1; fi
             if [ "$code" -eq 0 ]; then compared=$((compared + 1)); fi
