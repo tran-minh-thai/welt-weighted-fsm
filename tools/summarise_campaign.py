@@ -10,7 +10,8 @@ Reads the CSV files written by revision.sh and prints, as Markdown:
   4. voting-weight sensitivity (backtracking nodes over the grid);
   5. peak live heap and retained data;
   6. the tau_w sweep and the WeLT-only sweep;
-  7. WEGM, the exact ALL score and WeLT at WEGM's supports, and the nesting check.
+  7. WEGM, the exact ALL score and WeLT at WEGM's supports, and the nesting check;
+  8. the ablation repeated in three JVM passes (b4rep), read by the rule of rep_verdict.
 Tie rule: |difference| < 3 * sqrt(sd_a^2 + sd_b^2) over the measured runs of each side; the sd is within
 one JVM, so it does not include the variation between JVMs (section 4 measures that variation where the
 search counters are identical).
@@ -215,6 +216,48 @@ def wegm_range():
     p()
 
 
+def rep_verdict(full, var):
+    """Verdict of a variant over the JVM passes.
+
+    full, var: per-pass median times (same passes, same order). Slower (faster) only if the variant is
+    slower (faster) in every pass and its smallest (largest) ratio to full lies outside the spread of
+    full over the passes (max/min of the full times); otherwise tie.
+    """
+    ratios = [v / f for f, v in zip(full, var)]
+    spread = max(full) / min(full)
+    if all(r > 1 for r in ratios) and min(ratios) > spread:
+        return "slower", ratios, spread
+    if all(r < 1 for r in ratios) and max(ratios) < 1 / spread:
+        return "faster", ratios, spread
+    return "tie", ratios, spread
+
+
+def repeated():
+    passes = [load(f"B4_rep_jvm{i}.csv") for i in (1, 2, 3)]
+    if not all(passes):
+        return
+    p("## 8. Ablation repeated in three JVM passes")
+    by = [collections.defaultdict(dict) for _ in passes]
+    for b, rows in zip(by, passes):
+        for r in rows:
+            b[(r["dataset"][:-3], int(r["minSup"]))][r["variant"]] = r
+    p("| cell | variant | ms per pass | ratio to full per pass | full spread | verdict |")
+    p("|---|---|---|---|---|---|")
+    for k in sorted(by[0], key=lambda k: (k[0], -k[1])):
+        if not all(ok(b[k].get("full")) for b in by if k in b):
+            p(f"| {k[0]} {k[1]} | full | not complete in every pass | | | |")
+            continue
+        full = [ms(b[k]["full"]) for b in by]
+        for v in by[0][k]:
+            rs = [b[k].get(v) for b in by]
+            if v == "full" or not all(ok(r) for r in rs):
+                continue
+            t, ratios, spread = rep_verdict(full, [ms(r) for r in rs])
+            p(f"| {k[0]} {k[1]} | {v} | {' / '.join(f'{ms(r):.0f}' for r in rs)} | "
+              f"{' / '.join(f'{x:.2f}' for x in ratios)} | {spread:.2f} | {t} |")
+    p()
+
+
 def main():
     if D is None or not os.path.isdir(D):
         sys.exit("usage: summarise_campaign.py <campaign dir> [out.md]")
@@ -227,6 +270,7 @@ def main():
     memory()
     sweep()
     wegm_range()
+    repeated()
     text = "\n".join(OUT) + "\n"
     if len(sys.argv) > 2:
         with open(sys.argv[2], "w", encoding="utf-8", newline="\n") as fh:

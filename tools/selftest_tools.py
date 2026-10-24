@@ -148,6 +148,16 @@ def main():
     check("min heap: -Xmx parsing", min_heap.heap_mb_of("-Xmx48g -Xss4m") == 49152
           and min_heap.heap_mb_of("-Xmx512m") == 512 and min_heap.heap_mb_of("-Xss4m") is None)
 
+    # summarise_campaign.rep_verdict: the reading rule of the repeated JVM passes
+    import summarise_campaign
+    for full, var, want, what in (
+            ((100, 102, 98), (160, 165, 158), "slower", "slower in every pass, beyond the spread of full"),
+            ((100, 130, 98), (125, 140, 120), "tie", "slower in every pass but within the spread of full"),
+            ((100, 101, 100), (70, 72, 71), "faster", "faster in every pass, beyond the spread of full"),
+            ((100, 100, 100), (101, 99, 102), "tie", "slower in two passes only"),
+            ((100, 100, 100), (101, 101, 101), "slower", "small effect, no spread")):
+        check(f"rep verdict: {what}", summarise_campaign.rep_verdict(list(full), list(var))[0] == want)
+
     print(f"selftest_tools: {len(cases) - len(failures)}/{len(cases)} cases passed")
     sys.exit(1 if failures else 0)
 
