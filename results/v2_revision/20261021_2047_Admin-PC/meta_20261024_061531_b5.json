@@ -18,5 +18,6 @@
   "command": "revision.sh b5 lastfm",
   "limitMs": "3600000",
   "warmup": "1",
-  "measured": "5"
+  "measured": "5",
+  "endTime": "2026-10-24T12:22:48.2568387+07:00"
 }
