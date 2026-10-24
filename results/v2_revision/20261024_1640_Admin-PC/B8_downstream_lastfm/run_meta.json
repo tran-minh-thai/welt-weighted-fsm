@@ -1,0 +1,165 @@
+{
+  "experiment": "downstream node classification",
+  "dataset": "lastfm",
+  "kind": "measurement",
+  "command": "python.exe tools/downstream/run.py --dataset lastfm --out results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm --kind measurement --voting results/v2_revision/20261024_1640_Admin-PC/voting_choice.json --limit-ms 3600000 --frequent-bound fws-edges --skip-build",
+  "started": "2026-10-24T19:50:16",
+  "git_commit": "840df28a2f54bb25999a8f21ff17afcb2295356e",
+  "tree": "clean",
+  "host": "Admin-PC",
+  "os": "Windows-11-10.0.26300-SP0",
+  "machine": "AMD64",
+  "python": "3.14.4",
+  "packages": {
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "scikit-learn": "1.9.1",
+    "joblib": "1.6.0",
+    "threadpoolctl": "3.7.0",
+    "narwhals": "2.27.1",
+    "cloudpickle": "3.1.2"
+  },
+  "java": {
+    "java.runtime.version": "21.0.12.1+1-LTS",
+    "java.vendor": "Microsoft"
+  },
+  "java_opts": "-Xmx48g",
+  "tool_sha256": {
+    "tools/downstream/run.py": "cba1cd945ec1de1fd1701a9b0d7b02bc4e15b02e8b1d38f38036ba47da17f638",
+    "tools/downstream/lib.py": "e27a1b05fa9e6e0002da42e60a37aae164543eaffe8a41b53425a3d6b4af35cc",
+    "tools/downstream/selftest.py": "6c2cd39fec0180f30b0aca3a853b8a803b5f3d198f76ba465ffbfdd26f77ff6f",
+    "tools/downstream/requirements.txt": "bd501869552897c830039114d9560b54406bc9789031b79a60416af984e00918",
+    "datasets/convert_musae_struct.py": "9e575b05222b866c62b8697c56339c81a77eb9e483bdabb5d609ec00c56fc7cd",
+    "tools/heavy_subgraph.py": "9dee0b7b66814c341e2512abd3f9cb5b193c96818e7795910bf357be85a1b119",
+    "src/main/java/welt/runner/ImageSetMain.java": "d8d6f7c98fa6f4b62aa891a47dd8efb97c9a21f1f1009905378f2d882735c6fe",
+    "src/main/java/welt/core/MniSupportCounter.java": "cd043bcc44c5e92c4dfe19460374238c25c7ccabbcc16469e38da06144e0d06c",
+    "src/main/java/welt/runner/BenchmarkMain.java": "9fe4b7a5ff8358c14592bb21c161920a0042a95fa6deb918487ff1a22f7732fe",
+    "src/main/java/welt/runner/PatternDump.java": "6562c248f0d67360890fab788c20c1b5ce802c55822640bb5525335ec8b0ba3c",
+    "src/main/java/welt/core/MiningEngine.java": "f7667d02bef711ed66a2f75b38773158488e2707a11d80dfae781d0a0cf9d7d2"
+  },
+  "design": {
+    "tau_s_grid": [
+      1600,
+      1200,
+      1000,
+      800,
+      600,
+      500,
+      400,
+      300,
+      250,
+      200,
+      150,
+      100,
+      75,
+      50,
+      30,
+      20,
+      10
+    ],
+    "continuous_columns": "log1p, then standardised",
+    "rho_w": [
+      0.5,
+      0.7
+    ],
+    "pattern_window": [
+      20,
+      300
+    ],
+    "seeds": 3,
+    "folds": 10,
+    "inner_folds": 3,
+    "C_grid": [
+      0.01,
+      0.1,
+      1.0,
+      10.0
+    ],
+    "max_iter": 5000,
+    "pattern_sets": [
+      [
+        "FWS",
+        "full"
+      ],
+      [
+        "Frequent (same count)",
+        "full"
+      ],
+      [
+        "Frequent (all)",
+        "full"
+      ],
+      [
+        "ALL (images in G)",
+        "full"
+      ],
+      [
+        "ALL (images in heavy edges)",
+        "filtered"
+      ]
+    ],
+    "baselines": [
+      "B0",
+      "B1"
+    ],
+    "limit_ms": 3600000,
+    "selection_limit_ms": 600000,
+    "check_limit_ms": 3600000,
+    "frequent_bound": "fws-edges",
+    "warmup": 1,
+    "measured": 5
+  },
+  "departures_from_design": {},
+  "voting_choice": {
+    "file": "voting_choice.json",
+    "sha256": "c9bd105198acab8dda8cbd7929ac75650b3bbe42b0495fd61a44f3ea83585460",
+    "WELT_VOTER": "1,1,1",
+    "WELT_WORDER": "on"
+  },
+  "data_sha256": {
+    "datasets/lastfm_struct.lg": "f80c68853ba6bea9f2f133b853ec114c197025b03a4e478741f229fbaec5d44c",
+    "datasets/lastfm.lg": "be77963234648e22e998b703b2418f9d5dd030926713665fd049e7053c8ed3b7",
+    "datasets/raw/lasftm_asia/lastfm_asia_edges.csv": "548eacff61bff564ab5007831fa4a7a30e1a3956075ffd24e43310ed33555842",
+    "datasets/raw/lasftm_asia/lastfm_asia_features.json": "93fe84c96ffa9f0081ab37085979641062393895925de6c344df0f829c8ed2e7",
+    "datasets/raw/lasftm_asia/lastfm_asia_target.csv": "91f19215f6eca8321feec038bd32900cf13fd4f7e041a9976cf202807c72ac16"
+  },
+  "leakage_check": {
+    "vertices": 7624,
+    "edges_compared": 27806,
+    "edges_equal": true,
+    "vertex_count_equal": true,
+    "labels_are_degree_classes": true,
+    "distinct_labels": 5,
+    "vertices_whose_label_equals_target": 352
+  },
+  "outcome": "completed",
+  "finished": "2026-10-24T20:57:07",
+  "outputs": [
+    "console.txt",
+    "downstream_choice.json",
+    "folds.csv",
+    "heavy_edges.lg",
+    "heavy_edges.lg.source",
+    "image_sets/ALL_G.tsv",
+    "image_sets/ALL_heavy_edges.tsv",
+    "image_sets/FWS.tsv",
+    "image_sets/Frequent_all.tsv",
+    "image_sets/Frequent_same_count.selected.tsv",
+    "mined/ALL/heavy_edges_GraMi_1000_40.2807.tsv",
+    "mined/FWS/lastfm_struct_WeLT_1000_40.2807.tsv",
+    "mined/Frequent_all/lastfm_struct_GraMi_1000_40.2807.tsv",
+    "mining.csv",
+    "patterns/ALL.tsv",
+    "patterns/FWS.tsv",
+    "patterns/Frequent_all.tsv",
+    "selection_patterns/GraMi_1000_maxEdges5/lastfm_struct_GraMi_1000_40.2807.tsv",
+    "selection_patterns/WeLT_1000_0.7/lastfm_struct_WeLT_1000_40.2807.tsv",
+    "selection_patterns/WeLT_1200_0.7/lastfm_struct_WeLT_1200_40.2807.tsv",
+    "selection_patterns/WeLT_1600_0.5/lastfm_struct_WeLT_1600_28.772.tsv",
+    "selection_patterns/WeLT_1600_0.7/lastfm_struct_WeLT_1600_40.2807.tsv",
+    "summary.json",
+    "summary_configs.csv",
+    "summary_tests.csv",
+    "timings_measurement.json"
+  ]
+}

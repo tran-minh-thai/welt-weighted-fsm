@@ -1,0 +1,366 @@
+{
+  "per_config": {
+    "B0": {
+      "folds": 30,
+      "empty": false,
+      "not_converged": 0,
+      "C_chosen": {
+        "0.01": 0,
+        "0.1": 2,
+        "1.0": 13,
+        "10.0": 15
+      },
+      "macro_f1_mean": 0.02800375924941987,
+      "macro_f1_sd": 0.007690962667738137,
+      "accuracy_mean": 0.03554561413768233,
+      "accuracy_sd": 0.008050185143438427
+    },
+    "B1": {
+      "folds": 30,
+      "empty": false,
+      "not_converged": 0,
+      "C_chosen": {
+        "0.01": 3,
+        "0.1": 27,
+        "1.0": 0,
+        "10.0": 0
+      },
+      "macro_f1_mean": 0.5816883348712241,
+      "macro_f1_sd": 0.02839976317956934,
+      "accuracy_mean": 0.7701546481001803,
+      "accuracy_sd": 0.015383107294992985
+    },
+    "B0 + FWS": {
+      "folds": 30,
+      "empty": false,
+      "not_converged": 0,
+      "C_chosen": {
+        "0.01": 0,
+        "0.1": 0,
+        "1.0": 11,
+        "10.0": 19
+      },
+      "macro_f1_mean": 0.02694473927813105,
+      "macro_f1_sd": 0.008103495162747287,
+      "accuracy_mean": 0.028375237498982346,
+      "accuracy_sd": 0.00660191117795316
+    },
+    "B0 + Frequent (same count)": {
+      "folds": 30,
+      "empty": false,
+      "not_converged": 0,
+      "C_chosen": {
+        "0.01": 0,
+        "0.1": 0,
+        "1.0": 3,
+        "10.0": 27
+      },
+      "macro_f1_mean": 0.02390115299803058,
+      "macro_f1_sd": 0.007975882088861621,
+      "accuracy_mean": 0.02636407834341808,
+      "accuracy_sd": 0.008407886087989454
+    },
+    "B0 + Frequent (all)": {
+      "folds": 30,
+      "empty": false,
+      "not_converged": 0,
+      "C_chosen": {
+        "0.01": 0,
+        "0.1": 0,
+        "1.0": 1,
+        "10.0": 29
+      },
+      "macro_f1_mean": 0.032759952420790585,
+      "macro_f1_sd": 0.0075010335205717435,
+      "accuracy_mean": 0.032135375279924876,
+      "accuracy_sd": 0.0057095496167671985
+    },
+    "B0 + ALL (images in G)": {
+      "folds": 30,
+      "empty": true
+    },
+    "B0 + ALL (images in heavy edges)": {
+      "folds": 30,
+      "empty": true
+    },
+    "B1 + FWS": {
+      "folds": 30,
+      "empty": false,
+      "not_converged": 0,
+      "C_chosen": {
+        "0.01": 8,
+        "0.1": 22,
+        "1.0": 0,
+        "10.0": 0
+      },
+      "macro_f1_mean": 0.5797154692565892,
+      "macro_f1_sd": 0.030890326093894496,
+      "accuracy_mean": 0.7684050961519718,
+      "accuracy_sd": 0.016798157129720263
+    },
+    "B1 + Frequent (same count)": {
+      "folds": 30,
+      "empty": false,
+      "not_converged": 0,
+      "C_chosen": {
+        "0.01": 4,
+        "0.1": 26,
+        "1.0": 0,
+        "10.0": 0
+      },
+      "macro_f1_mean": 0.5819496826701391,
+      "macro_f1_sd": 0.029346691590297045,
+      "accuracy_mean": 0.7689300305351738,
+      "accuracy_sd": 0.015390090110813185
+    },
+    "B1 + Frequent (all)": {
+      "folds": 30,
+      "empty": false,
+      "not_converged": 0,
+      "C_chosen": {
+        "0.01": 6,
+        "0.1": 24,
+        "1.0": 0,
+        "10.0": 0
+      },
+      "macro_f1_mean": 0.5770540863663708,
+      "macro_f1_sd": 0.02956190147473697,
+      "accuracy_mean": 0.7677051836410357,
+      "accuracy_sd": 0.01571014216917097
+    },
+    "B1 + ALL (images in G)": {
+      "folds": 30,
+      "empty": true
+    },
+    "B1 + ALL (images in heavy edges)": {
+      "folds": 30,
+      "empty": true
+    }
+  },
+  "tests": [
+    {
+      "reference": "B0 + FWS",
+      "other": "B0",
+      "metric": "macro_f1",
+      "pairs": 30,
+      "mean_difference": -0.0010590199712888185,
+      "t": -0.2585098815736214,
+      "df": 29,
+      "p_value": 0.797839393589338,
+      "reference_better": 15,
+      "other_better": 15
+    },
+    {
+      "reference": "B0 + FWS",
+      "other": "B0",
+      "metric": "accuracy",
+      "pairs": 30,
+      "mean_difference": -0.007170376638699979,
+      "t": -1.8940088584481884,
+      "df": 29,
+      "p_value": 0.06823754545051754,
+      "reference_better": 9,
+      "other_better": 20
+    },
+    {
+      "reference": "B0 + FWS",
+      "other": "B0 + Frequent (same count)",
+      "metric": "macro_f1",
+      "pairs": 30,
+      "mean_difference": 0.0030435862801004754,
+      "t": 0.8667965234215376,
+      "df": 29,
+      "p_value": 0.39316906634228327,
+      "reference_better": 20,
+      "other_better": 10
+    },
+    {
+      "reference": "B0 + FWS",
+      "other": "B0 + Frequent (same count)",
+      "metric": "accuracy",
+      "pairs": 30,
+      "mean_difference": 0.002011159155564269,
+      "t": 0.7401825376153005,
+      "df": 29,
+      "p_value": 0.46513994748042947,
+      "reference_better": 19,
+      "other_better": 9
+    },
+    {
+      "reference": "B0 + FWS",
+      "other": "B0 + Frequent (all)",
+      "metric": "macro_f1",
+      "pairs": 30,
+      "mean_difference": -0.005815213142659535,
+      "t": -2.9912114119367743,
+      "df": 29,
+      "p_value": 0.005621051089297998,
+      "reference_better": 4,
+      "other_better": 26
+    },
+    {
+      "reference": "B0 + FWS",
+      "other": "B0 + Frequent (all)",
+      "metric": "accuracy",
+      "pairs": 30,
+      "mean_difference": -0.00376013778094252,
+      "t": -2.5305433016998355,
+      "df": 29,
+      "p_value": 0.01707328587083973,
+      "reference_better": 4,
+      "other_better": 25
+    },
+    {
+      "reference": "B0 + FWS",
+      "other": "B0 + ALL (images in G)",
+      "empty": true
+    },
+    {
+      "reference": "B0 + FWS",
+      "other": "B0 + ALL (images in heavy edges)",
+      "empty": true
+    },
+    {
+      "reference": "B1 + FWS",
+      "other": "B1",
+      "metric": "macro_f1",
+      "pairs": 30,
+      "mean_difference": -0.0019728656146348112,
+      "t": -0.6471026703640539,
+      "df": 29,
+      "p_value": 0.5226550994084654,
+      "reference_better": 15,
+      "other_better": 15
+    },
+    {
+      "reference": "B1 + FWS",
+      "other": "B1",
+      "metric": "accuracy",
+      "pairs": 30,
+      "mean_difference": -0.0017495519482083129,
+      "t": -1.0455547277056583,
+      "df": 29,
+      "p_value": 0.3044038050430492,
+      "reference_better": 8,
+      "other_better": 20
+    },
+    {
+      "reference": "B1 + FWS",
+      "other": "B1 + Frequent (same count)",
+      "metric": "macro_f1",
+      "pairs": 30,
+      "mean_difference": -0.002234213413549698,
+      "t": -0.6132035666476979,
+      "df": 29,
+      "p_value": 0.5445214967831759,
+      "reference_better": 12,
+      "other_better": 18
+    },
+    {
+      "reference": "B1 + FWS",
+      "other": "B1 + Frequent (same count)",
+      "metric": "accuracy",
+      "pairs": 30,
+      "mean_difference": -0.0005249343832020951,
+      "t": -0.23504267610389507,
+      "df": 29,
+      "p_value": 0.8158274010881827,
+      "reference_better": 10,
+      "other_better": 15
+    },
+    {
+      "reference": "B1 + FWS",
+      "other": "B1 + Frequent (all)",
+      "metric": "macro_f1",
+      "pairs": 30,
+      "mean_difference": 0.002661382890218437,
+      "t": 0.5933103140666964,
+      "df": 29,
+      "p_value": 0.5575729234680977,
+      "reference_better": 19,
+      "other_better": 11
+    },
+    {
+      "reference": "B1 + FWS",
+      "other": "B1 + Frequent (all)",
+      "metric": "accuracy",
+      "pairs": 30,
+      "mean_difference": 0.0006999125109361293,
+      "t": 0.3045717390125021,
+      "df": 29,
+      "p_value": 0.7628673736060876,
+      "reference_better": 14,
+      "other_better": 13
+    },
+    {
+      "reference": "B1 + FWS",
+      "other": "B1 + ALL (images in G)",
+      "empty": true
+    },
+    {
+      "reference": "B1 + FWS",
+      "other": "B1 + ALL (images in heavy edges)",
+      "empty": true
+    }
+  ],
+  "dimensions": {
+    "B0": 2,
+    "B1": 7844,
+    "FWS": {
+      "patterns": 26,
+      "columns_before_dedupe": 100,
+      "columns_after_dedupe": 45,
+      "nonzeros": 54598,
+      "vertices_with_a_feature": 2804,
+      "empty": false
+    },
+    "Frequent (same count)": {
+      "patterns": 26,
+      "columns_before_dedupe": 117,
+      "columns_after_dedupe": 25,
+      "nonzeros": 34814,
+      "vertices_with_a_feature": 2775,
+      "empty": false
+    },
+    "Frequent (all)": {
+      "patterns": 174,
+      "columns_before_dedupe": 914,
+      "columns_after_dedupe": 190,
+      "nonzeros": 233490,
+      "vertices_with_a_feature": 2804,
+      "empty": false
+    },
+    "ALL (images in G)": {
+      "patterns": 0,
+      "columns_before_dedupe": 0,
+      "columns_after_dedupe": 0,
+      "empty": true
+    },
+    "ALL (images in heavy edges)": {
+      "patterns": 0,
+      "columns_before_dedupe": 0,
+      "columns_after_dedupe": 0,
+      "empty": true
+    }
+  },
+  "classes": {
+    "count": 18,
+    "smallest": 16,
+    "largest": 1572
+  },
+  "chosen_cell": {
+    "tau_s": 1000,
+    "rho_w": 0.7,
+    "tau_w": "40.2807",
+    "R": 26,
+    "frequent_max_edges": 5,
+    "frequent_patterns": 174
+  },
+  "nesting": {
+    "FWS_in_frequent": 26,
+    "ALL_in_FWS": 0,
+    "FWS": 26,
+    "ALL": 0,
+    "frequent": 174
+  }
+}
