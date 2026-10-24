@@ -18,11 +18,14 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Exports the MNI image sets of a dumped result set on the weight-filtered graph, for the
- * downstream node-classification features:
+ * Exports the MNI image sets of a dumped pattern set, for the downstream node-classification
+ * features:
  * <pre>
- *   java welt.runner.ImageSetMain &lt;graph.lg&gt; &lt;tau_w&gt; &lt;patterns.tsv&gt; &lt;out.tsv&gt;
+ *   java welt.runner.ImageSetMain &lt;graph.lg&gt; &lt;tau_w&gt; &lt;patterns.tsv&gt; &lt;out.tsv&gt; [filtered|full]
  * </pre>
+ * {@code filtered} (the default) takes the images in G restricted to the edges of weight &gt;= tau_w,
+ * {@code full} in G itself; the description below is for {@code filtered}, and {@code full} is
+ * the same with G in place of the filtered graph and without the weight check.
  * {@code patterns.tsv} is a {@link PatternDump} file. Every pattern is decoded from its
  * canonical code (the decoding is checked by re-encoding it), and for every pattern vertex u
  * the output lists the vertices v of G such that u maps to v in at least one occurrence of the
@@ -110,17 +113,20 @@ public final class ImageSetMain {
         }
     }
 
+    /** Reads a {@link PatternDump} file: header {@code code vertices edges weight}, or the earlier one with {@code mni}. */
     static List<Dumped> readDump(Path file) throws IOException {
         List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
-        if (lines.isEmpty() || !lines.get(0).equals("code\tvertices\tedges\tmni\tweight")) {
-            throw new IOException(file + ": not a pattern dump (header '" + (lines.isEmpty() ? "" : lines.get(0)) + "')");
-        }
+        String header = lines.isEmpty() ? "" : lines.get(0);
+        int fields;
+        if (header.equals("code\tvertices\tedges\tweight")) fields = 4;
+        else if (header.equals("code\tvertices\tedges\tmni\tweight")) fields = 5;
+        else throw new IOException(file + ": not a pattern dump (header '" + header + "')");
         List<Dumped> out = new ArrayList<>();
         for (String line : lines.subList(1, lines.size())) {
             if (line.isEmpty()) continue;
             String[] f = line.split("\t");
-            if (f.length != 5) throw new IOException(file + ": expected 5 fields, got " + f.length + ": " + line);
-            out.add(new Dumped(f[0], Integer.parseInt(f[1]), Integer.parseInt(f[2]), Double.parseDouble(f[4])));
+            if (f.length != fields) throw new IOException(file + ": expected " + fields + " fields, got " + f.length + ": " + line);
+            out.add(new Dumped(f[0], Integer.parseInt(f[1]), Integer.parseInt(f[2]), Double.parseDouble(f[fields - 1])));
         }
         return out;
     }
@@ -140,10 +146,22 @@ public final class ImageSetMain {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 4) {
-            System.err.println("usage: ImageSetMain <graph.lg> <tau_w> <patterns.tsv> <out.tsv>");
-            System.exit(1);
+        int code = run(args);
+        if (code != 0) System.exit(code);
+    }
+
+    /** The export; returns 0, 1 (usage or input) or 2 (an empty image set or a pattern below tau_w). */
+    static int run(String[] args) throws Exception {
+        if (args.length != 4 && args.length != 5) {
+            System.err.println("usage: ImageSetMain <graph.lg> <tau_w> <patterns.tsv> <out.tsv> [filtered|full]");
+            return 1;
         }
+        String mode = args.length == 5 ? args[4] : "filtered";
+        if (!mode.equals("filtered") && !mode.equals("full")) {
+            System.err.println("ERROR: the image graph must be filtered or full, got " + mode);
+            return 1;
+        }
+        boolean full = mode.equals("full");
         Path graphFile = Path.of(args[0]);
         double tauW = Double.parseDouble(args[1]);
         Path dumpFile = Path.of(args[2]);
@@ -152,11 +170,11 @@ public final class ImageSetMain {
         LgGraphReader.Result read = new LgGraphReader().read(graphFile);
         if (read.stats.idsRemapped) {
             System.err.println("ERROR: " + graphFile + " has non-contiguous vertex ids; image ids would not be file ids");
-            System.exit(1);
+            return 1;
         }
         List<Dumped> dumped = readDump(dumpFile);
         long t0 = System.nanoTime();
-        LabeledWeightedGraph filtered = filterByWeight(read.graph, tauW);
+        LabeledWeightedGraph filtered = full ? read.graph : filterByWeight(read.graph, tauW);
         MniSupportCounter counter = new MniSupportCounter(filtered, new Metrics());
         int lines = 0;
         long cells = 0;
@@ -165,16 +183,16 @@ public final class ImageSetMain {
             w.write("pattern\tvertex\tcode\tsize\timages\n");
             for (int k = 0; k < dumped.size(); k++) {
                 Dumped d = dumped.get(k);
-                if (d.weight < tauW) {
+                if (!full && d.weight < tauW) {
                     System.err.println("ERROR: pattern " + k + " has W=" + d.weight + " < tau_w=" + tauW + ": " + d.code);
-                    System.exit(2);
+                    return 2;
                 }
                 int[][] sets = counter.exactImageSets(decodeChecked(d));
                 for (int u = 0; u < sets.length; u++) {
                     if (sets[u].length == 0) {
-                        System.err.println("ERROR: pattern " + k + " vertex " + u + " has no image in the graph filtered at tau_w="
-                                + tauW + " although W=" + d.weight + ": " + d.code);
-                        System.exit(2);
+                        System.err.println("ERROR: pattern " + k + " vertex " + u + " has no image in the " + mode
+                                + " graph (tau_w=" + tauW + ", W=" + d.weight + "): " + d.code);
+                        return 2;
                     }
                     StringBuilder sb = new StringBuilder();
                     for (int x = 0; x < sets[u].length; x++) {
@@ -188,7 +206,8 @@ public final class ImageSetMain {
             }
         }
         double ms = (System.nanoTime() - t0) / 1e6;
-        System.out.printf(Locale.ROOT, "patterns=%d featureColumns=%d nonzeros=%d filteredEdges=%d of %d imageSetMs=%.1f -> %s%n",
-                dumped.size(), lines, cells, filtered.numEdges(), read.graph.numEdges(), ms, outFile);
+        System.out.printf(Locale.ROOT, "images=%s patterns=%d featureColumns=%d nonzeros=%d imageGraphEdges=%d of %d imageSetMs=%.1f -> %s%n",
+                mode, dumped.size(), lines, cells, filtered.numEdges(), read.graph.numEdges(), ms, outFile);
+        return 0;
     }
 }

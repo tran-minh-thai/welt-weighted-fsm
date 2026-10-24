@@ -222,6 +222,62 @@ class ImageSetMainTest {
     }
 
     @Test
+    void readDumpTakesBothHeaders(@TempDir Path dir) throws IOException {
+        Path four = dir.resolve("four.tsv"), five = dir.resolve("five.tsv"), bad = dir.resolve("bad.tsv");
+        Files.writeString(four, "code\tvertices\tedges\tweight\n0 1 3 0 3;\t2\t1\t57.5\n");
+        Files.writeString(five, "code\tvertices\tedges\tmni\tweight\n0 1 3 0 3;\t2\t1\t1120\t57.5\n");
+        Files.writeString(bad, "code\tvertices\tedges\tweight\n0 1 3 0 3;\t2\t1\t1120\t57.5\n");
+        for (Path f : List.of(four, five)) {
+            List<ImageSetMain.Dumped> d = ImageSetMain.readDump(f);
+            assertEquals(1, d.size());
+            assertEquals("0 1 3 0 3;", d.get(0).code);
+            assertEquals(57.5, d.get(0).weight);
+        }
+        assertThrows(IOException.class, () -> ImageSetMain.readDump(bad));
+    }
+
+    /**
+     * Images in G (full): every frequent pattern of GraMi, including those below tau_w, has non-empty image
+     * sets whose smallest size is its MNI (at least minSup); for the WeLT patterns the images in G contain
+     * the images in the filtered graph.
+     */
+    @Test
+    void fullGraphImagesOfFrequentAndWeightedPatterns(@TempDir Path dir) throws Exception {
+        Path graph = Path.of("datasets/email_eu.lg");
+        LabeledWeightedGraph g = new LgGraphReader().read(graph).graph;
+        int minSup = 15;
+        RunHarness.Result grami = RunHarness.runOnce(g, new RunHarness.Config("GraMi", minSup, 336));
+        RunHarness.Result welt = RunHarness.runOnce(g, new RunHarness.Config("WeLT", minSup, 336));
+        PatternDump.write(dir, g, "email_eu.lg", "GraMi", minSup, 336, grami.patterns);
+        PatternDump.write(dir, g, "email_eu.lg", "WeLT", minSup, 336, welt.patterns);
+        Path gd = dir.resolve(PatternDump.fileName("email_eu.lg", "GraMi", minSup, 336));
+        Path wd = dir.resolve(PatternDump.fileName("email_eu.lg", "WeLT", minSup, 336));
+        long below = ImageSetMain.readDump(gd).stream().filter(d -> d.weight < 336).count();
+        assertTrue(below > 0, "the GraMi dump must hold patterns below tau_w to test the full mode");
+        Path gOut = dir.resolve("grami_full.tsv"), wFull = dir.resolve("welt_full.tsv"), wFilt = dir.resolve("welt_filtered.tsv");
+        assertEquals(0, ImageSetMain.run(new String[]{graph.toString(), "336", gd.toString(), gOut.toString(), "full"}));
+        assertEquals(0, ImageSetMain.run(new String[]{graph.toString(), "336", wd.toString(), wFull.toString(), "full"}));
+        assertEquals(0, ImageSetMain.run(new String[]{graph.toString(), "336", wd.toString(), wFilt.toString(), "filtered"}));
+        java.util.Map<Integer, Integer> mni = new java.util.HashMap<>();
+        for (String line : Files.readAllLines(gOut).subList(1, Files.readAllLines(gOut).size())) {
+            String[] f = line.split("\t");
+            mni.merge(Integer.parseInt(f[0]), Integer.parseInt(f[3]), Math::min);
+        }
+        assertEquals(grami.patterns.size(), mni.size());
+        for (int m : mni.values()) assertTrue(m >= minSup, "MNI in G below minSup: " + m);
+        List<String> full = Files.readAllLines(wFull), filt = Files.readAllLines(wFilt);
+        assertEquals(full.size(), filt.size());
+        int strictly = 0;
+        for (int i = 1; i < full.size(); i++) {
+            java.util.Set<String> a = new java.util.HashSet<>(List.of(full.get(i).split("\t")[4].split(" ")));
+            List<String> b = List.of(filt.get(i).split("\t")[4].split(" "));
+            assertTrue(a.containsAll(b), "filtered images not within full images at line " + i);
+            if (a.size() > b.size()) strictly++;
+        }
+        assertTrue(strictly > 0, "the two modes must differ on this cell");
+    }
+
+    @Test
     void readDumpRejectsAFileThatIsNotADump(@TempDir Path dir) throws IOException {
         Path f = dir.resolve("x.tsv");
         Files.writeString(f, "a\tb\n");
