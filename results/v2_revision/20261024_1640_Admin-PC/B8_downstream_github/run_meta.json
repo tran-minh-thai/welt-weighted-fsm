@@ -1,0 +1,163 @@
+{
+  "experiment": "downstream node classification",
+  "dataset": "github",
+  "kind": "measurement",
+  "command": "python.exe tools/downstream/run.py --dataset github --out results/v2_revision/20261024_1640_Admin-PC/B8_downstream_github --kind measurement --voting results/v2_revision/20261024_1640_Admin-PC/voting_choice.json --limit-ms 3600000 --frequent-bound fws-edges --skip-build",
+  "started": "2026-10-24T20:57:18",
+  "git_commit": "079c7227d6589f15d5f19b6fe0cdc599ffbb2cf0",
+  "tree": "clean",
+  "host": "Admin-PC",
+  "os": "Windows-11-10.0.26300-SP0",
+  "machine": "AMD64",
+  "python": "3.14.4",
+  "packages": {
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "scikit-learn": "1.9.1",
+    "joblib": "1.6.0",
+    "threadpoolctl": "3.7.0",
+    "narwhals": "2.27.1",
+    "cloudpickle": "3.1.2"
+  },
+  "java": {
+    "java.runtime.version": "21.0.12.1+1-LTS",
+    "java.vendor": "Microsoft"
+  },
+  "java_opts": "-Xmx48g",
+  "tool_sha256": {
+    "tools/downstream/run.py": "cba1cd945ec1de1fd1701a9b0d7b02bc4e15b02e8b1d38f38036ba47da17f638",
+    "tools/downstream/lib.py": "e27a1b05fa9e6e0002da42e60a37aae164543eaffe8a41b53425a3d6b4af35cc",
+    "tools/downstream/selftest.py": "6c2cd39fec0180f30b0aca3a853b8a803b5f3d198f76ba465ffbfdd26f77ff6f",
+    "tools/downstream/requirements.txt": "bd501869552897c830039114d9560b54406bc9789031b79a60416af984e00918",
+    "datasets/convert_musae_struct.py": "9e575b05222b866c62b8697c56339c81a77eb9e483bdabb5d609ec00c56fc7cd",
+    "tools/heavy_subgraph.py": "9dee0b7b66814c341e2512abd3f9cb5b193c96818e7795910bf357be85a1b119",
+    "src/main/java/welt/runner/ImageSetMain.java": "d8d6f7c98fa6f4b62aa891a47dd8efb97c9a21f1f1009905378f2d882735c6fe",
+    "src/main/java/welt/core/MniSupportCounter.java": "cd043bcc44c5e92c4dfe19460374238c25c7ccabbcc16469e38da06144e0d06c",
+    "src/main/java/welt/runner/BenchmarkMain.java": "9fe4b7a5ff8358c14592bb21c161920a0042a95fa6deb918487ff1a22f7732fe",
+    "src/main/java/welt/runner/PatternDump.java": "6562c248f0d67360890fab788c20c1b5ce802c55822640bb5525335ec8b0ba3c",
+    "src/main/java/welt/core/MiningEngine.java": "f7667d02bef711ed66a2f75b38773158488e2707a11d80dfae781d0a0cf9d7d2"
+  },
+  "design": {
+    "tau_s_grid": [
+      8000,
+      7500,
+      7000,
+      6500,
+      6000,
+      5000,
+      4000,
+      3000,
+      2500,
+      2000,
+      1500,
+      1250,
+      1000,
+      750,
+      500,
+      400,
+      250,
+      150,
+      100,
+      50
+    ],
+    "continuous_columns": "log1p, then standardised",
+    "rho_w": [
+      0.5,
+      0.7
+    ],
+    "pattern_window": [
+      20,
+      300
+    ],
+    "seeds": 3,
+    "folds": 10,
+    "inner_folds": 3,
+    "C_grid": [
+      0.01,
+      0.1,
+      1.0,
+      10.0
+    ],
+    "max_iter": 5000,
+    "pattern_sets": [
+      [
+        "FWS",
+        "full"
+      ],
+      [
+        "Frequent (same count)",
+        "full"
+      ],
+      [
+        "Frequent (all)",
+        "full"
+      ],
+      [
+        "ALL (images in G)",
+        "full"
+      ],
+      [
+        "ALL (images in heavy edges)",
+        "filtered"
+      ]
+    ],
+    "baselines": [
+      "B0",
+      "B1"
+    ],
+    "limit_ms": 3600000,
+    "selection_limit_ms": 3600000,
+    "check_limit_ms": 3600000,
+    "frequent_bound": "fws-edges",
+    "warmup": 1,
+    "measured": 1
+  },
+  "departures_from_design": {},
+  "voting_choice": {
+    "file": "voting_choice.json",
+    "sha256": "c9bd105198acab8dda8cbd7929ac75650b3bbe42b0495fd61a44f3ea83585460",
+    "WELT_VOTER": "1,1,1",
+    "WELT_WORDER": "on"
+  },
+  "data_sha256": {
+    "datasets/github_struct.lg": "05da9f8fb4c22224bf4602a15ea04b7441a89ab9b850875713d063b222a44b46",
+    "datasets/github.lg": "4f2e3e63ab3120d3c099606aca2000d1296bc9c4bc49403beb22e57dd892c2a1",
+    "datasets/raw/git_web_ml/musae_git_edges.csv": "34c57382246949d1b3b7fa641a8532672001ecae8e9558f0b3c113cc035bd781",
+    "datasets/raw/git_web_ml/musae_git_features.json": "47761f93f839d84b213e9f2fa43c056761734b295d6b2e838d8bbc335073cee7",
+    "datasets/raw/git_web_ml/musae_git_target.csv": "3a8582f0c55d6f605df5f45bde28a90561be9517b40226c5e6bbce253679906a"
+  },
+  "leakage_check": {
+    "vertices": 37700,
+    "edges_compared": 289003,
+    "edges_equal": true,
+    "vertex_count_equal": true,
+    "labels_are_degree_classes": true,
+    "distinct_labels": 5,
+    "vertices_whose_label_equals_target": 8235
+  },
+  "outcome": "no cell chosen: cell tau_s=7500 rho_w=0.5 ended with status TO at |R|=54 <= 300: its pattern count is unknown; the scan stops without a choice",
+  "selection_runs": [
+    {
+      "miner": "WeLT",
+      "tau_s": 8000,
+      "rho_w": 0.5,
+      "status": "OK",
+      "totalMs": "86.816"
+    },
+    {
+      "miner": "WeLT",
+      "tau_s": 8000,
+      "rho_w": 0.7,
+      "status": "OK",
+      "totalMs": "87.328"
+    },
+    {
+      "miner": "WeLT",
+      "tau_s": 7500,
+      "rho_w": 0.5,
+      "status": "TO",
+      "totalMs": "3600002.076"
+    }
+  ],
+  "finished": "2026-10-24T21:57:41"
+}
