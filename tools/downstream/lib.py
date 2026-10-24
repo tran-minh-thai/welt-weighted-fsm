@@ -16,10 +16,24 @@ TAU_S_GRID = (1600, 1200, 1000, 800, 600, 500, 400, 300, 250, 200, 150, 100, 75,
 RHO_W = (0.5, 0.7)
 PATTERN_WINDOW = (20, 300)
 
-SEEDS = (0, 1, 2)          # one StratifiedKFold shuffle per seed
+SEEDS = (1, 2, 3)          # one StratifiedKFold shuffle per seed
 FOLDS = 10
+INNER_FOLDS = 3            # stratified folds inside each training fold, to choose C
+C_GRID = (0.01, 0.1, 1.0, 10.0)
 MAX_ITER = 5000            # lbfgs iterations of the logistic regression
-FEATURE_SETS = ("baseline", "baseline+patterns", "patterns")
+
+# Pattern sets (all at the chosen (tau_s, tau_w)) and the graph their image sets are taken from.
+# "full" is G (the MNI of a frequent weighted subgraph is defined over G); "filtered" is G
+# restricted to the edges of weight >= tau_w (the occurrences counted by the ALL score).
+PATTERN_SETS = (
+    ("FWS", "full"),
+    ("Frequent (same count)", "full"),
+    ("Frequent (all)", "full"),
+    ("ALL (images in G)", "full"),
+    ("ALL (images in heavy edges)", "filtered"),
+)
+BASELINES = ("B0", "B1")   # B0: degree and total incident weight; B1: B0 and the artist features
+REFERENCE = "FWS"          # the paired tests compare base + FWS with every other set at the same base
 
 # Raw MUSAE LastFM Asia archive (SNAP) and its members.
 LASTFM_ZIP_URL = "https://snap.stanford.edu/data/lastfm_asia.zip"
@@ -110,9 +124,11 @@ def selection_order(tau_w_of_rho):
     return [(s, r, tau_w_of_rho[r]) for s in TAU_S_GRID for r in RHO_W]
 
 
-def scan(order, run):
+def scan(order, run, check=None):
     """Scans the (tau_s, rho_w, tau_w) cells in order and returns (index of the chosen record or
-    None, reason, records). run(tau_s, tau_w) -> (status, R).
+    None, reason, records). run(tau_s, tau_w) -> (status, R). check(tau_s, tau_w) -> (ok, note)
+    is the second condition, tested only on a cell whose R is inside the window; a cell that fails
+    it is recorded ("in window, second condition failed") and the scan goes on.
 
     A cell decides by its pattern count R: inside the window it is chosen and the scan stops;
     below it the scan goes on. Above it (R > hi) every later cell with the same rho_w is skipped
@@ -141,6 +157,12 @@ def scan(order, run):
             return None, (f"cell tau_s={s} rho_w={r} ended with status {status} at |R|={n} <= {hi}: "
                           f"its pattern count is unknown; the scan stops without a choice"), records
         elif n >= lo:
+            if check is not None:
+                ok, note = check(s, tw)
+                rec["second_condition"] = note
+                if not ok:
+                    rec["decision"] = "in window, second condition failed"
+                    continue
             rec["decision"] = "chosen"
             return len(records) - 1, f"first cell with {lo} <= |R| <= {hi}: tau_s={s} rho_w={r} |R|={n}", records
         else:
@@ -180,9 +202,21 @@ def pattern_matrix(n, image_sets):
     return sparse.csr_matrix((data, (rows, cols)), shape=(n, len(image_sets)))
 
 
-def baseline_matrix(features_json, n, edges):
-    """Binary features of features.json (one column per feature id present), then degree and
-    total incident weight, both from the full graph."""
+def structural_columns(n, edges):
+    """Degree and total incident weight of every vertex (the B0 baseline), as a dense n x 2 array."""
+    import numpy as np
+    deg = np.zeros(n)
+    wsum = np.zeros(n)
+    for a, b, w in edges:
+        deg[a] += 1
+        deg[b] += 1
+        wsum[a] += w
+        wsum[b] += w
+    return np.column_stack([deg, wsum])
+
+
+def artist_matrix(features_json, n):
+    """Binary features of features.json, one column per feature id present."""
     import numpy as np
     from scipy import sparse
     with open(features_json) as f:
@@ -196,37 +230,95 @@ def baseline_matrix(features_json, n, edges):
         for x in set(feats[v]):
             rows.append(v)
             cols.append(col[x])
-    binary = sparse.csr_matrix((np.ones(len(rows)), (rows, cols)), shape=(n, len(ids)))
-    deg = np.zeros(n)
-    wsum = np.zeros(n)
-    for a, b, w in edges:
-        deg[a] += 1
-        deg[b] += 1
-        wsum[a] += w
-        wsum[b] += w
-    return sparse.hstack([binary, sparse.csr_matrix(np.column_stack([deg, wsum]))]).tocsr(), len(ids)
+    return sparse.csr_matrix((np.ones(len(rows)), (rows, cols)), shape=(n, len(ids)))
 
 
-def distinct_columns(m):
-    """Number of distinct columns of a sparse binary matrix (automorphic pattern vertices repeat)."""
+def baselines(n, edges, features_json):
+    """{"B0": structural columns, "B1": structural columns then artist features}; the two
+    continuous columns come first in both (see model)."""
+    from scipy import sparse
+    s = sparse.csr_matrix(structural_columns(n, edges))
+    return {"B0": s, "B1": sparse.hstack([s, artist_matrix(features_json, n)]).tocsr()}
+
+
+def read_dump(path):
+    """[(code, vertices, edges, weight)] of a PatternDump file (4 columns, or 5 with mni)."""
+    with open(path) as f:
+        header = f.readline().rstrip("\n").split("\t")
+        if header not in (["code", "vertices", "edges", "weight"], ["code", "vertices", "edges", "mni", "weight"]):
+            raise ValueError(f"{path}: not a pattern dump ({header})")
+        out = []
+        for line in f:
+            p = line.rstrip("\n").split("\t")
+            if len(p) != len(header):
+                raise ValueError(f"{path}: expected {len(header)} fields: {line!r}")
+            out.append((p[0], int(p[1]), int(p[2]), float(p[-1])))
+    return out
+
+
+def mni_of(image_sets):
+    """{pattern index: MNI}, the smallest image-set size over the pattern's vertices."""
+    m = {}
+    for p, _u, img in image_sets:
+        m[p] = min(m.get(p, len(img)), len(img))
+    return m
+
+
+def top_by_mni(codes, mni, k):
+    """Indices of the k patterns of largest MNI, ties broken by ascending canonical code."""
+    if k > len(codes):
+        raise ValueError(f"asked for {k} patterns out of {len(codes)}")
+    return sorted(range(len(codes)), key=lambda i: (-mni[i], codes[i]))[:k]
+
+
+def dedupe_columns(m):
+    """The matrix without repeated columns (first occurrence kept), and the column counts before
+    and after."""
     m = m.tocsc()
-    return len({tuple(m.indices[m.indptr[j]:m.indptr[j + 1]]) for j in range(m.shape[1])})
+    seen, keep = set(), []
+    for j in range(m.shape[1]):
+        key = tuple(m.indices[m.indptr[j]:m.indptr[j + 1]])
+        if key not in seen:
+            seen.add(key)
+            keep.append(j)
+    return m[:, keep].tocsr(), m.shape[1], len(keep)
 
 
 # ---------------------------------------------------------------- evaluation
 
-def model():
+def to_dense(x):
+    """The two continuous columns as a dense array (StandardScaler cannot centre a sparse matrix)."""
+    return x.toarray() if hasattr(x, "toarray") else x
+
+
+def model(seed, n_jobs=None):
+    """Logistic regression with class-balanced weights; the two continuous columns (0 and 1) are
+    standardised on the training data, the binary columns pass through; C is chosen in C_GRID by
+    stratified INNER_FOLDS-fold cross-validation inside the training data (macro-F1)."""
+    from sklearn.compose import ColumnTransformer
     from sklearn.linear_model import LogisticRegression
-    from sklearn.pipeline import make_pipeline
-    from sklearn.preprocessing import StandardScaler
-    # sparse inputs: scaling to unit variance without centring (centring would densify)
-    return make_pipeline(StandardScaler(with_mean=False),
-                         LogisticRegression(class_weight="balanced", max_iter=MAX_ITER))
+    from sklearn.model_selection import GridSearchCV, StratifiedKFold
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import FunctionTransformer, StandardScaler
+    continuous = Pipeline([("dense", FunctionTransformer(to_dense, accept_sparse=True)), ("std", StandardScaler())])
+    pipe = Pipeline([
+        ("scale", ColumnTransformer([("continuous", continuous, [0, 1])], remainder="passthrough",
+                                    sparse_threshold=1.0)),
+        ("lr", LogisticRegression(class_weight="balanced", max_iter=MAX_ITER)),
+    ])
+    inner = StratifiedKFold(n_splits=INNER_FOLDS, shuffle=True, random_state=seed)
+    return GridSearchCV(pipe, {"lr__C": list(C_GRID)}, scoring="f1_macro", cv=inner, refit=True, n_jobs=n_jobs)
 
 
-def evaluate(matrices, y, seeds=SEEDS, folds=FOLDS, log=print):
-    """One row per (seed, fold, feature set) with macro-F1 and accuracy on the held-out fold.
-    Every feature set sees the same folds; the scaler is fitted on the training fold only."""
+def config_names():
+    """The evaluated configurations, in report order: every baseline alone, then with each pattern set."""
+    return [b for b in BASELINES] + [f"{b} + {name}" for b in BASELINES for name, _g in PATTERN_SETS]
+
+
+def evaluate(matrices, y, seeds=SEEDS, folds=FOLDS, log=print, n_jobs=None):
+    """One row per (seed, fold, configuration) with macro-F1, accuracy and the chosen C on the
+    held-out fold. matrices maps a configuration name to a matrix, or to None for an empty pattern
+    set (its rows are written with empty=1 and no metric). Every configuration sees the same folds."""
     import warnings
     import numpy as np
     from sklearn.exceptions import ConvergenceWarning
@@ -238,51 +330,83 @@ def evaluate(matrices, y, seeds=SEEDS, folds=FOLDS, log=print):
         skf = StratifiedKFold(n_splits=folds, shuffle=True, random_state=seed)
         for fold, (tr, te) in enumerate(skf.split(np.zeros(len(y)), y)):
             for name, x in matrices.items():
+                if x is None:
+                    rows.append({"seed": seed, "fold": fold, "features": name, "empty": 1, "macro_f1": "",
+                                 "accuracy": "", "C": "", "n_train": len(tr), "n_test": len(te), "converged": ""})
+                    continue
                 with warnings.catch_warnings(record=True) as caught:
                     warnings.simplefilter("always", ConvergenceWarning)
-                    m = model().fit(x[tr], y[tr])
+                    m = model(seed, n_jobs).fit(x[tr], y[tr])
                 pred = m.predict(x[te])
                 rows.append({
-                    "seed": seed, "fold": fold, "features": name,
+                    "seed": seed, "fold": fold, "features": name, "empty": 0,
                     "macro_f1": f1_score(y[te], pred, average="macro"),
                     "accuracy": accuracy_score(y[te], pred),
-                    "iterations": int(np.max(m[-1].n_iter_)),
+                    "C": m.best_params_["lr__C"], "n_train": len(tr), "n_test": len(te),
                     "converged": int(not any(issubclass(w.category, ConvergenceWarning) for w in caught)),
                 })
             log(f"  seed {seed} fold {fold}: " + "  ".join(
-                f"{r['features']} F1={r['macro_f1']:.4f}" for r in rows[-len(matrices):]))
+                f"{r['features']}={r['macro_f1']:.4f}" if r["empty"] == 0 else f"{r['features']}=empty"
+                for r in rows[-len(matrices):]))
     return rows
 
 
-def summarise(rows, a="baseline", b="baseline+patterns"):
-    """Mean and SD per feature set and metric, and the paired Wilcoxon test b vs a over the folds."""
+def corrected_t(d, n_train, n_test):
+    """Nadeau-Bengio corrected resampled t-test for repeated k-fold cross-validation.
+
+    d: paired differences over the k * r folds. The variance of their mean is
+    (1 / (k r) + n_test / n_train) * s^2 instead of s^2 / (k r), because the training sets overlap.
+    Returns (mean, t, degrees of freedom, two-sided p)."""
     import numpy as np
-    from scipy.stats import wilcoxon
-    out = {"per_set": {}, "wilcoxon": {}}
-    names = sorted({r["features"] for r in rows}, key=lambda s: FEATURE_SETS.index(s) if s in FEATURE_SETS else 99)
+    from scipy.stats import t as tdist
+    d = np.asarray(d, dtype=float)
+    kr = len(d)
+    mean = float(np.mean(d))
+    var = float(np.var(d, ddof=1))
+    if var == 0.0:
+        return mean, (0.0 if mean == 0 else float("inf") * np.sign(mean)), kr - 1, (1.0 if mean == 0 else 0.0)
+    t = mean / np.sqrt((1.0 / kr + n_test / n_train) * var)
+    return mean, float(t), kr - 1, float(2 * tdist.sf(abs(t), kr - 1))
+
+
+def summarise(rows):
+    """Mean and SD per configuration and metric, and for each baseline the corrected paired test of
+    "<base> + FWS" against every other configuration with the same base (the base alone included)."""
+    import numpy as np
+    out = {"per_config": {}, "tests": []}
+    names = list(dict.fromkeys(r["features"] for r in rows))
     for name in names:
         rs = [r for r in rows if r["features"] == name]
-        out["per_set"][name] = {
-            "folds": len(rs),
+        if all(r["empty"] == 1 for r in rs):
+            out["per_config"][name] = {"folds": len(rs), "empty": True}
+            continue
+        out["per_config"][name] = {
+            "folds": len(rs), "empty": False,
             "not_converged": sum(1 - r["converged"] for r in rs),
+            "C_chosen": {str(c): sum(1 for r in rs if r["C"] == c) for c in C_GRID},
             **{f"{k}_{s}": float(f(np.array([r[k] for r in rs]))) for k in ("macro_f1", "accuracy")
                for s, f in (("mean", np.mean), ("sd", lambda v: np.std(v, ddof=1)))},
         }
     key = lambda r: (r["seed"], r["fold"])
-    ra = {key(r): r for r in rows if r["features"] == a}
-    rb = {key(r): r for r in rows if r["features"] == b}
-    if set(ra) != set(rb):
-        raise ValueError("the two feature sets were not evaluated on the same folds")
-    pairs = sorted(ra)
-    for k in ("macro_f1", "accuracy"):
-        d = np.array([rb[p][k] - ra[p][k] for p in pairs])
-        res = wilcoxon(d, zero_method="wilcox", alternative="two-sided") if np.any(d != 0) else None
-        out["wilcoxon"][k] = {
-            "pairs": len(pairs), "zero_differences": int(np.sum(d == 0)),
-            "b_better": int(np.sum(d > 0)), "a_better": int(np.sum(d < 0)),
-            "mean_difference": float(np.mean(d)), "median_difference": float(np.median(d)),
-            "statistic": None if res is None else float(res.statistic),
-            "p_value": None if res is None else float(res.pvalue),
-            "compared": f"{b} minus {a}",
-        }
+    for base in BASELINES:
+        ref = f"{base} + {REFERENCE}"
+        ra = {key(r): r for r in rows if r["features"] == ref}
+        for other in [base] + [f"{base} + {n}" for n, _g in PATTERN_SETS if n != REFERENCE]:
+            rb = {key(r): r for r in rows if r["features"] == other}
+            if not rb or not ra:
+                raise ValueError(f"configuration {ref if not ra else other} has no evaluated fold")
+            if all(r["empty"] == 1 for r in rb.values()):
+                out["tests"].append({"reference": ref, "other": other, "empty": True})
+                continue
+            if set(ra) != set(rb):
+                raise ValueError(f"{ref} and {other} were not evaluated on the same folds")
+            pairs = sorted(ra)
+            for k in ("macro_f1", "accuracy"):
+                d = [ra[p][k] - rb[p][k] for p in pairs]
+                n_train, n_test = ra[pairs[0]]["n_train"], ra[pairs[0]]["n_test"]
+                mean, t, df, pv = corrected_t(d, n_train, n_test)
+                out["tests"].append({"reference": ref, "other": other, "metric": k, "pairs": len(pairs),
+                                     "mean_difference": mean, "t": t, "df": df, "p_value": pv,
+                                     "reference_better": int(sum(x > 0 for x in d)),
+                                     "other_better": int(sum(x < 0 for x in d))})
     return out

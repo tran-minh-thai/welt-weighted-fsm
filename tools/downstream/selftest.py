@@ -12,7 +12,7 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
-import b6lib  # noqa: E402
+import lib  # noqa: E402
 
 CASES = []
 
@@ -38,11 +38,11 @@ def raises(f, exc=ValueError):
 def _():
     # path 0-1-2-3-4-5: degrees 1,2,2,2,2,1 -> sorted 1,1,2,2,2,2; cuts at n=6: s[1],s[2],s[3],s[4] = 1,2,2,2
     path = [(i, i + 1) for i in range(5)]
-    assert b6lib.degree_classes(6, path) == [0, 1, 1, 1, 1, 0]
+    assert lib.degree_classes(6, path) == [0, 1, 1, 1, 1, 0]
     cycle = [(i, (i + 1) % 5) for i in range(5)]
-    assert b6lib.degree_classes(5, cycle) == [0] * 5, "equal degrees share one class"
+    assert lib.degree_classes(5, cycle) == [0] * 5, "equal degrees share one class"
     star = [(0, i) for i in range(1, 6)]
-    assert b6lib.degree_classes(6, star) == [4, 0, 0, 0, 0, 0], "cuts 1,1,1,1: the hub is above all four"
+    assert lib.degree_classes(6, star) == [4, 0, 0, 0, 0, 0], "cuts 1,1,1,1: the hub is above all four"
 
 
 def toy_graph():
@@ -54,14 +54,14 @@ def toy_graph():
 @case("leakage report: accepts the structural graph")
 def _():
     s_labels, edges = toy_graph()
-    ok, facts = b6lib.leakage_report(s_labels, edges, [5, 4, 3, 2, 1, 0], list(edges), [2, 2, 3, 3, 4, 4])
+    ok, facts = lib.leakage_report(s_labels, edges, [5, 4, 3, 2, 1, 0], list(edges), [2, 2, 3, 3, 4, 4])
     assert ok and facts["edges_equal"] and facts["labels_are_degree_classes"], facts
 
 
 @case("leakage report: rejects labels equal to the class target")
 def _():
     s_labels, edges = toy_graph()
-    ok, _ = b6lib.leakage_report(s_labels, edges, s_labels, list(edges), list(s_labels))
+    ok, _ = lib.leakage_report(s_labels, edges, s_labels, list(edges), list(s_labels))
     assert not ok
 
 
@@ -70,14 +70,14 @@ def _():
     s_labels, edges = toy_graph()
     ref = list(edges)
     ref[2] = (ref[2][0], ref[2][1], ref[2][2] + 0.0001)
-    ok, facts = b6lib.leakage_report(s_labels, edges, s_labels, ref, [9] * 6)
+    ok, facts = lib.leakage_report(s_labels, edges, s_labels, ref, [9] * 6)
     assert not ok and not facts["edges_equal"]
 
 
 @case("leakage report: rejects labels that are not the degree classes")
 def _():
     s_labels, edges = toy_graph()
-    ok, facts = b6lib.leakage_report([1, 0, 1, 1, 1, 0], edges, s_labels, list(edges), [9] * 6)
+    ok, facts = lib.leakage_report([1, 0, 1, 1, 1, 0], edges, s_labels, list(edges), [9] * 6)
     assert not ok and not facts["labels_are_degree_classes"]
 
 
@@ -106,7 +106,7 @@ def _():
     with tempfile.TemporaryDirectory() as tmp:
         code, out = converter(tmp, REF)
         assert code == 0, code
-        labels, _ = b6lib.read_lg(out)
+        labels, _ = lib.read_lg(out)
         assert labels == [0, 2, 2, 0], labels  # degrees 1,2,2,1: cuts 1,1,2,2
 
 
@@ -126,8 +126,8 @@ def _():
 
 # ---------------------------------------------------------------- selection
 
-def fake_scan(results, order=None):
-    """Runs b6lib.scan with a table {(tau_s, tau_w): (status, R)}; returns (chosen record, reason, records, calls)."""
+def fake_scan(results, order=None, check=None):
+    """Runs lib.scan with a table {(tau_s, tau_w): (status, R)}; returns (chosen record, reason, records, calls)."""
     calls = []
     order = order or [(1600, 0.5, "a"), (1600, 0.7, "b"), (1200, 0.5, "a"), (1200, 0.7, "b"),
                       (800, 0.5, "a"), (800, 0.7, "b")]
@@ -135,13 +135,13 @@ def fake_scan(results, order=None):
     def run(s, tw):
         calls.append((s, tw))
         return results[(s, tw)]
-    idx, reason, recs = b6lib.scan(order, run)
+    idx, reason, recs = lib.scan(order, run, check)
     return (None if idx is None else recs[idx]), reason, recs, calls
 
 
 @case("selection: window bounds 20 and 300 are inclusive, 19 and 301 are not")
 def _():
-    lo, hi = b6lib.PATTERN_WINDOW
+    lo, hi = lib.PATTERN_WINDOW
     assert (lo, hi) == (20, 300)
     c, _, _, _ = fake_scan({(1600, "a"): ("OK", 19), (1600, "b"): ("OK", 20)})
     assert (c["tau_s"], c["rho_w"]) == (1600, 0.7), c
@@ -175,15 +175,32 @@ def _():
     assert c is None and "no cell" in reason and len(recs) == 6
 
 
+@case("selection: the second condition is tested only in the window; a failed cell does not stop the scan")
+def _():
+    checked = []
+
+    def check(s, tw):
+        checked.append((s, tw))
+        return (s != 1200), {"status": "OK" if s != 1200 else "TO"}
+    table = {(1600, "a"): ("OK", 5), (1600, "b"): ("OK", 400), (1200, "a"): ("OK", 50), (800, "a"): ("OK", 60)}
+    c, _, recs, _ = fake_scan(table, check=check)
+    assert checked == [(1200, "a"), (800, "a")], checked
+    assert recs[2]["decision"] == "in window, second condition failed" and recs[2]["second_condition"]["status"] == "TO"
+    assert (c["tau_s"], c["rho_w"]) == (800, 0.5) and c["second_condition"]["status"] == "OK", c
+    c, reason, _, _ = fake_scan({(1600, "a"): ("OK", 50), (1600, "b"): ("OK", 400), (1200, "a"): ("OK", 400)},
+                                check=lambda s, tw: (False, {}))
+    assert c is None and "every rho_w" in reason, reason
+
+
 @case("selection: scan order is tau_s descending, then rho_w 0.5 before 0.7")
 def _():
-    order = b6lib.selection_order({0.5: "a", 0.7: "b"})
+    order = lib.selection_order({0.5: "a", 0.7: "b"})
     assert order[:3] == [(1600, 0.5, "a"), (1600, 0.7, "b"), (1200, 0.5, "a")]
-    assert len(order) == 2 * len(b6lib.TAU_S_GRID)
-    assert list(b6lib.TAU_S_GRID) == sorted(b6lib.TAU_S_GRID, reverse=True)
+    assert len(order) == 2 * len(lib.TAU_S_GRID)
+    assert list(lib.TAU_S_GRID) == sorted(lib.TAU_S_GRID, reverse=True)
 
 
-# ---------------------------------------------------------------- features
+# ---------------------------------------------------------------- pattern sets and features
 
 @case("image sets: matrix entries are exactly the images; bad lines are rejected")
 def _():
@@ -191,51 +208,159 @@ def _():
         p = os.path.join(tmp, "img.tsv")
         with open(p, "w") as f:
             f.write("pattern\tvertex\tcode\tsize\timages\n0\t0\tc\t2\t1 3\n0\t1\tc\t1\t2\n1\t0\td\t2\t1 3\n")
-        sets = b6lib.read_image_sets(p)
-        m = b6lib.pattern_matrix(4, sets).toarray()
+        sets = lib.read_image_sets(p)
+        m = lib.pattern_matrix(4, sets).toarray()
         assert m.tolist() == [[0, 0, 0], [1, 0, 1], [0, 1, 0], [1, 0, 1]], m.tolist()
-        assert b6lib.distinct_columns(b6lib.pattern_matrix(4, sets)) == 2
-        assert raises(lambda: b6lib.pattern_matrix(3, sets)), "vertex id 3 is out of range for n=3"
+        assert raises(lambda: lib.pattern_matrix(3, sets)), "vertex id 3 is out of range for n=3"
         with open(p, "w") as f:
             f.write("pattern\tvertex\tcode\tsize\timages\n0\t0\tc\t3\t1 3\n")
-        assert raises(lambda: b6lib.read_image_sets(p)), "size 3 with 2 ids"
+        assert raises(lambda: lib.read_image_sets(p)), "size 3 with 2 ids"
         with open(p, "w") as f:
             f.write("pattern\tvertex\tcode\tsize\timages\n0\t0\tc\t0\t\n")
-        assert raises(lambda: b6lib.read_image_sets(p)), "empty image set"
+        assert raises(lambda: lib.read_image_sets(p)), "empty image set"
 
 
-@case("baseline features: binary columns, degree and incident weight")
+@case("column dedupe: equal columns merged (first kept, order kept); one differing row keeps both")
+def _():
+    from scipy import sparse
+    import numpy as np
+    m = sparse.csr_matrix(np.array([[1, 0, 1, 0, 1], [0, 1, 0, 1, 0], [1, 1, 1, 0, 0]], dtype=float))
+    d, before, after = lib.dedupe_columns(m)
+    # columns: c0=(0,2) c1=(1,2) c2=(0,2) c3=(1) c4=(0): c2 repeats c0
+    assert (before, after) == (5, 4), (before, after)
+    assert d.toarray().tolist() == [[1, 0, 0, 1], [0, 1, 1, 0], [1, 1, 0, 0]], d.toarray().tolist()
+    single = sparse.csr_matrix(np.array([[1], [0]], dtype=float))
+    assert lib.dedupe_columns(single)[1:] == (1, 1)
+    same = sparse.csr_matrix(np.ones((3, 4)))
+    assert lib.dedupe_columns(same)[1:] == (4, 1), "all-equal columns collapse to one"
+
+
+@case("pattern dump: both headers read, a short line rejected")
+def _():
+    with tempfile.TemporaryDirectory() as tmp:
+        p = os.path.join(tmp, "d.tsv")
+        with open(p, "w") as f:
+            f.write("code\tvertices\tedges\tweight\nA\t2\t1\t40.5\nB\t3\t2\t41\n")
+        assert lib.read_dump(p) == [("A", 2, 1, 40.5), ("B", 3, 2, 41.0)]
+        with open(p, "w") as f:
+            f.write("code\tvertices\tedges\tmni\tweight\nA\t2\t1\t9\t40.5\n")
+        assert lib.read_dump(p) == [("A", 2, 1, 40.5)]
+        with open(p, "w") as f:
+            f.write("code\tvertices\tedges\tweight\nA\t2\t1\n")
+        assert raises(lambda: lib.read_dump(p))
+        with open(p, "w") as f:
+            f.write("pattern\tvertex\n")
+        assert raises(lambda: lib.read_dump(p))
+
+
+@case("same-count set: MNI is the smallest image set; largest MNI first, ties by ascending code")
+def _():
+    rows = [(0, 0, [1, 2, 3]), (0, 1, [1, 2]), (1, 0, [4, 5, 6]), (1, 1, [1, 2, 3]),
+            (2, 0, [7, 8, 9]), (3, 0, [1]), (4, 0, [1, 2, 3])]
+    mni = lib.mni_of(rows)
+    assert mni == {0: 2, 1: 3, 2: 3, 3: 1, 4: 3}, mni
+    codes = ["e", "c", "b", "a", "d"]
+    assert lib.top_by_mni(codes, mni, 3) == [2, 1, 4], "MNI 3 ties ordered by code b < c < d"
+    assert lib.top_by_mni(codes, mni, 5) == [2, 1, 4, 0, 3]
+    assert lib.top_by_mni(codes, mni, 0) == []
+    assert raises(lambda: lib.top_by_mni(codes, mni, 6))
+
+
+@case("baselines: B0 is degree and incident weight; B1 appends the artist features; bad ids refused")
 def _():
     with tempfile.TemporaryDirectory() as tmp:
         p = os.path.join(tmp, "f.json")
         with open(p, "w") as f:
-            f.write('{"0": [5, 9], "1": [9], "2": []}')
-        m, nb = b6lib.baseline_matrix(p, 3, [(0, 1, 2.0), (1, 2, 3.0)])
-        assert nb == 2
-        assert m.toarray().tolist() == [[1, 1, 1, 2], [0, 1, 2, 5], [0, 0, 1, 3]], m.toarray().tolist()
+            f.write('{"0": [5, 9], "1": [9, 9], "2": []}')
+        b = lib.baselines(3, [(0, 1, 2.0), (1, 2, 3.0)], p)
+        assert b["B0"].toarray().tolist() == [[1, 2], [2, 5], [1, 3]], b["B0"].toarray().tolist()
+        assert b["B1"].toarray().tolist() == [[1, 2, 1, 1], [2, 5, 0, 1], [1, 3, 0, 0]], b["B1"].toarray().tolist()
+        with open(p, "w") as f:
+            f.write('{"0": [5], "2": []}')
+        assert raises(lambda: lib.baselines(3, [], p))
 
 
 # ---------------------------------------------------------------- evaluation
 
-@case("evaluation: an informative feature beats noise; folds are paired; Wilcoxon reports ties")
+@case("corrected t-test: value of the Nadeau-Bengio formula, df, zero variance")
 def _():
+    import math
+    from scipy.stats import t as tdist
+    d = [0.01, 0.02, 0.03, 0.04, 0.05, 0.02]
+    m = sum(d) / 6
+    s2 = sum((x - m) ** 2 for x in d) / 5
+    t_hand = m / math.sqrt((1 / 6 + 10 / 90) * s2)
+    mean, t, df, p = lib.corrected_t(d, 90, 10)
+    assert abs(mean - m) < 1e-15 and abs(t - t_hand) < 1e-12 and df == 5, (t, t_hand, df)
+    assert abs(p - 2 * tdist.sf(t_hand, 5)) < 1e-12
+    naive = m / math.sqrt(s2 / 6)
+    assert t < naive, "the correction must widen the variance"
+    assert lib.corrected_t([0.0] * 4, 90, 10)[3] == 1.0
+    assert lib.corrected_t([0.1] * 4, 90, 10)[3] == 0.0
+    assert lib.corrected_t([-0.1, 0.1], 90, 10)[1] == 0.0
+
+
+@case("configurations: two baselines alone, then each with the five pattern sets, in this order")
+def _():
+    names = lib.config_names()
+    assert len(names) == 12 and len(set(names)) == 12, names
+    assert names[:3] == ["B0", "B1", "B0 + FWS"] and names[-1] == "B1 + ALL (images in heavy edges)", names
+    assert [g for _n, g in lib.PATTERN_SETS] == ["full", "full", "full", "full", "filtered"]
+    assert lib.SEEDS == (1, 2, 3) and lib.FOLDS == 10 and lib.INNER_FOLDS == 3
+    assert lib.C_GRID == (0.01, 0.1, 1.0, 10.0)
+
+
+def toy_evaluation():
     import numpy as np
     from scipy import sparse
     rng = np.random.default_rng(0)
-    y = np.repeat([0, 1, 2], 40)
-    informative = sparse.csr_matrix(np.eye(3)[y] + 0.1 * rng.random((120, 3)))
-    noise = sparse.csr_matrix(rng.random((120, 3)))
-    rows = b6lib.evaluate({"baseline": noise, "baseline+patterns": informative}, y, seeds=(0,), folds=4,
-                          log=lambda m: None)
-    s = b6lib.summarise(rows)
-    assert s["per_set"]["baseline+patterns"]["macro_f1_mean"] > 0.95, s
-    assert s["per_set"]["baseline"]["macro_f1_mean"] < 0.6, s
-    assert s["wilcoxon"]["macro_f1"]["pairs"] == 4
-    same = b6lib.summarise([dict(r, features=f) for r in rows if r["features"] == "baseline"
-                            for f in ("baseline", "baseline+patterns")])
-    assert same["wilcoxon"]["macro_f1"]["zero_differences"] == 4 and same["wilcoxon"]["macro_f1"]["p_value"] is None
-    unpaired = [r for r in rows if not (r["features"] == "baseline" and r["fold"] == 0)]
-    assert raises(lambda: b6lib.summarise(unpaired)), "missing fold must be refused"
+    y = np.repeat([0, 1, 2], 30)
+    cont = rng.normal(size=(90, 2)) * [10.0, 1000.0]
+    noise = sparse.csr_matrix(np.column_stack([cont, rng.integers(0, 2, size=(90, 2))]))
+    informative = sparse.csr_matrix(np.column_stack([cont, np.eye(3)[y]]))
+    mats = {}
+    for name in lib.config_names():
+        if name.endswith("FWS"):
+            mats[name] = informative
+        elif name.endswith("(images in heavy edges)"):
+            mats[name] = None
+        else:
+            mats[name] = noise
+    return mats, y
+
+
+@case("evaluation: informative features win the corrected test; an empty set is recorded; folds paired")
+def _():
+    mats, y = toy_evaluation()
+    rows = lib.evaluate(mats, y, seeds=(1,), folds=3, log=lambda m: None)
+    assert len(rows) == 12 * 3 and sum(r["empty"] for r in rows) == 2 * 3
+    s = lib.summarise(rows)
+    assert s["per_config"]["B0 + FWS"]["macro_f1_mean"] > 0.95, s["per_config"]["B0 + FWS"]
+    assert s["per_config"]["B0"]["macro_f1_mean"] < 0.6, s["per_config"]["B0"]
+    assert s["per_config"]["B1 + ALL (images in heavy edges)"] == {"folds": 3, "empty": True}
+    assert sum(s["per_config"]["B0"]["C_chosen"].values()) == 3
+    tests = [t for t in s["tests"] if t["reference"] == "B0 + FWS"]
+    assert len(tests) == 2 * 4 + 1, len(tests)  # base and three non-empty sets on two metrics, one empty set
+    t = next(t for t in tests if t.get("other") == "B0" and t.get("metric") == "macro_f1")
+    assert t["pairs"] == 3 and t["df"] == 2 and t["mean_difference"] > 0.3 and t["reference_better"] == 3, t
+    assert any(t.get("other") == "B0 + ALL (images in heavy edges)" and t.get("empty") for t in tests)
+    unpaired = [r for r in rows if not (r["features"] == "B0" and r["fold"] == 0)]
+    assert raises(lambda: lib.summarise(unpaired)), "missing fold must be refused"
+    missing = [r for r in rows if r["features"] != "B1 + Frequent (all)"]
+    assert raises(lambda: lib.summarise(missing)), "a missing configuration must be refused, not read as empty"
+
+
+@case("evaluation: the continuous columns are standardised, so a signal in small units is used")
+def _():
+    import numpy as np
+    from scipy import sparse
+    from sklearn.metrics import f1_score
+    rng = np.random.default_rng(1)
+    y = np.repeat([0, 1], 60)
+    tiny = y * 1e-3 + rng.normal(scale=1e-5, size=120)        # separates the classes, in units of 1e-3
+    x = sparse.csr_matrix(np.column_stack([tiny, rng.normal(size=120), rng.integers(0, 2, size=(120, 2))]))
+    m = lib.model(1).fit(x, y)
+    assert f1_score(y, m.predict(x), average="macro") > 0.95, "the unscaled column would be shrunk to zero"
 
 
 def main():
