@@ -51,13 +51,13 @@ git init -q "$T/work"
     git config user.name check; git config user.email check@example.invalid
     git remote add origin "$T/origin.git"
     mkdir -p results; echo "a,b" > results/x.csv
-    CHECKPOINT=1 RUN_STATUS_DIR="$T/status" STATUS_PROJECT=check COMPUTERNAME=M1 checkpoint "cell one" > /dev/null
+    CHECKPOINT=1 CAMPAIGN_BRANCH=check-campaign RUN_STATUS_DIR="$T/status" STATUS_PROJECT=check COMPUTERNAME=M1 checkpoint "cell one" > /dev/null
     git remote set-url origin "$T/missing.git"
     echo "c,d" >> results/x.csv
-    CHECKPOINT=1 RUN_STATUS_DIR="$T/status" STATUS_PROJECT=check COMPUTERNAME=M1 checkpoint "cell two" > /dev/null 2>&1
+    CHECKPOINT=1 CAMPAIGN_BRANCH=check-campaign RUN_STATUS_DIR="$T/status" STATUS_PROJECT=check COMPUTERNAME=M1 checkpoint "cell two" > /dev/null 2>&1
 )
 check "checkpoint pushed results to the campaign branch" \
-    "$(git --git-dir="$T/origin.git" show campaign-revision-r2:results/x.csv 2>/dev/null | head -1)" "a,b"
+    "$(git --git-dir="$T/origin.git" show check-campaign:results/x.csv 2>/dev/null | tail -n 1)" "a,b"
 check "the status line reached the status remote" \
     "$(git --git-dir="$T/status.git" show HEAD:check/M1.log 2>/dev/null | grep -c 'cell one')" 1
 check "a failed push is reported and the run goes on" \
