@@ -1,0 +1,37 @@
+{
+  "graph": "email_eu_struct.lg",
+  "graph_sha256": "7a4005c606221f5daac84e57542c38e4b5a7366b7bdc6a3fc97f51c21e059db5",
+  "labels": "email_eu.lg",
+  "labels_sha256": "5b413cc05e79da1a2ee70837e1541106254bbc00706e2141c3eb65e36f254278",
+  "min_class": 1,
+  "classes_total": 42,
+  "classes_kept": 42,
+  "vertices_total": 677,
+  "vertices_kept": 677,
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "folds": 10,
+  "fold_rows": 30,
+  "B0_macro_f1_mean": 0.008251577869396927,
+  "B0_macro_f1_sd": 0.009750349092626254,
+  "B0_accuracy_mean": 0.01131109160081943,
+  "B0_accuracy_sd": 0.01141158949327542,
+  "B0_C_chosen": {
+    "0.01": 0,
+    "0.1": 7,
+    "1.0": 5,
+    "10.0": 18
+  },
+  "chance": {
+    "classes": 42,
+    "uniform_macro_f1": 0.01904874039064081,
+    "prior_macro_f1": 0.023809523809523808,
+    "uniform_accuracy": 0.023809523809523808,
+    "prior_accuracy": 0.048334275160419694
+  },
+  "B0_folds_above_uniform_chance": 4,
+  "B0_folds_above_prior_chance": 4
+}

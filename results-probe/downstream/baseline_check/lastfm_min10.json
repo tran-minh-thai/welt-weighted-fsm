@@ -1,0 +1,37 @@
+{
+  "graph": "lastfm_struct.lg",
+  "graph_sha256": "f80c68853ba6bea9f2f133b853ec114c197025b03a4e478741f229fbaec5d44c",
+  "labels": "lastfm.lg",
+  "labels_sha256": "be77963234648e22e998b703b2418f9d5dd030926713665fd049e7053c8ed3b7",
+  "min_class": 10,
+  "classes_total": 18,
+  "classes_kept": 18,
+  "vertices_total": 7624,
+  "vertices_kept": 7624,
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "folds": 10,
+  "fold_rows": 30,
+  "B0_macro_f1_mean": 0.03626704501100779,
+  "B0_macro_f1_sd": 0.006233341219028006,
+  "B0_accuracy_mean": 0.0430244957912371,
+  "B0_accuracy_sd": 0.00879103709840899,
+  "B0_C_chosen": {
+    "0.01": 0,
+    "0.1": 2,
+    "1.0": 10,
+    "10.0": 18
+  },
+  "chance": {
+    "classes": 18,
+    "uniform_macro_f1": 0.04212462946387966,
+    "prior_macro_f1": 0.05555555555555555,
+    "uniform_accuracy": 0.05555555555555555,
+    "prior_accuracy": 0.11941545117918893
+  },
+  "B0_folds_above_uniform_chance": 7,
+  "B0_folds_above_prior_chance": 0
+}
