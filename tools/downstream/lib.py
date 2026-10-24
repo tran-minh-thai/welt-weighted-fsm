@@ -39,7 +39,12 @@ REFERENCE = "FWS"          # the paired tests compare base + FWS with every othe
 # the graph of the efficiency experiments) and the mining graph with degree-class labels (struct).
 # tau_s_grid: LastFM's grid starts below its largest degree class (1,979 vertices); GitHub's grid
 # has the same relative steps (rounded) from below its largest degree class (9,665 vertices), so that
-# both scans begin where single-edge patterns can first be frequent.
+# both scans begin where single-edge patterns can first be frequent, plus 7500, 7000, 6500: a probe
+# of pattern counts only (no class label) found 0 FWS at 8000 and at least 385 at 6000.
+# protocol: the time limit of one selection run and the warmup/measured runs of the timed mining.
+# GitHub's selection runs take more than 10 minutes, so its limit is the mining limit (60 minutes)
+# and its mining has one measured run; a selection run made with the timed protocol is reused as
+# the timed run (run.py).
 DATASETS = {
     "lastfm": {
         "zip": "lastfm_asia.zip", "url": "https://snap.stanford.edu/data/lastfm_asia.zip",
@@ -55,6 +60,7 @@ DATASETS = {
         "struct_lg": "lastfm_struct.lg",
         "struct_sha": "f80c68853ba6bea9f2f133b853ec114c197025b03a4e478741f229fbaec5d44c",
         "tau_s_grid": TAU_S_GRID,
+        "protocol": {"selection_limit_ms": 600000, "warmup": 1, "measured": 5},
     },
     "github": {
         "zip": "git_web_ml.zip", "url": "https://snap.stanford.edu/data/git_web_ml.zip",
@@ -69,7 +75,9 @@ DATASETS = {
         "ref_lg": "github.lg", "ref_sha": "4f2e3e63ab3120d3c099606aca2000d1296bc9c4bc49403beb22e57dd892c2a1",
         "struct_lg": "github_struct.lg",
         "struct_sha": "05da9f8fb4c22224bf4602a15ea04b7441a89ab9b850875713d063b222a44b46",
-        "tau_s_grid": (8000, 6000, 5000, 4000, 3000, 2500, 2000, 1500, 1250, 1000, 750, 500, 400, 250, 150, 100, 50),
+        "tau_s_grid": (8000, 7500, 7000, 6500, 6000, 5000, 4000, 3000, 2500, 2000, 1500, 1250, 1000, 750, 500, 400,
+                       250, 150, 100, 50),
+        "protocol": {"selection_limit_ms": 3600000, "warmup": 1, "measured": 1},
     },
 }
 

@@ -50,7 +50,8 @@ import lib  # noqa: E402
 
 DATA = os.path.join(ROOT, "datasets")
 RAW = os.path.join(DATA, "raw")
-DS = None          # the entry of lib.DATASETS chosen by --dataset (set in main)
+DATASET = None     # --dataset (set in main)
+DS = None          # the entry of lib.DATASETS chosen by --dataset
 STRUCT_LG = None   # datasets/<struct_lg>: the mining graph
 REF_LG = None      # datasets/<ref_lg>: the same graph with the class as vertex label
 TOOL_FILES = [
@@ -60,9 +61,13 @@ TOOL_FILES = [
     "src/main/java/welt/runner/BenchmarkMain.java", "src/main/java/welt/runner/PatternDump.java",
     "src/main/java/welt/core/MiningEngine.java",
 ]
-DESIGN_DEFAULTS = {"limit_ms": 3600000, "selection_limit_ms": 600000, "check_limit_ms": 3600000,
-                   "frequent_bound": "fws-edges", "warmup": 1, "measured": 5,
-                   "seeds": len(lib.SEEDS), "folds": lib.FOLDS}
+DESIGN_COMMON = {"limit_ms": 3600000, "check_limit_ms": 3600000, "frequent_bound": "fws-edges",
+                 "seeds": len(lib.SEEDS), "folds": lib.FOLDS}
+
+
+def design_defaults(dataset):
+    """The design settings of a dataset: the common ones and its protocol (lib.DATASETS)."""
+    return {**DESIGN_COMMON, **lib.DATASETS[dataset]["protocol"]}
 
 
 class Log:
@@ -75,8 +80,33 @@ class Log:
         self.fh.flush()
 
 
+def status(msg):
+    """One line in the status repository, as report_status of tools/common.sh does (CHECKPOINT=1
+    only; between runs, never during one). A failure is printed and the run goes on."""
+    line = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S") + " " + msg
+    print("[status] " + line, flush=True)
+    if os.environ.get("CHECKPOINT") != "1":
+        return
+    repo = os.environ.get("RUN_STATUS_DIR") or os.path.join(os.path.expanduser("~"), "work", "run-status")
+    project = os.environ.get("STATUS_PROJECT", "01_SubWeightedGraphMiner")
+    machine = os.environ.get("COMPUTERNAME") or socket.gethostname()
+    if not os.path.isdir(os.path.join(repo, ".git")):
+        print(f"WARNING: status repository {repo} not found; line not recorded", flush=True)
+        return
+    os.makedirs(os.path.join(repo, project), exist_ok=True)
+    with open(os.path.join(repo, project, machine + ".log"), "a", newline="") as f:
+        f.write(line + "\r\n")
+    for args in (["add", "--", f"{project}/{machine}.log"], ["commit", "-q", "-m", f"{project} {machine}: {msg}"],
+                 ["pull", "-q", "--rebase", "--autostash"], ["push", "-q"]):
+        if subprocess.run(["git", "-C", repo, *args], capture_output=True).returncode != 0:
+            print(f"WARNING: status: git {args[0]} failed", flush=True)
+            if args[0] in ("add", "commit"):
+                return
+
+
 def fail(log, msg, code=1):
     log("ERROR: " + msg)
+    status(f"downstream {DATASET}: STOPPED: {msg[:200]}")
     sys.exit(code)
 
 
@@ -191,8 +221,17 @@ def build_struct_graph(log, out_dir):
 
 # ---------------------------------------------------------------- mining
 
+BENCH_RUNS = {}    # (graph, algo, tau_s, tau_w, limit, warmup, measured, env, max_edges) -> result
+
+
 def run_bench(log, graph, algo, tau_s, tau_w, dump_dir, limit_ms, warmup, measured, env_extra, max_edges=0):
-    """One BenchmarkMain cell: (CSV row, path of the pattern dump or None, command line)."""
+    """One BenchmarkMain cell: (CSV row, path of the pattern dump or None, command line). A cell
+    already run with the same settings is not run again: its result is returned (and its dump
+    directory is the one of the first run)."""
+    key = (graph, algo, str(tau_s), tau_w, limit_ms, warmup, measured, tuple(sorted(env_extra.items())), max_edges)
+    if key in BENCH_RUNS:
+        log(f"  {algo} tau_s={tau_s} tau_w={tau_w} max edges={max_edges}: reusing the run of the same settings")
+        return BENCH_RUNS[key]
     env = dict(os.environ, BENCH_CSV="1", BENCH_ALGOS=algo, DUMP_PATTERNS=dump_dir,
                WELT_MAX_EDGES=str(max_edges), **env_extra)
     cmd = java("welt.runner.BenchmarkMain", graph, str(tau_s), tau_w, "0", str(limit_ms), str(warmup), str(measured))
@@ -205,7 +244,8 @@ def run_bench(log, graph, algo, tau_s, tau_w, dump_dir, limit_ms, warmup, measur
     row = next(csv.DictReader(rows))
     dumps = [f for f in os.listdir(dump_dir) if f.endswith(".tsv")] if os.path.isdir(dump_dir) else []
     shown = f"WELT_MAX_EDGES={max_edges} BENCH_ALGOS={algo} " + " ".join(cmd[:1] + cmd[-9:])
-    return row, (os.path.join(dump_dir, dumps[0]) if len(dumps) == 1 else None), shown.replace(ROOT, "<repo>")
+    BENCH_RUNS[key] = (row, (os.path.join(dump_dir, dumps[0]) if len(dumps) == 1 else None), shown.replace(ROOT, "<repo>"))
+    return BENCH_RUNS[key]
 
 
 def grid_tau_w(log):
@@ -244,23 +284,28 @@ def main():
     ap.add_argument("--out", help="output directory (default results-probe/downstream/<date>_<host>_<dataset>)")
     ap.add_argument("--kind", choices=("probe", "measurement"), default="probe")
     ap.add_argument("--voting", help="voting_choice.json of the campaign (WELT_VOTER, WELT_WORDER)")
-    ap.add_argument("--limit-ms", type=int, default=DESIGN_DEFAULTS["limit_ms"],
+    ap.add_argument("--limit-ms", type=int, default=None,
                     help="time limit of one timed mining run at the chosen cell")
-    ap.add_argument("--selection-limit-ms", type=int, default=DESIGN_DEFAULTS["selection_limit_ms"],
+    ap.add_argument("--selection-limit-ms", type=int, default=None,
                     help="time limit of one WeLT selection run (only its pattern count is used; see lib.scan)")
-    ap.add_argument("--check-limit-ms", type=int, default=DESIGN_DEFAULTS["check_limit_ms"],
+    ap.add_argument("--check-limit-ms", type=int, default=None,
                     help="time limit of the GraMi run of the second selection condition")
-    ap.add_argument("--frequent-bound", choices=("fws-edges", "none"), default=DESIGN_DEFAULTS["frequent_bound"],
+    ap.add_argument("--frequent-bound", choices=("fws-edges", "none"), default=None,
                     help="fws-edges: GraMi mines patterns of at most the largest FWS edge count; none: any size")
-    ap.add_argument("--warmup", type=int, default=DESIGN_DEFAULTS["warmup"])
-    ap.add_argument("--measured", type=int, default=DESIGN_DEFAULTS["measured"])
+    ap.add_argument("--warmup", type=int, default=None)
+    ap.add_argument("--measured", type=int, default=None)
     ap.add_argument("--jobs", type=int, default=-1, help="processes of the inner C search (results do not depend on it)")
-    ap.add_argument("--seeds", type=int, default=DESIGN_DEFAULTS["seeds"], help="probe only: first S seeds of lib.SEEDS")
-    ap.add_argument("--folds", type=int, default=DESIGN_DEFAULTS["folds"], help="probe only: outer folds")
+    ap.add_argument("--seeds", type=int, default=None, help="probe only: first S seeds of lib.SEEDS")
+    ap.add_argument("--folds", type=int, default=None, help="probe only: outer folds")
     ap.add_argument("--skip-build", action="store_true", help="target/classes is already built")
     a = ap.parse_args()
-    global DS, STRUCT_LG, REF_LG
+    global DATASET, DS, STRUCT_LG, REF_LG
+    DATASET = a.dataset
     DS = lib.DATASETS[a.dataset]
+    defaults = design_defaults(a.dataset)
+    for k, v in defaults.items():
+        if getattr(a, k) is None:
+            setattr(a, k, v)
     STRUCT_LG = os.path.join(DATA, DS["struct_lg"])
     REF_LG = os.path.join(DATA, DS["ref_lg"])
 
@@ -277,7 +322,7 @@ def main():
     settings = {"limit_ms": a.limit_ms, "selection_limit_ms": a.selection_limit_ms,
                 "check_limit_ms": a.check_limit_ms, "frequent_bound": a.frequent_bound,
                 "warmup": a.warmup, "measured": a.measured, "seeds": a.seeds, "folds": a.folds}
-    departures = {k: v for k, v in settings.items() if v != DESIGN_DEFAULTS[k]}
+    departures = {k: v for k, v in settings.items() if v != defaults[k]}
     if a.kind == "measurement" and {k for k in departures if k != "frequent_bound"}:
         fail(log, "a measurement run uses the design settings; these differ: " + json.dumps(departures))
     if not 1 <= a.seeds <= len(lib.SEEDS) or a.folds < 2:
@@ -350,6 +395,7 @@ def main():
         selection_ms.append({"miner": "WeLT", "tau_s": tau_s, "rho_w": rho, "status": row["status"],
                              "totalMs": row["totalMs"]})
         log(f"  WeLT  tau_s={tau_s:<5} rho_w={rho} tau_w={tau_w}: status={row['status']} |R|={n}")
+        status(f"downstream {DATASET} select WeLT tau_s={tau_s} rho_w={rho}: {row['status']} R={n} ({float(row['totalMs']) / 1000:.0f} s)")
         return row["status"], n
 
     def second_condition(tau_s, tau_w):
@@ -363,6 +409,7 @@ def main():
             checks[(tau_s, k)] = {"miner": "GraMi", "max_edges": k, "limit_ms": a.check_limit_ms,
                                   "status": row["status"], "patterns": int(row["R"])}
             log(f"  GraMi tau_s={tau_s:<5} max edges={k or 'any'}: status={row['status']} patterns={row['R']}")
+            status(f"downstream {DATASET} select GraMi tau_s={tau_s} max_edges={k}: {row['status']} patterns={row['R']}")
         note = checks[(tau_s, k)]
         return note["status"] == "OK", note
 
@@ -382,6 +429,10 @@ def main():
               "tau_w_of_rho_w": tw, "scanned": grid_rows, "reason": reason, "chosen": None}
     if chosen is None:
         write_json(os.path.join(out, "downstream_choice.json"), choice)
+        meta["outcome"] = "no cell chosen: " + reason
+        meta["selection_runs"] = selection_ms
+        meta["finished"] = datetime.datetime.now().isoformat(timespec="seconds")
+        write_json(os.path.join(out, "run_meta.json"), meta)
         fail(log, reason, code=2)
     c = grid_rows[chosen]
     max_edges = c["second_condition"]["max_edges"]
@@ -414,6 +465,7 @@ def main():
         mining_time[name] = {k2: row[k2] for k2 in ("runs", "warmup", *[x for x in row if is_timing_column(x)])}
         commands[name] = cmd
         log(f"  {name:<15} {algo:<6} patterns={row['R']:<6} totalMs median={row['totalMs']} over {row['runs']} runs")
+        status(f"downstream {DATASET} mined {name}: {row['R']} patterns")
     write_csv(os.path.join(out, "mining.csv"), mining_rows)
 
     codes = {name: [r[0] for r in lib.read_dump(p)] for name, p in mined.items()}
@@ -454,6 +506,7 @@ def main():
         shutil.copyfile(p, os.path.join(patterns_dir, re.sub(r"[^A-Za-z]+", "_", name).strip("_") + ".tsv"))
 
     # 5. features and classification
+    status(f"downstream {DATASET} image sets done; classification starts")
     log("== 5. features and classification")
     import numpy as np
     from scipy import sparse
@@ -532,11 +585,13 @@ def main():
         "feature_dimension": dims,
     }
     write_json(os.path.join(out, f"timings_{a.kind}.json"), timings)
+    meta["outcome"] = "completed"
     meta["finished"] = datetime.datetime.now().isoformat(timespec="seconds")
     meta["outputs"] = sorted(rel(os.path.join(dp, fn)).replace(rel(out) + "/", "")
                              for dp, _dn, fns in os.walk(out) for fn in fns)
     write_json(os.path.join(out, "run_meta.json"), meta)
     log(f"== done -> {rel(out)}")
+    status(f"downstream {DATASET} done")
 
 
 if __name__ == "__main__":

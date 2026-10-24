@@ -202,6 +202,10 @@ def _():
         assert list(g) == sorted(set(g), reverse=True), f"{name}: grid not strictly descending"
         assert lib.selection_order({0.5: "a", 0.7: "b"}, g)[0] == (g[0], 0.5, "a")
         assert set(d["members"]) == {d["edges"], d["features"], d["target"]}, name
+        pr = d["protocol"]
+        assert set(pr) == {"selection_limit_ms", "warmup", "measured"} and pr["warmup"] >= 1 and pr["measured"] >= 1, name
+    assert lib.DATASETS["lastfm"]["protocol"] == {"selection_limit_ms": 600000, "warmup": 1, "measured": 5}
+    assert {7500, 7000, 6500} <= set(lib.DATASETS["github"]["tau_s_grid"])
     assert lib.DATASETS["lastfm"]["tau_s_grid"] == lib.TAU_S_GRID, "the LastFM grid of the measured run"
 
 
