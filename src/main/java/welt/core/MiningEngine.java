@@ -95,6 +95,18 @@ public final class MiningEngine {
     }
 
     private boolean aprioriPruning = true;
+
+    /**
+     * Largest number of edges of a mined pattern; 0 (the default) means no bound. A pattern with
+     * this many edges is still counted and reported but not extended, so the run returns exactly
+     * the patterns of the unbounded run that have at most this many edges.
+     */
+    public void setMaxEdges(int maxEdges) {
+        if (maxEdges < 0) throw new IllegalArgumentException("maxEdges must be >= 0, got " + maxEdges);
+        this.maxEdges = maxEdges;
+    }
+
+    private int maxEdges = 0;
     private final Set<String> frequentCodes = new HashSet<>(); // memoized canonical codes of FREQUENT patterns
 
     /**
@@ -277,7 +289,7 @@ public final class MiningEngine {
         metrics.frequentMemoSize = frequentCodes.size();
         // MNI-frequent ⇒ extendable (if the strategy allows); pass domains to children
         long tw = timing ? System.nanoTime() : 0;
-        boolean extend = strategy.allowExtension(p, r.mni);
+        boolean extend = strategy.allowExtension(p, r.mni) && (maxEdges == 0 || p.edgeCount() < maxEdges);
         boolean accept = strategy.acceptFrequent(p, r.mni); // accept as FWS (GraMi: always)
         if (timing) metrics.weightNanos += System.nanoTime() - tw;
         if (extend) {

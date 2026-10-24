@@ -85,6 +85,8 @@ public final class RunHarness {
         public boolean phaseTiming = false;
         /** Untimed live-heap run: forced collections as the retained data grows (see Metrics). */
         public boolean liveHeap = false;
+        /** Largest number of edges of a mined pattern, 0 for no bound (see MiningEngine.setMaxEdges). */
+        public int maxEdges = 0;
 
         public Config(String algo, int minSup, double minWeight) {
             this.algo = algo;
@@ -192,6 +194,7 @@ public final class RunHarness {
         engine.setDeadline(deadline);
         engine.setVoter(cfg.voter);
         engine.setAprioriPruning(cfg.p3);
+        engine.setMaxEdges(cfg.maxEdges);
         engine.setP3AgainstResults(cfg.p3AgainstResults);
 
         long tIndex = System.nanoTime();
