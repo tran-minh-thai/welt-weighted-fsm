@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Downstream node classification with mined patterns on LastFM Asia (one command).
+"""Downstream node classification with mined patterns on a MUSAE dataset (one command).
 
-    python tools/downstream/run.py [--out DIR] [--kind probe|measurement] [--voting voting_choice.json]
+    python tools/downstream/run.py [--dataset lastfm|github] [--out DIR] [--kind probe|measurement] [--voting voting_choice.json]
                                    [--limit-ms N] [--selection-limit-ms N] [--check-limit-ms N]
                                    [--frequent-bound fws-edges|none] [--warmup W] [--measured M]
                                    [--jobs J] [--seeds S] [--folds K] [--skip-build]
 
 Steps (README.md in this folder gives the design and the leakage controls):
-  1. data      fetch the raw MUSAE archive if missing, verify every SHA-256, rebuild
-               datasets/lastfm_struct.lg and compare it with the committed file and with lastfm.lg;
+  1. data      fetch the raw MUSAE archive if missing, verify every SHA-256, rebuild the mining
+               graph (lib.DATASETS) and compare it with the expected file and with the class graph;
   2. select    scan the fixed (tau_s, rho_w) grid: a cell is chosen when WeLT returns 20..300
                frequent weighted subgraphs (FWS) and GraMi completes at the same tau_s within
                --check-limit-ms, mining patterns of at most as many edges as the largest FWS
@@ -50,9 +50,10 @@ import lib  # noqa: E402
 
 DATA = os.path.join(ROOT, "datasets")
 RAW = os.path.join(DATA, "raw")
-LASTFM_RAW = os.path.join(RAW, "lasftm_asia")
-STRUCT_LG = os.path.join(DATA, "lastfm_struct.lg")
-REF_LG = os.path.join(DATA, "lastfm.lg")
+DATASET = None     # --dataset (set in main)
+DS = None          # the entry of lib.DATASETS chosen by --dataset
+STRUCT_LG = None   # datasets/<struct_lg>: the mining graph
+REF_LG = None      # datasets/<ref_lg>: the same graph with the class as vertex label
 TOOL_FILES = [
     "tools/downstream/run.py", "tools/downstream/lib.py", "tools/downstream/selftest.py",
     "tools/downstream/requirements.txt", "datasets/convert_musae_struct.py", "tools/heavy_subgraph.py",
@@ -60,9 +61,13 @@ TOOL_FILES = [
     "src/main/java/welt/runner/BenchmarkMain.java", "src/main/java/welt/runner/PatternDump.java",
     "src/main/java/welt/core/MiningEngine.java",
 ]
-DESIGN_DEFAULTS = {"limit_ms": 3600000, "selection_limit_ms": 600000, "check_limit_ms": 3600000,
-                   "frequent_bound": "fws-edges", "warmup": 1, "measured": 5,
-                   "seeds": len(lib.SEEDS), "folds": lib.FOLDS}
+DESIGN_COMMON = {"limit_ms": 3600000, "check_limit_ms": 3600000, "frequent_bound": "fws-edges",
+                 "seeds": len(lib.SEEDS), "folds": lib.FOLDS}
+
+
+def design_defaults(dataset):
+    """The design settings of a dataset: the common ones and its protocol (lib.DATASETS)."""
+    return {**DESIGN_COMMON, **lib.DATASETS[dataset]["protocol"]}
 
 
 class Log:
@@ -75,8 +80,33 @@ class Log:
         self.fh.flush()
 
 
+def status(msg):
+    """One line in the status repository, as report_status of tools/common.sh does (CHECKPOINT=1
+    only; between runs, never during one). A failure is printed and the run goes on."""
+    line = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S") + " " + msg
+    print("[status] " + line, flush=True)
+    if os.environ.get("CHECKPOINT") != "1":
+        return
+    repo = os.environ.get("RUN_STATUS_DIR") or os.path.join(os.path.expanduser("~"), "work", "run-status")
+    project = os.environ.get("STATUS_PROJECT", "01_SubWeightedGraphMiner")
+    machine = os.environ.get("COMPUTERNAME") or socket.gethostname()
+    if not os.path.isdir(os.path.join(repo, ".git")):
+        print(f"WARNING: status repository {repo} not found; line not recorded", flush=True)
+        return
+    os.makedirs(os.path.join(repo, project), exist_ok=True)
+    with open(os.path.join(repo, project, machine + ".log"), "a", newline="") as f:
+        f.write(line + "\r\n")
+    for args in (["add", "--", f"{project}/{machine}.log"], ["commit", "-q", "-m", f"{project} {machine}: {msg}"],
+                 ["pull", "-q", "--rebase", "--autostash"], ["push", "-q"]):
+        if subprocess.run(["git", "-C", repo, *args], capture_output=True).returncode != 0:
+            print(f"WARNING: status: git {args[0]} failed", flush=True)
+            if args[0] in ("add", "commit"):
+                return
+
+
 def fail(log, msg, code=1):
     log("ERROR: " + msg)
+    status(f"downstream {DATASET}: STOPPED: {msg[:200]}")
     sys.exit(code)
 
 
@@ -139,61 +169,69 @@ def java(cls, *args):
 # ---------------------------------------------------------------- step 1: data
 
 def ensure_raw(log):
-    missing = [m for m in lib.LASTFM_MEMBERS if not os.path.isfile(os.path.join(RAW, m))]
+    missing = [m for m in DS["members"] if not os.path.isfile(os.path.join(RAW, m))]
     if missing:
-        zpath = os.path.join(RAW, "lastfm_asia.zip")
+        zpath = os.path.join(RAW, DS["zip"])
         os.makedirs(RAW, exist_ok=True)
         if not os.path.isfile(zpath):
-            log(f"  downloading {lib.LASTFM_ZIP_URL}")
-            with urllib.request.urlopen(lib.LASTFM_ZIP_URL, timeout=120) as r, open(zpath + ".part", "wb") as out:
+            log(f"  downloading {DS['url']}")
+            with urllib.request.urlopen(DS["url"], timeout=120) as r, open(zpath + ".part", "wb") as out:
                 shutil.copyfileobj(r, out)
             os.replace(zpath + ".part", zpath)
         got = lib.sha256(zpath)
-        if got != lib.LASTFM_ZIP_SHA:
-            fail(log, f"{rel(zpath)} has SHA-256 {got}, expected {lib.LASTFM_ZIP_SHA}")
+        if got != DS["zip_sha"]:
+            fail(log, f"{rel(zpath)} has SHA-256 {got}, expected {DS['zip_sha']}")
         with zipfile.ZipFile(zpath) as z:
-            for m in lib.LASTFM_MEMBERS:
+            for m in DS["members"]:
                 z.extract(m, RAW)
-    for m, sha in lib.LASTFM_MEMBERS.items():
+    for m, sha in DS["members"].items():
         got = lib.sha256(os.path.join(RAW, m))
         if got != sha:
             fail(log, f"datasets/raw/{m} has SHA-256 {got}, expected {sha}")
-    log("  raw LastFM Asia files: SHA-256 verified")
+    log(f"  raw {DS['zip']} members: SHA-256 verified")
 
 
 def build_struct_graph(log, out_dir):
-    for path, sha in ((REF_LG, lib.LASTFM_LG_SHA), (STRUCT_LG, lib.LASTFM_STRUCT_LG_SHA)):
+    for path, sha in ((REF_LG, DS["ref_sha"]), (STRUCT_LG, DS["struct_sha"])):
         got = lib.sha256(path)
         if got != sha:
             fail(log, f"{rel(path)} has SHA-256 {got}, expected {sha}")
-    rebuilt = os.path.join(out_dir, "lastfm_struct.rebuilt.lg")
+    rebuilt = os.path.join(out_dir, DS["struct_lg"].replace(".lg", ".rebuilt.lg"))
     p = subprocess.run([sys.executable, os.path.join(DATA, "convert_musae_struct.py"),
-                        os.path.join(LASTFM_RAW, "lastfm_asia_edges.csv"),
-                        os.path.join(LASTFM_RAW, "lastfm_asia_features.json"), rebuilt,
+                        os.path.join(RAW, DS["edges"]), os.path.join(RAW, DS["features"]), rebuilt,
                         "--check-against", REF_LG], capture_output=True, text=True)
     for line in (p.stdout + p.stderr).splitlines():
         log("  " + line.replace(out_dir, "<out>").replace(ROOT, "<repo>"))
     if p.returncode != 0:
-        fail(log, "convert_musae_struct.py failed its check against lastfm.lg")
-    if lib.sha256(rebuilt) != lib.LASTFM_STRUCT_LG_SHA:
-        fail(log, "the rebuilt lastfm_struct.lg differs from the committed one")
+        fail(log, f"convert_musae_struct.py failed its check against {DS['ref_lg']}")
+    if lib.sha256(rebuilt) != DS["struct_sha"]:
+        fail(log, f"the rebuilt {DS['struct_lg']} differs from the committed one")
     os.remove(rebuilt)
-    log("  lastfm_struct.lg rebuilt from the raw files: identical to the committed file")
+    log(f"  {DS['struct_lg']} rebuilt from the raw files: identical to the expected file")
 
     s_labels, s_edges = lib.read_lg(STRUCT_LG)
     r_labels, r_edges = lib.read_lg(REF_LG)
-    target = lib.read_target(os.path.join(LASTFM_RAW, "lastfm_asia_target.csv"))
+    target = lib.read_target(os.path.join(RAW, DS["target"]))
     ok, facts = lib.leakage_report(s_labels, s_edges, r_labels, r_edges, target)
     log("  leakage check: " + json.dumps(facts))
     if not ok:
-        fail(log, "the mining graph is not lastfm.lg with degree-class labels")
+        fail(log, f"the mining graph is not {DS['ref_lg']} with degree-class labels")
     return s_labels, s_edges, target, facts
 
 
 # ---------------------------------------------------------------- mining
 
+BENCH_RUNS = {}    # (graph, algo, tau_s, tau_w, limit, warmup, measured, env, max_edges) -> result
+
+
 def run_bench(log, graph, algo, tau_s, tau_w, dump_dir, limit_ms, warmup, measured, env_extra, max_edges=0):
-    """One BenchmarkMain cell: (CSV row, path of the pattern dump or None, command line)."""
+    """One BenchmarkMain cell: (CSV row, path of the pattern dump or None, command line). A cell
+    already run with the same settings is not run again: its result is returned (and its dump
+    directory is the one of the first run)."""
+    key = (graph, algo, str(tau_s), tau_w, limit_ms, warmup, measured, tuple(sorted(env_extra.items())), max_edges)
+    if key in BENCH_RUNS:
+        log(f"  {algo} tau_s={tau_s} tau_w={tau_w} max edges={max_edges}: reusing the run of the same settings")
+        return BENCH_RUNS[key]
     env = dict(os.environ, BENCH_CSV="1", BENCH_ALGOS=algo, DUMP_PATTERNS=dump_dir,
                WELT_MAX_EDGES=str(max_edges), **env_extra)
     cmd = java("welt.runner.BenchmarkMain", graph, str(tau_s), tau_w, "0", str(limit_ms), str(warmup), str(measured))
@@ -206,7 +244,8 @@ def run_bench(log, graph, algo, tau_s, tau_w, dump_dir, limit_ms, warmup, measur
     row = next(csv.DictReader(rows))
     dumps = [f for f in os.listdir(dump_dir) if f.endswith(".tsv")] if os.path.isdir(dump_dir) else []
     shown = f"WELT_MAX_EDGES={max_edges} BENCH_ALGOS={algo} " + " ".join(cmd[:1] + cmd[-9:])
-    return row, (os.path.join(dump_dir, dumps[0]) if len(dumps) == 1 else None), shown.replace(ROOT, "<repo>")
+    BENCH_RUNS[key] = (row, (os.path.join(dump_dir, dumps[0]) if len(dumps) == 1 else None), shown.replace(ROOT, "<repo>"))
+    return BENCH_RUNS[key]
 
 
 def grid_tau_w(log):
@@ -241,39 +280,49 @@ def image_sets(log, dump, tau_w, mode, out_path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", help="output directory (default results-probe/downstream/<date>_<host>)")
+    ap.add_argument("--dataset", choices=sorted(lib.DATASETS), default="lastfm")
+    ap.add_argument("--out", help="output directory (default results-probe/downstream/<date>_<host>_<dataset>)")
     ap.add_argument("--kind", choices=("probe", "measurement"), default="probe")
     ap.add_argument("--voting", help="voting_choice.json of the campaign (WELT_VOTER, WELT_WORDER)")
-    ap.add_argument("--limit-ms", type=int, default=DESIGN_DEFAULTS["limit_ms"],
+    ap.add_argument("--limit-ms", type=int, default=None,
                     help="time limit of one timed mining run at the chosen cell")
-    ap.add_argument("--selection-limit-ms", type=int, default=DESIGN_DEFAULTS["selection_limit_ms"],
+    ap.add_argument("--selection-limit-ms", type=int, default=None,
                     help="time limit of one WeLT selection run (only its pattern count is used; see lib.scan)")
-    ap.add_argument("--check-limit-ms", type=int, default=DESIGN_DEFAULTS["check_limit_ms"],
+    ap.add_argument("--check-limit-ms", type=int, default=None,
                     help="time limit of the GraMi run of the second selection condition")
-    ap.add_argument("--frequent-bound", choices=("fws-edges", "none"), default=DESIGN_DEFAULTS["frequent_bound"],
+    ap.add_argument("--frequent-bound", choices=("fws-edges", "none"), default=None,
                     help="fws-edges: GraMi mines patterns of at most the largest FWS edge count; none: any size")
-    ap.add_argument("--warmup", type=int, default=DESIGN_DEFAULTS["warmup"])
-    ap.add_argument("--measured", type=int, default=DESIGN_DEFAULTS["measured"])
+    ap.add_argument("--warmup", type=int, default=None)
+    ap.add_argument("--measured", type=int, default=None)
     ap.add_argument("--jobs", type=int, default=-1, help="processes of the inner C search (results do not depend on it)")
-    ap.add_argument("--seeds", type=int, default=DESIGN_DEFAULTS["seeds"], help="probe only: first S seeds of lib.SEEDS")
-    ap.add_argument("--folds", type=int, default=DESIGN_DEFAULTS["folds"], help="probe only: outer folds")
+    ap.add_argument("--seeds", type=int, default=None, help="probe only: first S seeds of lib.SEEDS")
+    ap.add_argument("--folds", type=int, default=None, help="probe only: outer folds")
     ap.add_argument("--skip-build", action="store_true", help="target/classes is already built")
     a = ap.parse_args()
+    global DATASET, DS, STRUCT_LG, REF_LG
+    DATASET = a.dataset
+    DS = lib.DATASETS[a.dataset]
+    defaults = design_defaults(a.dataset)
+    for k, v in defaults.items():
+        if getattr(a, k) is None:
+            setattr(a, k, v)
+    STRUCT_LG = os.path.join(DATA, DS["struct_lg"])
+    REF_LG = os.path.join(DATA, DS["ref_lg"])
 
     host = re.sub(r"[^A-Za-z0-9_.-]", "_", socket.gethostname())
     started = datetime.datetime.now()
     out = os.path.abspath(a.out or os.path.join(ROOT, "results-probe", "downstream",
-                                                started.strftime("%Y%m%d_%H%M") + "_" + host))
+                                                started.strftime("%Y%m%d_%H%M") + "_" + host + "_" + a.dataset))
     if os.path.exists(out) and os.listdir(out):
         sys.exit(f"ERROR: {out} exists and is not empty; choose another --out")
     os.makedirs(out, exist_ok=True)
     log = Log(os.path.join(out, "console.txt"))
-    log(f"== downstream node classification | kind={a.kind} | out={rel(out)}")
+    log(f"== downstream node classification | dataset={a.dataset} | kind={a.kind} | out={rel(out)}")
 
     settings = {"limit_ms": a.limit_ms, "selection_limit_ms": a.selection_limit_ms,
                 "check_limit_ms": a.check_limit_ms, "frequent_bound": a.frequent_bound,
                 "warmup": a.warmup, "measured": a.measured, "seeds": a.seeds, "folds": a.folds}
-    departures = {k: v for k, v in settings.items() if v != DESIGN_DEFAULTS[k]}
+    departures = {k: v for k, v in settings.items() if v != defaults[k]}
     if a.kind == "measurement" and {k for k in departures if k != "frequent_bound"}:
         fail(log, "a measurement run uses the design settings; these differ: " + json.dumps(departures))
     if not 1 <= a.seeds <= len(lib.SEEDS) or a.folds < 2:
@@ -294,6 +343,7 @@ def main():
     tree = git("status", "--porcelain", "--untracked-files=no")
     meta = {
         "experiment": "downstream node classification",
+        "dataset": a.dataset,
         "kind": a.kind,
         "command": " ".join([os.path.basename(sys.executable), rel(os.path.abspath(sys.argv[0])), *sys.argv[1:]]),
         "started": started.isoformat(timespec="seconds"),
@@ -303,7 +353,7 @@ def main():
         "python": platform.python_version(), "packages": pins, "java": java_version(),
         "java_opts": os.environ.get("JAVA_OPTS", ""),
         "tool_sha256": {f: lib.sha256(os.path.join(ROOT, f)) for f in TOOL_FILES},
-        "design": {"tau_s_grid": lib.TAU_S_GRID, "rho_w": lib.RHO_W, "pattern_window": lib.PATTERN_WINDOW,
+        "design": {"tau_s_grid": DS["tau_s_grid"], "continuous_columns": "log1p, then standardised", "rho_w": lib.RHO_W, "pattern_window": lib.PATTERN_WINDOW,
                    "seeds": seeds, "folds": a.folds, "inner_folds": lib.INNER_FOLDS, "C_grid": lib.C_GRID,
                    "max_iter": lib.MAX_ITER, "pattern_sets": lib.PATTERN_SETS, "baselines": lib.BASELINES,
                    **settings},
@@ -324,8 +374,8 @@ def main():
     log("== 1. data")
     ensure_raw(log)
     s_labels, s_edges, target, facts = build_struct_graph(log, out)
-    meta["data_sha256"] = {rel(STRUCT_LG): lib.LASTFM_STRUCT_LG_SHA, rel(REF_LG): lib.LASTFM_LG_SHA,
-                           **{"datasets/raw/" + m: s for m, s in lib.LASTFM_MEMBERS.items()}}
+    meta["data_sha256"] = {rel(STRUCT_LG): DS["struct_sha"], rel(REF_LG): DS["ref_sha"],
+                           **{"datasets/raw/" + m: s for m, s in DS["members"].items()}}
     meta["leakage_check"] = facts
 
     # 2. threshold selection (one warmup and one measured run per cell: only the counts are used)
@@ -345,6 +395,7 @@ def main():
         selection_ms.append({"miner": "WeLT", "tau_s": tau_s, "rho_w": rho, "status": row["status"],
                              "totalMs": row["totalMs"]})
         log(f"  WeLT  tau_s={tau_s:<5} rho_w={rho} tau_w={tau_w}: status={row['status']} |R|={n}")
+        status(f"downstream {DATASET} select WeLT tau_s={tau_s} rho_w={rho}: {row['status']} R={n} ({float(row['totalMs']) / 1000:.0f} s)")
         return row["status"], n
 
     def second_condition(tau_s, tau_w):
@@ -358,10 +409,11 @@ def main():
             checks[(tau_s, k)] = {"miner": "GraMi", "max_edges": k, "limit_ms": a.check_limit_ms,
                                   "status": row["status"], "patterns": int(row["R"])}
             log(f"  GraMi tau_s={tau_s:<5} max edges={k or 'any'}: status={row['status']} patterns={row['R']}")
+            status(f"downstream {DATASET} select GraMi tau_s={tau_s} max_edges={k}: {row['status']} patterns={row['R']}")
         note = checks[(tau_s, k)]
         return note["status"] == "OK", note
 
-    chosen, reason, grid_rows = lib.scan(lib.selection_order(tw), run_selection_cell, second_condition)
+    chosen, reason, grid_rows = lib.scan(lib.selection_order(tw, DS["tau_s_grid"]), run_selection_cell, second_condition)
     skipped = sum(1 for r in grid_rows if r["status"] == "SKIPPED")
     if skipped:
         log(f"  {skipped} cells skipped: a higher tau_s at their rho_w is already above the window")
@@ -371,12 +423,16 @@ def main():
                        + ("mining patterns of at most the largest FWS edge count" if a.frequent_bound == "fws-edges"
                           else "mining patterns of any size") + "; no class label is used"),
               "frequent_bound": a.frequent_bound,
-              "grid": {"tau_s": lib.TAU_S_GRID, "rho_w": lib.RHO_W},
+              "grid": {"tau_s": DS["tau_s_grid"], "rho_w": lib.RHO_W},
               "selection_runs": {"WeLT_limit_ms": a.selection_limit_ms, "GraMi_limit_ms": a.check_limit_ms,
                                  "warmup": 1, "measured": 1},
               "tau_w_of_rho_w": tw, "scanned": grid_rows, "reason": reason, "chosen": None}
     if chosen is None:
         write_json(os.path.join(out, "downstream_choice.json"), choice)
+        meta["outcome"] = "no cell chosen: " + reason
+        meta["selection_runs"] = selection_ms
+        meta["finished"] = datetime.datetime.now().isoformat(timespec="seconds")
+        write_json(os.path.join(out, "run_meta.json"), meta)
         fail(log, reason, code=2)
     c = grid_rows[chosen]
     max_edges = c["second_condition"]["max_edges"]
@@ -409,6 +465,7 @@ def main():
         mining_time[name] = {k2: row[k2] for k2 in ("runs", "warmup", *[x for x in row if is_timing_column(x)])}
         commands[name] = cmd
         log(f"  {name:<15} {algo:<6} patterns={row['R']:<6} totalMs median={row['totalMs']} over {row['runs']} runs")
+        status(f"downstream {DATASET} mined {name}: {row['R']} patterns")
     write_csv(os.path.join(out, "mining.csv"), mining_rows)
 
     codes = {name: [r[0] for r in lib.read_dump(p)] for name, p in mined.items()}
@@ -449,12 +506,13 @@ def main():
         shutil.copyfile(p, os.path.join(patterns_dir, re.sub(r"[^A-Za-z]+", "_", name).strip("_") + ".tsv"))
 
     # 5. features and classification
+    status(f"downstream {DATASET} image sets done; classification starts")
     log("== 5. features and classification")
     import numpy as np
     from scipy import sparse
     n = len(s_labels)
     t0 = time.perf_counter()
-    base = lib.baselines(n, s_edges, os.path.join(LASTFM_RAW, "lastfm_asia_features.json"))
+    base = lib.baselines(n, s_edges, os.path.join(RAW, DS["features"]))
     pattern_mats, dims = {}, {"B0": base["B0"].shape[1], "B1": base["B1"].shape[1]}
     for name, _graph in lib.PATTERN_SETS:
         rows_ = images[name]
@@ -527,11 +585,13 @@ def main():
         "feature_dimension": dims,
     }
     write_json(os.path.join(out, f"timings_{a.kind}.json"), timings)
+    meta["outcome"] = "completed"
     meta["finished"] = datetime.datetime.now().isoformat(timespec="seconds")
     meta["outputs"] = sorted(rel(os.path.join(dp, fn)).replace(rel(out) + "/", "")
                              for dp, _dn, fns in os.walk(out) for fn in fns)
     write_json(os.path.join(out, "run_meta.json"), meta)
     log(f"== done -> {rel(out)}")
+    status(f"downstream {DATASET} done")
 
 
 if __name__ == "__main__":

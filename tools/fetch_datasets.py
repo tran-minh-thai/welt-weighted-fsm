@@ -29,8 +29,10 @@ GRAPHS = {
     "bitcoin_otc.lg": "4967da48059fc147ddf24a420fab088c0e4d8cad39a7c0e7674bfced68a6d212",
     "citeseer.lg": "1150fe20d702c49419a5296dc9d8ada47e912a48eda5fdab2d2f987510200a02",
     "email_eu.lg": "5b413cc05e79da1a2ee70837e1541106254bbc00706e2141c3eb65e36f254278",
+    "email_eu_struct.lg": "7a4005c606221f5daac84e57542c38e4b5a7366b7bdc6a3fc97f51c21e059db5",
     "example.lg": "12faa0c703dcccde2979947014e36e441b18822b782293923eca7251a59d774c",
     "github.lg": "4f2e3e63ab3120d3c099606aca2000d1296bc9c4bc49403beb22e57dd892c2a1",
+    "github_struct.lg": "05da9f8fb4c22224bf4602a15ea04b7441a89ab9b850875713d063b222a44b46",
     "lastfm.lg": "be77963234648e22e998b703b2418f9d5dd030926713665fd049e7053c8ed3b7",
     "lastfm_struct.lg": "f80c68853ba6bea9f2f133b853ec114c197025b03a4e478741f229fbaec5d44c",
     "mico.lg": "f94eabe3659b8b35027323f2df00b749c63c78d1e954d36a4036218001333aa1",
@@ -72,23 +74,34 @@ def download(url, dest, attempts=5):
             time.sleep(10 * 2 ** (attempt - 1))
 
 
+def github_raw():
+    """The extracted MUSAE GitHub archive (downloaded and SHA-256 checked when missing)."""
+    os.makedirs(RAW, exist_ok=True)
+    zpath = os.path.join(RAW, "git_web_ml.zip")
+    if not os.path.exists(zpath):
+        download(GITHUB_ZIP_URL, zpath)
+    got = sha256(zpath)
+    if got != GITHUB_ZIP_SHA:
+        sys.exit(f"ERROR: {zpath} has SHA-256 {got}, expected {GITHUB_ZIP_SHA}")
+    with zipfile.ZipFile(zpath) as z:
+        z.extractall(RAW)
+    return os.path.join(RAW, "git_web_ml")
+
+
 def rebuild(name):
     if name == "mico.lg":
         download(MICO_URL, os.path.join(DATA, name))
     elif name == "github.lg":
-        os.makedirs(RAW, exist_ok=True)
-        zpath = os.path.join(RAW, "git_web_ml.zip")
-        if not os.path.exists(zpath):
-            download(GITHUB_ZIP_URL, zpath)
-        got = sha256(zpath)
-        if got != GITHUB_ZIP_SHA:
-            sys.exit(f"ERROR: {zpath} has SHA-256 {got}, expected {GITHUB_ZIP_SHA}")
-        with zipfile.ZipFile(zpath) as z:
-            z.extractall(RAW)
-        src = os.path.join(RAW, "git_web_ml")
+        src = github_raw()
         subprocess.run([sys.executable, os.path.join(DATA, "convert_musae.py"),
                         os.path.join(src, "musae_git_edges.csv"), os.path.join(src, "musae_git_features.json"),
                         os.path.join(src, "musae_git_target.csv"), os.path.join(DATA, name)], check=True)
+    elif name == "github_struct.lg":
+        # the edges and weights of github.lg with degree-class vertex labels (downstream experiment)
+        src = github_raw()
+        subprocess.run([sys.executable, os.path.join(DATA, "convert_musae_struct.py"),
+                        os.path.join(src, "musae_git_edges.csv"), os.path.join(src, "musae_git_features.json"),
+                        os.path.join(DATA, name), "--check-against", os.path.join(DATA, "github.lg")], check=True)
     else:
         sys.exit(f"ERROR: {name} is committed to the repository but missing; run git checkout / git pull")
 

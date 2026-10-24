@@ -1,0 +1,315 @@
+{
+  "rule": "first (tau_s descending, rho_w in [0.5, 0.7]) pair where WeLT returns 20 <= |R| <= 300 FWS and GraMi completes at the same tau_s within 1800000 ms mining patterns of at most the largest FWS edge count; no class label is used",
+  "frequent_bound": "fws-edges",
+  "grid": {
+    "tau_s": [
+      8000,
+      6000,
+      5000,
+      4000,
+      3000,
+      2500,
+      2000,
+      1500,
+      1250,
+      1000,
+      750,
+      500,
+      400,
+      250,
+      150,
+      100,
+      50
+    ],
+    "rho_w": [
+      0.5,
+      0.7
+    ]
+  },
+  "selection_runs": {
+    "WeLT_limit_ms": 600000,
+    "GraMi_limit_ms": 1800000,
+    "warmup": 1,
+    "measured": 1
+  },
+  "tau_w_of_rho_w": {
+    "0.5": "41.3044",
+    "0.7": "57.8261"
+  },
+  "scanned": [
+    {
+      "tau_s": 8000,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "OK",
+      "R": 0,
+      "decision": "below"
+    },
+    {
+      "tau_s": 8000,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 0,
+      "decision": "below"
+    },
+    {
+      "tau_s": 6000,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "TO",
+      "R": 385,
+      "decision": "above (lower bound of a run that did not complete)"
+    },
+    {
+      "tau_s": 6000,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 1,
+      "decision": "below"
+    },
+    {
+      "tau_s": 5000,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 5000,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 1,
+      "decision": "below"
+    },
+    {
+      "tau_s": 4000,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 4000,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 3,
+      "decision": "below"
+    },
+    {
+      "tau_s": 3000,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 3000,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 4,
+      "decision": "below"
+    },
+    {
+      "tau_s": 2500,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 2500,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 5,
+      "decision": "below"
+    },
+    {
+      "tau_s": 2000,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 2000,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 5,
+      "decision": "below"
+    },
+    {
+      "tau_s": 1500,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 1500,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 5,
+      "decision": "below"
+    },
+    {
+      "tau_s": 1250,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 1250,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 5,
+      "decision": "below"
+    },
+    {
+      "tau_s": 1000,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 1000,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 6,
+      "decision": "below"
+    },
+    {
+      "tau_s": 750,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 750,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 6,
+      "decision": "below"
+    },
+    {
+      "tau_s": 500,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 500,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 7,
+      "decision": "below"
+    },
+    {
+      "tau_s": 400,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 400,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 7,
+      "decision": "below"
+    },
+    {
+      "tau_s": 250,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 250,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 7,
+      "decision": "below"
+    },
+    {
+      "tau_s": 150,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 150,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 7,
+      "decision": "below"
+    },
+    {
+      "tau_s": 100,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 100,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 7,
+      "decision": "below"
+    },
+    {
+      "tau_s": 50,
+      "rho_w": 0.5,
+      "tau_w": "41.3044",
+      "status": "SKIPPED",
+      "R": null,
+      "decision": "above (a higher tau_s at this rho_w is above the window)"
+    },
+    {
+      "tau_s": 50,
+      "rho_w": 0.7,
+      "tau_w": "57.8261",
+      "status": "OK",
+      "R": 7,
+      "decision": "below"
+    }
+  ],
+  "reason": "no cell of the grid has 20 <= |R| <= 300",
+  "chosen": null
+}

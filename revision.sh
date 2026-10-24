@@ -551,23 +551,28 @@ b5)
     done
     ;;
 downstream)
-    # One run of tools/downstream/run.py (selection, mining, image sets, classification). A finished
-    # run (run_meta.json present) is not repeated; an interrupted one is moved aside and run again.
+    # One run of tools/downstream/run.py per dataset (DOWNSTREAM_DATASETS, default "lastfm github"),
+    # each into B8_downstream_<dataset>. A finished run (run_meta.json present) is not repeated; an
+    # interrupted one is moved aside and run again. The protocol of each dataset (selection limit,
+    # warmup/measured runs) is in lib.DATASETS; the time limit is the campaign's.
     # DOWNSTREAM_FREQUENT_BOUND=none mines the frequent patterns of any size (fallback when the
-    # size-bounded GraMi run does not complete at any cell).
+    # size-bounded GraMi run does not complete at any cell). A dataset whose scan ends without a
+    # choice (exit 2, run_meta.json outcome "no cell chosen") is recorded and the next dataset runs.
     require_voting_choice
-    D="$RUN_DIR/B8_downstream"
-    if [ -f "$D/run_meta.json" ]; then
-        echo "=== $D is complete; nothing to do"
-    else
+    for ds in ${DOWNSTREAM_DATASETS:-lastfm github}; do
+        D="$RUN_DIR/B8_downstream_$ds"
+        if [ -f "$D/run_meta.json" ]; then
+            echo "=== $D is complete (outcome in run_meta.json); nothing to do"
+            continue
+        fi
         if [ -d "$D" ]; then mv "$D" "$D.interrupted_$(date +%Y%m%d_%H%M%S)"; fi
         rc=0
-        "${DOWNSTREAM_PYTHON:-$PY}" tools/downstream/run.py --out "$D" --kind measurement \
-            --voting "$RUN_DIR/voting_choice.json" --limit-ms "$LIMIT" --warmup "$WARMUP" --measured "$MEASURED" \
+        "${DOWNSTREAM_PYTHON:-$PY}" tools/downstream/run.py --dataset "$ds" --out "$D" --kind measurement \
+            --voting "$RUN_DIR/voting_choice.json" --limit-ms "$LIMIT" \
             --frequent-bound "${DOWNSTREAM_FREQUENT_BOUND:-fws-edges}" --skip-build || rc=$?
-        checkpoint "downstream: exit $rc"
-        [ "$rc" -eq 0 ] || exit "$rc"
-    fi
+        checkpoint "downstream $ds: exit $rc"
+        [ "$rc" -eq 0 ] || [ "$rc" -eq 2 ] || exit "$rc"
+    done
     ;;
 b7)
     # Required (exit 1 on failure): GraMiFilter = WeLT; the exact ALL result

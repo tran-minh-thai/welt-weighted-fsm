@@ -197,7 +197,16 @@ def _():
     order = lib.selection_order({0.5: "a", 0.7: "b"})
     assert order[:3] == [(1600, 0.5, "a"), (1600, 0.7, "b"), (1200, 0.5, "a")]
     assert len(order) == 2 * len(lib.TAU_S_GRID)
-    assert list(lib.TAU_S_GRID) == sorted(lib.TAU_S_GRID, reverse=True)
+    for name, d in lib.DATASETS.items():
+        g = d["tau_s_grid"]
+        assert list(g) == sorted(set(g), reverse=True), f"{name}: grid not strictly descending"
+        assert lib.selection_order({0.5: "a", 0.7: "b"}, g)[0] == (g[0], 0.5, "a")
+        assert set(d["members"]) == {d["edges"], d["features"], d["target"]}, name
+        pr = d["protocol"]
+        assert set(pr) == {"selection_limit_ms", "warmup", "measured"} and pr["warmup"] >= 1 and pr["measured"] >= 1, name
+    assert lib.DATASETS["lastfm"]["protocol"] == {"selection_limit_ms": 600000, "warmup": 1, "measured": 5}
+    assert {7500, 7000, 6500} <= set(lib.DATASETS["github"]["tau_s_grid"])
+    assert lib.DATASETS["lastfm"]["tau_s_grid"] == lib.TAU_S_GRID, "the LastFM grid of the measured run"
 
 
 # ---------------------------------------------------------------- pattern sets and features
@@ -315,7 +324,7 @@ def toy_evaluation():
     from scipy import sparse
     rng = np.random.default_rng(0)
     y = np.repeat([0, 1, 2], 30)
-    cont = rng.normal(size=(90, 2)) * [10.0, 1000.0]
+    cont = np.abs(rng.normal(size=(90, 2))) * [10.0, 1000.0]   # degree and weight are non-negative
     noise = sparse.csr_matrix(np.column_stack([cont, rng.integers(0, 2, size=(90, 2))]))
     informative = sparse.csr_matrix(np.column_stack([cont, np.eye(3)[y]]))
     mats = {}
@@ -357,10 +366,24 @@ def _():
     from sklearn.metrics import f1_score
     rng = np.random.default_rng(1)
     y = np.repeat([0, 1], 60)
-    tiny = y * 1e-3 + rng.normal(scale=1e-5, size=120)        # separates the classes, in units of 1e-3
-    x = sparse.csr_matrix(np.column_stack([tiny, rng.normal(size=120), rng.integers(0, 2, size=(120, 2))]))
+    tiny = y * 1e-3 + np.abs(rng.normal(scale=1e-5, size=120))  # separates the classes, in units of 1e-3
+    x = sparse.csr_matrix(np.column_stack([tiny, np.abs(rng.normal(size=120)), rng.integers(0, 2, size=(120, 2))]))
     m = lib.model(1).fit(x, y)
     assert f1_score(y, m.predict(x), average="macro") > 0.95, "the unscaled column would be shrunk to zero"
+
+
+@case("evaluation: the continuous columns are log(1 + x) then standardised; binary columns untouched")
+def _():
+    import numpy as np
+    from scipy import sparse
+    x = np.array([[0.0, 1.0, 1, 0], [3.0, 10.0, 0, 1], [99.0, 1000.0, 1, 1], [7.0, 0.0, 0, 0]])
+    step = lib.model(1).estimator.steps[0][1].fit(sparse.csr_matrix(x))
+    got = step.transform(sparse.csr_matrix(x))
+    got = got.toarray() if hasattr(got, "toarray") else got
+    lg = np.log1p(x[:, :2])
+    want = (lg - lg.mean(axis=0)) / lg.std(axis=0)
+    assert np.allclose(got[:, :2], want) and np.array_equal(got[:, 2:], x[:, 2:]), got
+    assert raises(lambda: lib.log_dense(np.array([[-1.0, 2.0]])))
 
 
 def main():

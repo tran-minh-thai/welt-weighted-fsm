@@ -1,0 +1,32 @@
+== downstream node classification | dataset=github | kind=probe | out=results-probe/downstream/20261024_2000_mac-probe_github
+  downstream selftest: 24/24 cases passed
+  WeLT voting: runner default (WELT_VOTER unset)
+== 1. data
+  raw git_web_ml.zip members: SHA-256 verified
+  <out>/github_struct.rebuilt.lg: 37700 vertices, 289003 edges | degree cut points [2, 4, 8, 16] | class sizes [9665, 6507, 7552, 6454, 7522]
+  check against <repo>/datasets/github.lg: 37700 vertices, 289003 edge lines compared byte by byte; 8235 vertices share their label
+  github_struct.lg rebuilt from the raw files: identical to the expected file
+  leakage check: {"vertices": 37700, "edges_compared": 289003, "edges_equal": true, "vertex_count_equal": true, "labels_are_degree_classes": true, "distinct_labels": 5, "vertices_whose_label_equals_target": 8235}
+== 2. threshold selection
+  tau_w = min + rho_w * (max - min): {"0.5": "41.3044", "0.7": "57.8261"}
+  WeLT  tau_s=8000  rho_w=0.5 tau_w=41.3044: status=OK |R|=0
+  WeLT  tau_s=8000  rho_w=0.7 tau_w=57.8261: status=OK |R|=0
+  WeLT  tau_s=6000  rho_w=0.5 tau_w=41.3044: status=TO |R|=385
+  WeLT  tau_s=6000  rho_w=0.7 tau_w=57.8261: status=OK |R|=1
+  WeLT  tau_s=5000  rho_w=0.7 tau_w=57.8261: status=OK |R|=1
+  WeLT  tau_s=4000  rho_w=0.7 tau_w=57.8261: status=OK |R|=3
+  WeLT  tau_s=3000  rho_w=0.7 tau_w=57.8261: status=OK |R|=4
+  WeLT  tau_s=2500  rho_w=0.7 tau_w=57.8261: status=OK |R|=5
+  WeLT  tau_s=2000  rho_w=0.7 tau_w=57.8261: status=OK |R|=5
+  WeLT  tau_s=1500  rho_w=0.7 tau_w=57.8261: status=OK |R|=5
+  WeLT  tau_s=1250  rho_w=0.7 tau_w=57.8261: status=OK |R|=5
+  WeLT  tau_s=1000  rho_w=0.7 tau_w=57.8261: status=OK |R|=6
+  WeLT  tau_s=750   rho_w=0.7 tau_w=57.8261: status=OK |R|=6
+  WeLT  tau_s=500   rho_w=0.7 tau_w=57.8261: status=OK |R|=7
+  WeLT  tau_s=400   rho_w=0.7 tau_w=57.8261: status=OK |R|=7
+  WeLT  tau_s=250   rho_w=0.7 tau_w=57.8261: status=OK |R|=7
+  WeLT  tau_s=150   rho_w=0.7 tau_w=57.8261: status=OK |R|=7
+  WeLT  tau_s=100   rho_w=0.7 tau_w=57.8261: status=OK |R|=7
+  WeLT  tau_s=50    rho_w=0.7 tau_w=57.8261: status=OK |R|=7
+  15 cells skipped: a higher tau_s at their rho_w is already above the window
+ERROR: no cell of the grid has 20 <= |R| <= 300
