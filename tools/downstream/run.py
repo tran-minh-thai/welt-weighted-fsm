@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Downstream node classification with mined patterns on LastFM Asia (one command).
+"""Downstream node classification with mined patterns on a MUSAE dataset (one command).
 
-    python tools/downstream/run.py [--out DIR] [--kind probe|measurement] [--voting voting_choice.json]
+    python tools/downstream/run.py [--dataset lastfm|github] [--out DIR] [--kind probe|measurement] [--voting voting_choice.json]
                                    [--limit-ms N] [--selection-limit-ms N] [--check-limit-ms N]
                                    [--frequent-bound fws-edges|none] [--warmup W] [--measured M]
                                    [--jobs J] [--seeds S] [--folds K] [--skip-build]
 
 Steps (README.md in this folder gives the design and the leakage controls):
-  1. data      fetch the raw MUSAE archive if missing, verify every SHA-256, rebuild
-               datasets/lastfm_struct.lg and compare it with the committed file and with lastfm.lg;
+  1. data      fetch the raw MUSAE archive if missing, verify every SHA-256, rebuild the mining
+               graph (lib.DATASETS) and compare it with the expected file and with the class graph;
   2. select    scan the fixed (tau_s, rho_w) grid: a cell is chosen when WeLT returns 20..300
                frequent weighted subgraphs (FWS) and GraMi completes at the same tau_s within
                --check-limit-ms, mining patterns of at most as many edges as the largest FWS
@@ -50,9 +50,9 @@ import lib  # noqa: E402
 
 DATA = os.path.join(ROOT, "datasets")
 RAW = os.path.join(DATA, "raw")
-LASTFM_RAW = os.path.join(RAW, "lasftm_asia")
-STRUCT_LG = os.path.join(DATA, "lastfm_struct.lg")
-REF_LG = os.path.join(DATA, "lastfm.lg")
+DS = None          # the entry of lib.DATASETS chosen by --dataset (set in main)
+STRUCT_LG = None   # datasets/<struct_lg>: the mining graph
+REF_LG = None      # datasets/<ref_lg>: the same graph with the class as vertex label
 TOOL_FILES = [
     "tools/downstream/run.py", "tools/downstream/lib.py", "tools/downstream/selftest.py",
     "tools/downstream/requirements.txt", "datasets/convert_musae_struct.py", "tools/heavy_subgraph.py",
@@ -139,54 +139,53 @@ def java(cls, *args):
 # ---------------------------------------------------------------- step 1: data
 
 def ensure_raw(log):
-    missing = [m for m in lib.LASTFM_MEMBERS if not os.path.isfile(os.path.join(RAW, m))]
+    missing = [m for m in DS["members"] if not os.path.isfile(os.path.join(RAW, m))]
     if missing:
-        zpath = os.path.join(RAW, "lastfm_asia.zip")
+        zpath = os.path.join(RAW, DS["zip"])
         os.makedirs(RAW, exist_ok=True)
         if not os.path.isfile(zpath):
-            log(f"  downloading {lib.LASTFM_ZIP_URL}")
-            with urllib.request.urlopen(lib.LASTFM_ZIP_URL, timeout=120) as r, open(zpath + ".part", "wb") as out:
+            log(f"  downloading {DS['url']}")
+            with urllib.request.urlopen(DS["url"], timeout=120) as r, open(zpath + ".part", "wb") as out:
                 shutil.copyfileobj(r, out)
             os.replace(zpath + ".part", zpath)
         got = lib.sha256(zpath)
-        if got != lib.LASTFM_ZIP_SHA:
-            fail(log, f"{rel(zpath)} has SHA-256 {got}, expected {lib.LASTFM_ZIP_SHA}")
+        if got != DS["zip_sha"]:
+            fail(log, f"{rel(zpath)} has SHA-256 {got}, expected {DS['zip_sha']}")
         with zipfile.ZipFile(zpath) as z:
-            for m in lib.LASTFM_MEMBERS:
+            for m in DS["members"]:
                 z.extract(m, RAW)
-    for m, sha in lib.LASTFM_MEMBERS.items():
+    for m, sha in DS["members"].items():
         got = lib.sha256(os.path.join(RAW, m))
         if got != sha:
             fail(log, f"datasets/raw/{m} has SHA-256 {got}, expected {sha}")
-    log("  raw LastFM Asia files: SHA-256 verified")
+    log(f"  raw {DS['zip']} members: SHA-256 verified")
 
 
 def build_struct_graph(log, out_dir):
-    for path, sha in ((REF_LG, lib.LASTFM_LG_SHA), (STRUCT_LG, lib.LASTFM_STRUCT_LG_SHA)):
+    for path, sha in ((REF_LG, DS["ref_sha"]), (STRUCT_LG, DS["struct_sha"])):
         got = lib.sha256(path)
         if got != sha:
             fail(log, f"{rel(path)} has SHA-256 {got}, expected {sha}")
-    rebuilt = os.path.join(out_dir, "lastfm_struct.rebuilt.lg")
+    rebuilt = os.path.join(out_dir, DS["struct_lg"].replace(".lg", ".rebuilt.lg"))
     p = subprocess.run([sys.executable, os.path.join(DATA, "convert_musae_struct.py"),
-                        os.path.join(LASTFM_RAW, "lastfm_asia_edges.csv"),
-                        os.path.join(LASTFM_RAW, "lastfm_asia_features.json"), rebuilt,
+                        os.path.join(RAW, DS["edges"]), os.path.join(RAW, DS["features"]), rebuilt,
                         "--check-against", REF_LG], capture_output=True, text=True)
     for line in (p.stdout + p.stderr).splitlines():
         log("  " + line.replace(out_dir, "<out>").replace(ROOT, "<repo>"))
     if p.returncode != 0:
-        fail(log, "convert_musae_struct.py failed its check against lastfm.lg")
-    if lib.sha256(rebuilt) != lib.LASTFM_STRUCT_LG_SHA:
-        fail(log, "the rebuilt lastfm_struct.lg differs from the committed one")
+        fail(log, f"convert_musae_struct.py failed its check against {DS['ref_lg']}")
+    if lib.sha256(rebuilt) != DS["struct_sha"]:
+        fail(log, f"the rebuilt {DS['struct_lg']} differs from the committed one")
     os.remove(rebuilt)
-    log("  lastfm_struct.lg rebuilt from the raw files: identical to the committed file")
+    log(f"  {DS['struct_lg']} rebuilt from the raw files: identical to the expected file")
 
     s_labels, s_edges = lib.read_lg(STRUCT_LG)
     r_labels, r_edges = lib.read_lg(REF_LG)
-    target = lib.read_target(os.path.join(LASTFM_RAW, "lastfm_asia_target.csv"))
+    target = lib.read_target(os.path.join(RAW, DS["target"]))
     ok, facts = lib.leakage_report(s_labels, s_edges, r_labels, r_edges, target)
     log("  leakage check: " + json.dumps(facts))
     if not ok:
-        fail(log, "the mining graph is not lastfm.lg with degree-class labels")
+        fail(log, f"the mining graph is not {DS['ref_lg']} with degree-class labels")
     return s_labels, s_edges, target, facts
 
 
@@ -241,7 +240,8 @@ def image_sets(log, dump, tau_w, mode, out_path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", help="output directory (default results-probe/downstream/<date>_<host>)")
+    ap.add_argument("--dataset", choices=sorted(lib.DATASETS), default="lastfm")
+    ap.add_argument("--out", help="output directory (default results-probe/downstream/<date>_<host>_<dataset>)")
     ap.add_argument("--kind", choices=("probe", "measurement"), default="probe")
     ap.add_argument("--voting", help="voting_choice.json of the campaign (WELT_VOTER, WELT_WORDER)")
     ap.add_argument("--limit-ms", type=int, default=DESIGN_DEFAULTS["limit_ms"],
@@ -259,16 +259,20 @@ def main():
     ap.add_argument("--folds", type=int, default=DESIGN_DEFAULTS["folds"], help="probe only: outer folds")
     ap.add_argument("--skip-build", action="store_true", help="target/classes is already built")
     a = ap.parse_args()
+    global DS, STRUCT_LG, REF_LG
+    DS = lib.DATASETS[a.dataset]
+    STRUCT_LG = os.path.join(DATA, DS["struct_lg"])
+    REF_LG = os.path.join(DATA, DS["ref_lg"])
 
     host = re.sub(r"[^A-Za-z0-9_.-]", "_", socket.gethostname())
     started = datetime.datetime.now()
     out = os.path.abspath(a.out or os.path.join(ROOT, "results-probe", "downstream",
-                                                started.strftime("%Y%m%d_%H%M") + "_" + host))
+                                                started.strftime("%Y%m%d_%H%M") + "_" + host + "_" + a.dataset))
     if os.path.exists(out) and os.listdir(out):
         sys.exit(f"ERROR: {out} exists and is not empty; choose another --out")
     os.makedirs(out, exist_ok=True)
     log = Log(os.path.join(out, "console.txt"))
-    log(f"== downstream node classification | kind={a.kind} | out={rel(out)}")
+    log(f"== downstream node classification | dataset={a.dataset} | kind={a.kind} | out={rel(out)}")
 
     settings = {"limit_ms": a.limit_ms, "selection_limit_ms": a.selection_limit_ms,
                 "check_limit_ms": a.check_limit_ms, "frequent_bound": a.frequent_bound,
@@ -294,6 +298,7 @@ def main():
     tree = git("status", "--porcelain", "--untracked-files=no")
     meta = {
         "experiment": "downstream node classification",
+        "dataset": a.dataset,
         "kind": a.kind,
         "command": " ".join([os.path.basename(sys.executable), rel(os.path.abspath(sys.argv[0])), *sys.argv[1:]]),
         "started": started.isoformat(timespec="seconds"),
@@ -303,7 +308,7 @@ def main():
         "python": platform.python_version(), "packages": pins, "java": java_version(),
         "java_opts": os.environ.get("JAVA_OPTS", ""),
         "tool_sha256": {f: lib.sha256(os.path.join(ROOT, f)) for f in TOOL_FILES},
-        "design": {"tau_s_grid": lib.TAU_S_GRID, "rho_w": lib.RHO_W, "pattern_window": lib.PATTERN_WINDOW,
+        "design": {"tau_s_grid": DS["tau_s_grid"], "continuous_columns": "log1p, then standardised", "rho_w": lib.RHO_W, "pattern_window": lib.PATTERN_WINDOW,
                    "seeds": seeds, "folds": a.folds, "inner_folds": lib.INNER_FOLDS, "C_grid": lib.C_GRID,
                    "max_iter": lib.MAX_ITER, "pattern_sets": lib.PATTERN_SETS, "baselines": lib.BASELINES,
                    **settings},
@@ -324,8 +329,8 @@ def main():
     log("== 1. data")
     ensure_raw(log)
     s_labels, s_edges, target, facts = build_struct_graph(log, out)
-    meta["data_sha256"] = {rel(STRUCT_LG): lib.LASTFM_STRUCT_LG_SHA, rel(REF_LG): lib.LASTFM_LG_SHA,
-                           **{"datasets/raw/" + m: s for m, s in lib.LASTFM_MEMBERS.items()}}
+    meta["data_sha256"] = {rel(STRUCT_LG): DS["struct_sha"], rel(REF_LG): DS["ref_sha"],
+                           **{"datasets/raw/" + m: s for m, s in DS["members"].items()}}
     meta["leakage_check"] = facts
 
     # 2. threshold selection (one warmup and one measured run per cell: only the counts are used)
@@ -361,7 +366,7 @@ def main():
         note = checks[(tau_s, k)]
         return note["status"] == "OK", note
 
-    chosen, reason, grid_rows = lib.scan(lib.selection_order(tw), run_selection_cell, second_condition)
+    chosen, reason, grid_rows = lib.scan(lib.selection_order(tw, DS["tau_s_grid"]), run_selection_cell, second_condition)
     skipped = sum(1 for r in grid_rows if r["status"] == "SKIPPED")
     if skipped:
         log(f"  {skipped} cells skipped: a higher tau_s at their rho_w is already above the window")
@@ -371,7 +376,7 @@ def main():
                        + ("mining patterns of at most the largest FWS edge count" if a.frequent_bound == "fws-edges"
                           else "mining patterns of any size") + "; no class label is used"),
               "frequent_bound": a.frequent_bound,
-              "grid": {"tau_s": lib.TAU_S_GRID, "rho_w": lib.RHO_W},
+              "grid": {"tau_s": DS["tau_s_grid"], "rho_w": lib.RHO_W},
               "selection_runs": {"WeLT_limit_ms": a.selection_limit_ms, "GraMi_limit_ms": a.check_limit_ms,
                                  "warmup": 1, "measured": 1},
               "tau_w_of_rho_w": tw, "scanned": grid_rows, "reason": reason, "chosen": None}
@@ -454,7 +459,7 @@ def main():
     from scipy import sparse
     n = len(s_labels)
     t0 = time.perf_counter()
-    base = lib.baselines(n, s_edges, os.path.join(LASTFM_RAW, "lastfm_asia_features.json"))
+    base = lib.baselines(n, s_edges, os.path.join(RAW, DS["features"]))
     pattern_mats, dims = {}, {"B0": base["B0"].shape[1], "B1": base["B1"].shape[1]}
     for name, _graph in lib.PATTERN_SETS:
         rows_ = images[name]

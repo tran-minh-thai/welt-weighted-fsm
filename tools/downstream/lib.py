@@ -9,9 +9,9 @@ import json
 
 # ---------------------------------------------------------------- fixed design (set before any run)
 
-# Support thresholds scanned in descending order; for each, rho_w in RHO_W order. The first pair
-# whose WeLT result set has PATTERN_WINDOW[0] <= |R| <= PATTERN_WINDOW[1] patterns is used (see
-# scan). The grid and the rule use no class label (only the size of the result set).
+# Support thresholds are scanned in descending order (the grid of each dataset, DATASETS); for
+# each, rho_w in RHO_W order. The first pair whose WeLT result set has PATTERN_WINDOW[0] <= |R| <=
+# PATTERN_WINDOW[1] patterns is used (see scan). The grids and the rule use no class label.
 TAU_S_GRID = (1600, 1200, 1000, 800, 600, 500, 400, 300, 250, 200, 150, 100, 75, 50, 30, 20, 10)
 RHO_W = (0.5, 0.7)
 PATTERN_WINDOW = (20, 300)
@@ -35,16 +35,43 @@ PATTERN_SETS = (
 BASELINES = ("B0", "B1")   # B0: degree and total incident weight; B1: B0 and the artist features
 REFERENCE = "FWS"          # the paired tests compare base + FWS with every other set at the same base
 
-# Raw MUSAE LastFM Asia archive (SNAP) and its members.
-LASTFM_ZIP_URL = "https://snap.stanford.edu/data/lastfm_asia.zip"
-LASTFM_ZIP_SHA = "51acb78a923bb223ed6e61be88f91122fb29adca3f07beff7289cafd98601d47"
-LASTFM_MEMBERS = {
-    "lasftm_asia/lastfm_asia_edges.csv": "548eacff61bff564ab5007831fa4a7a30e1a3956075ffd24e43310ed33555842",
-    "lasftm_asia/lastfm_asia_features.json": "93fe84c96ffa9f0081ab37085979641062393895925de6c344df0f829c8ed2e7",
-    "lasftm_asia/lastfm_asia_target.csv": "91f19215f6eca8321feec038bd32900cf13fd4f7e041a9976cf202807c72ac16",
+# The MUSAE datasets (SNAP archives): raw members, the graph with the class as vertex label (ref,
+# the graph of the efficiency experiments) and the mining graph with degree-class labels (struct).
+# tau_s_grid: LastFM's grid starts below its largest degree class (1,979 vertices); GitHub's grid
+# has the same relative steps (rounded) from below its largest degree class (9,665 vertices), so that
+# both scans begin where single-edge patterns can first be frequent.
+DATASETS = {
+    "lastfm": {
+        "zip": "lastfm_asia.zip", "url": "https://snap.stanford.edu/data/lastfm_asia.zip",
+        "zip_sha": "51acb78a923bb223ed6e61be88f91122fb29adca3f07beff7289cafd98601d47",
+        "edges": "lasftm_asia/lastfm_asia_edges.csv", "features": "lasftm_asia/lastfm_asia_features.json",
+        "target": "lasftm_asia/lastfm_asia_target.csv",
+        "members": {
+            "lasftm_asia/lastfm_asia_edges.csv": "548eacff61bff564ab5007831fa4a7a30e1a3956075ffd24e43310ed33555842",
+            "lasftm_asia/lastfm_asia_features.json": "93fe84c96ffa9f0081ab37085979641062393895925de6c344df0f829c8ed2e7",
+            "lasftm_asia/lastfm_asia_target.csv": "91f19215f6eca8321feec038bd32900cf13fd4f7e041a9976cf202807c72ac16",
+        },
+        "ref_lg": "lastfm.lg", "ref_sha": "be77963234648e22e998b703b2418f9d5dd030926713665fd049e7053c8ed3b7",
+        "struct_lg": "lastfm_struct.lg",
+        "struct_sha": "f80c68853ba6bea9f2f133b853ec114c197025b03a4e478741f229fbaec5d44c",
+        "tau_s_grid": TAU_S_GRID,
+    },
+    "github": {
+        "zip": "git_web_ml.zip", "url": "https://snap.stanford.edu/data/git_web_ml.zip",
+        "zip_sha": "56c0c1c2c460dc4c7bf89357b1fec020f45e2ecebab81d131d073b10e28ec031",
+        "edges": "git_web_ml/musae_git_edges.csv", "features": "git_web_ml/musae_git_features.json",
+        "target": "git_web_ml/musae_git_target.csv",
+        "members": {
+            "git_web_ml/musae_git_edges.csv": "34c57382246949d1b3b7fa641a8532672001ecae8e9558f0b3c113cc035bd781",
+            "git_web_ml/musae_git_features.json": "47761f93f839d84b213e9f2fa43c056761734b295d6b2e838d8bbc335073cee7",
+            "git_web_ml/musae_git_target.csv": "3a8582f0c55d6f605df5f45bde28a90561be9517b40226c5e6bbce253679906a",
+        },
+        "ref_lg": "github.lg", "ref_sha": "4f2e3e63ab3120d3c099606aca2000d1296bc9c4bc49403beb22e57dd892c2a1",
+        "struct_lg": "github_struct.lg",
+        "struct_sha": "05da9f8fb4c22224bf4602a15ea04b7441a89ab9b850875713d063b222a44b46",
+        "tau_s_grid": (8000, 6000, 5000, 4000, 3000, 2500, 2000, 1500, 1250, 1000, 750, 500, 400, 250, 150, 100, 50),
+    },
 }
-LASTFM_LG_SHA = "be77963234648e22e998b703b2418f9d5dd030926713665fd049e7053c8ed3b7"
-LASTFM_STRUCT_LG_SHA = "f80c68853ba6bea9f2f133b853ec114c197025b03a4e478741f229fbaec5d44c"
 
 
 def sha256(path):
@@ -119,9 +146,9 @@ def read_target(path):
 
 # ---------------------------------------------------------------- threshold selection
 
-def selection_order(tau_w_of_rho):
+def selection_order(tau_w_of_rho, grid=TAU_S_GRID):
     """The (tau_s, rho_w, tau_w) pairs in scan order."""
-    return [(s, r, tau_w_of_rho[r]) for s in TAU_S_GRID for r in RHO_W]
+    return [(s, r, tau_w_of_rho[r]) for s in grid for r in RHO_W]
 
 
 def scan(order, run, check=None):
@@ -286,21 +313,26 @@ def dedupe_columns(m):
 
 # ---------------------------------------------------------------- evaluation
 
-def to_dense(x):
-    """The two continuous columns as a dense array (StandardScaler cannot centre a sparse matrix)."""
-    return x.toarray() if hasattr(x, "toarray") else x
+def log_dense(x):
+    """log(1 + x) of the two continuous columns (degree and total weight, right-skewed), as a
+    dense array (StandardScaler cannot centre a sparse matrix). Negative values are refused."""
+    import numpy as np
+    x = x.toarray() if hasattr(x, "toarray") else np.asarray(x, dtype=float)
+    if (x < 0).any():
+        raise ValueError("a continuous column has a negative value")
+    return np.log1p(x)
 
 
 def model(seed, n_jobs=None):
     """Logistic regression with class-balanced weights; the two continuous columns (0 and 1) are
-    standardised on the training data, the binary columns pass through; C is chosen in C_GRID by
+    log(1 + x)-transformed and standardised on the training data, the binary columns pass through; C is chosen in C_GRID by
     stratified INNER_FOLDS-fold cross-validation inside the training data (macro-F1)."""
     from sklearn.compose import ColumnTransformer
     from sklearn.linear_model import LogisticRegression
     from sklearn.model_selection import GridSearchCV, StratifiedKFold
     from sklearn.pipeline import Pipeline
     from sklearn.preprocessing import FunctionTransformer, StandardScaler
-    continuous = Pipeline([("dense", FunctionTransformer(to_dense, accept_sparse=True)), ("std", StandardScaler())])
+    continuous = Pipeline([("log", FunctionTransformer(log_dense, accept_sparse=True)), ("std", StandardScaler())])
     pipe = Pipeline([
         ("scale", ColumnTransformer([("continuous", continuous, [0, 1])], remainder="passthrough",
                                     sparse_threshold=1.0)),
