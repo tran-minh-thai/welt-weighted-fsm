@@ -1,0 +1,37 @@
+{
+  "graph": "github_struct.lg",
+  "graph_sha256": "05da9f8fb4c22224bf4602a15ea04b7441a89ab9b850875713d063b222a44b46",
+  "labels": "github.lg",
+  "labels_sha256": "4f2e3e63ab3120d3c099606aca2000d1296bc9c4bc49403beb22e57dd892c2a1",
+  "min_class": 10,
+  "classes_total": 2,
+  "classes_kept": 2,
+  "vertices_total": 37700,
+  "vertices_kept": 37700,
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "folds": 10,
+  "fold_rows": 30,
+  "B0_macro_f1_mean": 0.4628086583220425,
+  "B0_macro_f1_sd": 0.006030751039604798,
+  "B0_accuracy_mean": 0.46377541998231653,
+  "B0_accuracy_sd": 0.006144851975303493,
+  "B0_C_chosen": {
+    "0.01": 0,
+    "0.1": 0,
+    "1.0": 1,
+    "10.0": 29
+  },
+  "chance": {
+    "classes": 2,
+    "uniform_macro_f1": 0.46898618341794307,
+    "prior_macro_f1": 0.5,
+    "uniform_accuracy": 0.5,
+    "prior_accuracy": 0.6168098290989171
+  },
+  "B0_folds_above_uniform_chance": 6,
+  "B0_folds_above_prior_chance": 0
+}

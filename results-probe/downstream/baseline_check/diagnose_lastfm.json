@@ -1,0 +1,1 @@
+{"vertices": 7624, "classes": 18, "design LR": {"macro_f1_mean": 0.03589169203133615, "macro_f1_sd": 0.006409250655861782, "folds": 10}, "design LR on log1p": {"macro_f1_mean": 0.029676806596330464, "macro_f1_sd": 0.009172753843976107, "folds": 10}, "gradient boosting": {"macro_f1_mean": 0.046777029511216206, "macro_f1_sd": 0.004424428898377856, "folds": 10}}
