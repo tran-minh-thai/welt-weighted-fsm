@@ -28,8 +28,15 @@ does less work. Keys, with <c> the cell name with '.' replaced by '_':
   e5m.<c>.controlled_bt.grid_distinct       number of distinct values over the 22 voters
   e5m.<c>.no_controlled_work                1 when the mining phase has no MNI count with searches and at
                                             most one weight check (the ratios then compare a few nodes)
-  e5x.count.{above_floor,below_floor,mode_better}   over every (cell, compared order), cells with
-                                            controlled work only
+  e5x.count.{above_floor,below_floor,mode_better,comparisons}   over every (cell, compared order), cells
+                                            with controlled work only; e5x.count.novote.* the same over the
+                                            orders without a vote (index, reverse, random) only
+  e5m.<c>.weight.fail_share                 failing weight checks / all weight checks, backtracking nodes
+  e5x.<c>.<mode>.mni_searches_ratio, e5x.<c>.{default,<mode>}.nodes_per_search   mining MNI counts
+  e5x.<c>.<mode>.table_bt_ratio             backtracking of the lookup-table build (also ordered by the vote)
+  e5x.table_bt_ratio.<mode>.{min,max}       over the cells with a table build
+  e5x.count.reverse_weight_above, e5x.reverse.bt_ratio_weight.max   weight-check part under reverse
+  e5x.cells_with_work, e5x.cells_without_work, e5x.random.seeds
 Exits 1 when a cell lacks the default run or a mode, or when runs of a cell disagree on the result set.
 """
 import json
@@ -59,6 +66,9 @@ def main():
         cells.setdefault(r["cell"], {})[r["voter_or_mode"]] = r
     keys, rows, problems = {}, [], []
     above = below = better = 0
+    nv = {"above": 0, "below": 0, "better": 0}
+    rev_w_above, rev_w = 0, []
+    table_r = {}
     cost_count = {"above": 0, "below": 0, "better": 0}
     for cell, rs in cells.items():
         c = cell.replace(".", "_")
@@ -100,6 +110,8 @@ def main():
             keys[f"{k}.weight.{part}.bt_ratio"] = (max(vals) / min(vals)) if min(vals) else (1.0 if max(vals) == 0 else None)
         n = s["mining.mni.calls"]
         keys[f"{k}.pattern_vertices.mean"] = share(s["mining.mni.vertices_sum"], n)
+        wb = s["mining.weight.pass_backtrack"] + s["mining.weight.fail_backtrack"]
+        keys[f"{k}.weight.fail_share"] = share(s["mining.weight.fail_backtrack"], wb)
         keys[f"{k}.pattern_vertices.max"] = s["mining.mni.vertices_max"]
         base = controlled(d)
         cg = {v: controlled(r) for v, r in grid.items()}
@@ -115,6 +127,17 @@ def main():
         keys[f"{k}.no_controlled_work"] = int(idle)
         x = f"e5x.{c}"
         ratio = {}
+        keys[f"e5x.{c}.default.nodes_per_search"] = share(s["mining.mni.backtrack"], s["mining.mni.searches"])
+        tb0 = s["table.mni.backtrack"] + s["table.weight.backtrack"]
+        for m in modes + (["cost"] if "cost" in rs else []):
+            sm = rs[m]["stats"]
+            mk = m.replace(":", "_")
+            keys[f"e5x.{c}.{mk}.mni_searches_ratio"] = share(sm["mining.mni.searches"], s["mining.mni.searches"]) if s["mining.mni.searches"] else None
+            keys[f"e5x.{c}.{mk}.nodes_per_search"] = share(sm["mining.mni.backtrack"], sm["mining.mni.searches"])
+            if tb0:
+                v = share(sm["table.mni.backtrack"] + sm["table.weight.backtrack"], tb0)
+                keys[f"e5x.{c}.{mk}.table_bt_ratio"] = v
+                table_r.setdefault(mk, []).append(v)
         if "cost" in rs:
             ratio["cost"] = share(controlled(rs["cost"]), base) if base else None
             for part in ("mni", "weight"):
@@ -142,6 +165,15 @@ def main():
         for m in modes + ["grid_worst"]:
             r_ = rs[m] if m in rs else rs[worst_v]
             keys[f"{x}.total_bt_ratio.{m.replace(':', '_')}"] = share(r_["backtrack"], d["backtrack"])
+        if not idle:
+            for m in modes:
+                v = ratio[m.replace(":", "_")]
+                if v is not None:
+                    nv["above" if v > floor else "better" if v < 1 / floor else "below"] += 1
+            vw = keys.get(f"{x}.reverse.bt_ratio_weight")
+            if vw is not None:
+                rev_w.append(vw)
+                rev_w_above += vw > floor
         for m in modes + ["grid_best", "grid_worst"]:
             v = ratio[m.replace(":", "_")]
             if v is None or idle:
@@ -166,6 +198,18 @@ def main():
             keys[f"{k}.size_{h}.share_of_gap"] = share(by.get(worst_v, 0) - by.get(best_v, 0), diff) if diff else 0.0
         rows.append((cell + (" (no controlled work)" if idle else ""), d["group"], d["N"], d["M"], base, s["mining.mni.calls"], s["mining.weight.calls"],
                      keys[f"{k}.share_bt.mni"] + keys[f"{k}.share_bt.weight"], ratio))
+    keys["e5x.count.comparisons"] = above + below + better
+    for kk, vv in nv.items():
+        keys[f"e5x.count.novote.{kk}"] = vv
+    keys["e5x.count.novote.comparisons"] = sum(nv.values())
+    keys["e5x.count.reverse_weight_above"] = rev_w_above
+    keys["e5x.reverse.bt_ratio_weight.max"] = max(rev_w) if rev_w else None
+    for mk, vals in table_r.items():
+        keys[f"e5x.table_bt_ratio.{mk}.min"] = min(vals)
+        keys[f"e5x.table_bt_ratio.{mk}.max"] = max(vals)
+    keys["e5x.cells_with_work"] = len(rows) - sum(1 for r in rows if r[0].endswith("(no controlled work)"))
+    keys["e5x.cells_without_work"] = sum(1 for r in rows if r[0].endswith("(no controlled work)"))
+    keys["e5x.random.seeds"] = len(SEEDS)
     keys["e5x.count.above_floor"] = above
     keys["e5x.count.below_floor"] = below
     keys["e5x.count.mode_better"] = better

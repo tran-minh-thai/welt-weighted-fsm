@@ -15,6 +15,10 @@ B4_low.csv, phase timing on) give, per cell, the share of the run time spent in 
 checks (e5t.<c>.phase_share.search), in canonical codes and filters (.canon_filter) and in the table
 build (.table): the part of the time the order can act on is at most the search share.
 
+Also: e5t.<c>.fewer_nodes.time_ratio.{min,max}, the time ratios of the orders whose backtracking is below
+1/MIN_EFFECT of the default; e5t.count.tie_rule_passed, the comparisons whose difference passes the tie
+rule alone (the floor then decides).
+
 Writes <out dir>/times.json (keys e5t.*) and <out dir>/times.md. Exits 1 when a cell lacks the default
 row, a row is not OK, or the counters of a row differ between two rows of one order (none expected).
 """
@@ -54,6 +58,7 @@ def main():
     keys, lines = {}, ["| cell | default ms | compared order | ms | time ratio | verdict | backtracking ratio |",
                        "|---|---:|---|---:|---:|---|---:|"]
     count = {"default_faster": 0, "tie": 0, "default_slower": 0}
+    tie_rule_passed = 0
     for c, rs in sorted(cells.items()):
         d = rs.get("1;1;1")
         if d is None:
@@ -75,6 +80,7 @@ def main():
                     continue
             ratio = ms(r) / ms(d)
             v_tie = verdict(d, r)                       # 'faster': the default is faster
+            tie_rule_passed += v_tie != "tie"
             if v_tie == "tie" or 1 / MIN_EFFECT <= ratio <= MIN_EFFECT:
                 ver = "tie"
             else:
@@ -84,6 +90,11 @@ def main():
                 bt = vn.get(f"e5x.{c}.grid.bt_ratio.{name[5:]}")
             else:
                 bt = vn.get(f"e5x.{c}.{name}.bt_ratio")
+            if bt is not None and bt < 1 / MIN_EFFECT:
+                lo = keys.get(f"e5t.{c}.fewer_nodes.time_ratio.min", ratio)
+                hi = keys.get(f"e5t.{c}.fewer_nodes.time_ratio.max", ratio)
+                keys[f"e5t.{c}.fewer_nodes.time_ratio.min"] = min(lo, ratio)
+                keys[f"e5t.{c}.fewer_nodes.time_ratio.max"] = max(hi, ratio)
             keys[f"e5t.{c}.{name}.ms"] = ms(r)
             keys[f"e5t.{c}.{name}.time_ratio"] = ratio
             keys[f"e5t.{c}.{name}.verdict"] = ver
@@ -106,6 +117,7 @@ def main():
                 lines.append(f"| {c} | {sh['search']:.2f} | {sh['canon_filter']:.2f} | {sh['table']:.2f} |")
     for k, v in count.items():
         keys[f"e5t.count.{k}"] = v
+    keys["e5t.count.tie_rule_passed"] = tie_rule_passed
     keys["e5t.cells"] = len(cells)
     keys["e5t.floor"] = MIN_EFFECT
     (out / "times.json").write_text(json.dumps(keys, indent=1, sort_keys=True) + "\n", encoding="utf-8")
