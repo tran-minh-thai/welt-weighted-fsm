@@ -15,7 +15,9 @@ checks of the mining phase under the compared order / under the voter 1,1,1; flo
 
 The runs were made in two invocations on one machine: 145 runs at commit a75abc5 and 406 at 12d30e5
 (the second adds tools/summarise_voting.py only); both have source tree 334722c and the same
-voting_probe.py. run_meta.json records the second invocation. mico.lg was copied from another checkout
+voting_probe.py. The 19 runs of the order mode cost were a third invocation at commit 1c72a64 (source
+tree with the cost mode added; the default path regressed again: 247 comparisons, 0 differences).
+run_meta.json records the last invocation only. mico.lg was copied from another checkout
 after checking its SHA-256 against tools/fetch_datasets.py.
 
 Regression: 4699 comparisons, 0 differences (229 runs equal the counters N, M, R, backtracking nodes and
