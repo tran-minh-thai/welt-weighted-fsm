@@ -1,0 +1,63 @@
+{
+  "graph": "github_struct.lg",
+  "graph_sha256": "05da9f8fb4c22224bf4602a15ea04b7441a89ab9b850875713d063b222a44b46",
+  "labels": "github.lg",
+  "labels_sha256": "4f2e3e63ab3120d3c099606aca2000d1296bc9c4bc49403beb22e57dd892c2a1",
+  "min_class": 10,
+  "classes_total": 2,
+  "classes_kept": 2,
+  "vertices_total": 37700,
+  "vertices_kept": 37700,
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "folds": 10,
+  "fold_rows": 30,
+  "B0_macro_f1_mean": 0.530869508061351,
+  "B0_macro_f1_sd": 0.006211277549892906,
+  "B0_accuracy_mean": 0.5512820512820513,
+  "B0_accuracy_sd": 0.006475751206862137,
+  "B0_C_chosen": {
+    "0.01": 30,
+    "0.1": 0,
+    "1.0": 0,
+    "10.0": 0
+  },
+  "chance": {
+    "classes": 2,
+    "uniform_macro_f1": 0.46898618341794307,
+    "prior_macro_f1": 0.5,
+    "uniform_accuracy": 0.5,
+    "prior_accuracy": 0.6168098290989171
+  },
+  "B0_folds_above_uniform_chance": 30,
+  "B0_folds_above_prior_chance": 30,
+  "design": {
+    "model": "lib.model: log1p and standardised continuous columns, balanced logistic regression, C chosen by inner cross-validation",
+    "C_grid": [
+      0.01,
+      0.1,
+      1.0,
+      10.0
+    ],
+    "inner_folds": 3
+  },
+  "run": {
+    "command": "python tools/downstream/baseline_check.py datasets/github_struct.lg datasets/github.lg results-invariant/downstream-baseline-check-20261025/github.json",
+    "git_commit": "b3d04ea9f00bffb937252aa728d2a7b468181de5",
+    "tree": "clean",
+    "host": "ThaiTMs-MacBook-Pro.local",
+    "python": "3.14.6",
+    "packages": {
+      "numpy": "2.5.4",
+      "scipy": "1.18.1",
+      "scikit-learn": "1.9.1"
+    },
+    "tool_sha256": {
+      "tools/downstream/baseline_check.py": "4bc43ef9b03bf85526386e141d7a62b2a5ed87c6c6e050124d59b31509df4325",
+      "tools/downstream/lib.py": "e27a1b05fa9e6e0002da42e60a37aae164543eaffe8a41b53425a3d6b4af35cc"
+    }
+  }
+}

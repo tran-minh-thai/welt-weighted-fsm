@@ -1,0 +1,63 @@
+{
+  "graph": "email_eu_struct.lg",
+  "graph_sha256": "7a4005c606221f5daac84e57542c38e4b5a7366b7bdc6a3fc97f51c21e059db5",
+  "labels": "email_eu.lg",
+  "labels_sha256": "5b413cc05e79da1a2ee70837e1541106254bbc00706e2141c3eb65e36f254278",
+  "min_class": 10,
+  "classes_total": 42,
+  "classes_kept": 23,
+  "vertices_total": 677,
+  "vertices_kept": 598,
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "folds": 10,
+  "fold_rows": 30,
+  "B0_macro_f1_mean": 0.01893843498399966,
+  "B0_macro_f1_sd": 0.01165747528300772,
+  "B0_accuracy_mean": 0.03233521657250472,
+  "B0_accuracy_sd": 0.015151745889332602,
+  "B0_C_chosen": {
+    "0.01": 0,
+    "0.1": 5,
+    "1.0": 9,
+    "10.0": 16
+  },
+  "chance": {
+    "classes": 23,
+    "uniform_macro_f1": 0.040126146228869446,
+    "prior_macro_f1": 0.043478260869565216,
+    "uniform_accuracy": 0.043478260869565216,
+    "prior_accuracy": 0.0606424984060581
+  },
+  "B0_folds_above_uniform_chance": 1,
+  "B0_folds_above_prior_chance": 1,
+  "design": {
+    "model": "lib.model: log1p and standardised continuous columns, balanced logistic regression, C chosen by inner cross-validation",
+    "C_grid": [
+      0.01,
+      0.1,
+      1.0,
+      10.0
+    ],
+    "inner_folds": 3
+  },
+  "run": {
+    "command": "python tools/downstream/baseline_check.py datasets/email_eu_struct.lg datasets/email_eu.lg results-invariant/downstream-baseline-check-20261025/email_eu.json",
+    "git_commit": "b3d04ea9f00bffb937252aa728d2a7b468181de5",
+    "tree": "clean",
+    "host": "ThaiTMs-MacBook-Pro.local",
+    "python": "3.14.6",
+    "packages": {
+      "numpy": "2.5.4",
+      "scipy": "1.18.1",
+      "scikit-learn": "1.9.1"
+    },
+    "tool_sha256": {
+      "tools/downstream/baseline_check.py": "4bc43ef9b03bf85526386e141d7a62b2a5ed87c6c6e050124d59b31509df4325",
+      "tools/downstream/lib.py": "e27a1b05fa9e6e0002da42e60a37aae164543eaffe8a41b53425a3d6b4af35cc"
+    }
+  }
+}
