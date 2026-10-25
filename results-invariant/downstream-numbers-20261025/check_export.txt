@@ -6,5 +6,7 @@ ok    one fold missing: exit 1, ERROR: <copy>/camp/B8_downstream_lastfm/folds.cs
 ok    one test missing: exit 1, ERROR: <copy>/camp/B8_downstream_lastfm/summary.json: test B1 + FWS vs B1 [accuracy] missing
 ok    GitHub run completed: exit 1, ERROR: <copy>/camp/B8_downstream_github/run_meta.json: outcome 'completed'
 ok    baseline check differs: exit 1, ERROR: the baseline check does not reproduce the B0 of the reported LastFM run exactly
+ok    GitHub probe cell incomplete: exit 1, ERROR: <copy>/probe/downstream_choice.json: a cell of rho_w 0.7 did not complete
+ok    seed missing from the folds: exit 1, ERROR: <copy>/camp/B8_downstream_lastfm/folds.csv: seeds [1, 2, 4], run record 3, design [1, 2, 3]
 ok    baseline check on a modified tree: exit 1, ERROR: <copy>/checks/email_eu.json: tree 'MODIFIED (2 files)'
-check_export: 8/8 faults caught
+check_export: 10/10 faults caught
