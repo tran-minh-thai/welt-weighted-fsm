@@ -58,6 +58,8 @@ EXPECTED = {
     "WeLT.N": 17, "WeLT.M": 3, "WeLT.Mprime": 3, "WeLT.R": 3,
     "WeLT.M.no_single_edge_bound": 4,
     "GraMi.N": 34, "GraMi.M": 16, "GraMi.Mprime": 7, "GraMi.R": 7,
+    # embedding searches for the support in the mining phase (WeLT reads all three supports from the table)
+    "WeLT.mni_searches": 0, "GraMi.mni_searches": 24,
     "trace.start_label": "B", "trace.order": "B,A,C",
 }
 
@@ -422,6 +424,9 @@ def check(graph, expected, runs, trace, flip_bound=False):
             row = runs[(algo, "5")]["row"]
             for k in ("N", "M", "Mprime", "R"):
                 rep.eq(f"miner, {algo} {k} at (2,5) against the search", ref[k], int(row[k]))
+        for algo in ("WeLT", "GraMi"):
+            rep.eq(f"miner, {algo} MNI embedding searches of the mining phase at (2,5)", expected[f"{algo}.mni_searches"],
+                   int(runs[(algo, "5")]["row"]["mniIsoCallsMine"]))
         row = runs[("WeLT", "5")]["row"]
         rep.eq("miner, WeLT table size against the frequent two-edge paths", len(f2), int(row["tableSize"]))
         rep.eq("miner, WeLT settings (voter, weight order, reuse, threshold table)",

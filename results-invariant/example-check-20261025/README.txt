@@ -7,5 +7,5 @@ Source run: the campaign-revision-r2 tree (miner_src_tree in run_meta.json), wit
 the benchmark (voter 1,1,1, weight-aware order, support reuse and threshold table on).
 Counters are deterministic; they do not depend on the machine or the JVM.
 
-check_example.txt lists 50 comparisons between three sources (definitions by brute force, the
+check_example.txt lists 52 comparisons between three sources (definitions by brute force, the
 level-wise search re-implemented from its description, and the miner) and the four injected faults.
