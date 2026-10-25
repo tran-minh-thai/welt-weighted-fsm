@@ -484,6 +484,8 @@ def e6(o):
     both |= {(ds(r), int(r["minSup"]), round(float(r["minWeight"]), 2)) for r in nest
              if r["exit"].strip() == "0" and r["allNotInWelt"] not in ("", "-1")}
     o.put("e6.all_in_welt.configurations", len(both), "B7_all_within_welt.csv")
+    eq6 = sum(1 for r in nest if r["exit"].strip() == "0" and r["allNotInWelt"] not in ("", "-1") and r["all"] == r["welt"])
+    o.put("e6.all_in_welt.equal", sum(1 for r in aw if r["sameSet"] == "1") + eq6, "B7_all_within_welt.csv")
     o.src("B7_nesting.csv")
     ad = o.rows("B7_all_exact_definition.csv")
     o.put("e6.all_definition.compared", len(ad), "B7_all_exact_definition.csv")
