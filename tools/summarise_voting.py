@@ -24,7 +24,12 @@ does less work. Keys, with <c> the cell name with '.' replaced by '_':
   e5x.<c>.<mode>.bt_ratio                   index, reverse, random_<seed>, random.{min,mean,max}
   e5x.<c>.grid.bt_ratio.{best,worst}        best and worst voter of the grid
   e5x.<c>.total_bt_ratio.<mode>             same ratios on all backtracking nodes (secondary)
-  e5x.count.{above_floor,below_floor,mode_better}   over every (cell, compared order)
+  e5x.<c>.<mode>.bt_ratio_{mni,weight}     the same ratio on the MNI part and on the weight-check part
+  e5m.<c>.controlled_bt.grid_distinct       number of distinct values over the 22 voters
+  e5m.<c>.no_controlled_work                1 when the mining phase has no MNI count with searches and at
+                                            most one weight check (the ratios then compare a few nodes)
+  e5x.count.{above_floor,below_floor,mode_better}   over every (cell, compared order), cells with
+                                            controlled work only
 Exits 1 when a cell lacks the default run or a mode, or when runs of a cell disagree on the result set.
 """
 import json
@@ -104,6 +109,9 @@ def main():
         keys[f"{k}.controlled_bt.worst"] = cg[worst_v]
         keys[f"{k}.controlled_bt.best_voter"] = best_v
         keys[f"{k}.controlled_bt.worst_voter"] = worst_v
+        keys[f"{k}.controlled_bt.grid_distinct"] = len(set(cg.values()))
+        idle = s["mining.mni.calls"] == 0 and s["mining.weight.calls"] <= 1
+        keys[f"{k}.no_controlled_work"] = int(idle)
         x = f"e5x.{c}"
         ratio = {}
         for m in modes:
@@ -120,12 +128,16 @@ def main():
             keys[f"{x}.random.bt_ratio.min"] = min(rnd)
             keys[f"{x}.random.bt_ratio.mean"] = statistics.mean(rnd)
             keys[f"{x}.random.bt_ratio.max"] = max(rnd)
+        for m in modes:
+            for part in ("mni", "weight"):
+                b0 = s[f"mining.{part}.backtrack"]
+                keys[f"{x}.{m.replace(':', '_')}.bt_ratio_{part}"] = share(rs[m]["stats"][f"mining.{part}.backtrack"], b0) if b0 else None
         for m in modes + ["grid_worst"]:
             r_ = rs[m] if m in rs else rs[worst_v]
             keys[f"{x}.total_bt_ratio.{m.replace(':', '_')}"] = share(r_["backtrack"], d["backtrack"])
         for m in modes + ["grid_best", "grid_worst"]:
             v = ratio[m.replace(":", "_")]
-            if v is None:
+            if v is None or idle:
                 continue
             if v > floor:
                 above += 1
@@ -142,7 +154,7 @@ def main():
         diff = cg[worst_v] - cg[best_v]
         for h, by in sorted(bysize.items()):
             keys[f"{k}.size_{h}.share_of_gap"] = share(by.get(worst_v, 0) - by.get(best_v, 0), diff) if diff else 0.0
-        rows.append((cell, d["group"], d["N"], d["M"], base, s["mining.mni.calls"], s["mining.weight.calls"],
+        rows.append((cell + (" (no controlled work)" if idle else ""), d["group"], d["N"], d["M"], base, s["mining.mni.calls"], s["mining.weight.calls"],
                      keys[f"{k}.share_bt.mni"] + keys[f"{k}.share_bt.weight"], ratio))
     keys["e5x.count.above_floor"] = above
     keys["e5x.count.below_floor"] = below
