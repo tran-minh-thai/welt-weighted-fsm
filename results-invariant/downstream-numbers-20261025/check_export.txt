@@ -1,0 +1,10 @@
+ok    the unchanged copy is exported
+ok    modified tree: exit 1, ERROR: <copy>/camp/B8_downstream_lastfm/run_meta.json: tree 'MODIFIED (1 files)'
+ok    departure from the design: exit 1, ERROR: <copy>/camp/B8_downstream_lastfm/run_meta.json: departures {'folds': 3}
+ok    raw continuous columns: exit 1, ERROR: <copy>/camp/B8_downstream_lastfm/run_meta.json: continuous columns 'raw'
+ok    one fold missing: exit 1, ERROR: <copy>/camp/B8_downstream_lastfm/folds.csv: 359 rows, expected 360
+ok    one test missing: exit 1, ERROR: <copy>/camp/B8_downstream_lastfm/summary.json: test B1 + FWS vs B1 [accuracy] missing
+ok    GitHub run completed: exit 1, ERROR: <copy>/camp/B8_downstream_github/run_meta.json: outcome 'completed'
+ok    baseline check differs: exit 1, ERROR: the baseline check does not reproduce the B0 of the reported LastFM run exactly
+ok    baseline check on a modified tree: exit 1, ERROR: <copy>/checks/email_eu.json: tree 'MODIFIED (2 files)'
+check_export: 8/8 faults caught
