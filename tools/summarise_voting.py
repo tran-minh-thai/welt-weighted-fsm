@@ -37,6 +37,9 @@ does less work. Keys, with <c> the cell name with '.' replaced by '_':
   e5x.table_bt_ratio.<mode>.{min,max}       over the cells with a table build
   e5x.count.reverse_weight_above, e5x.reverse.bt_ratio_weight.max   weight-check part under reverse
   e5x.cells_with_work, e5x.cells_without_work, e5x.random.seeds
+  e5x.<c>.<mode>.weight_share_of_gap        (weight-check nodes of the order - of the default) / (controlled
+                                            nodes of the order - of the default): the part of the difference
+                                            that comes from the start of the weight check
 Exits 1 when a cell lacks the default run or a mode, or when runs of a cell disagree on the result set.
 """
 import json
@@ -134,6 +137,9 @@ def main():
             mk = m.replace(":", "_")
             keys[f"e5x.{c}.{mk}.mni_searches_ratio"] = share(sm["mining.mni.searches"], s["mining.mni.searches"]) if s["mining.mni.searches"] else None
             keys[f"e5x.{c}.{mk}.nodes_per_search"] = share(sm["mining.mni.backtrack"], sm["mining.mni.searches"])
+            gap = (sm["mining.mni.backtrack"] + sm["mining.weight.backtrack"]) - (s["mining.mni.backtrack"] + s["mining.weight.backtrack"])
+            if gap and not (s["mining.mni.calls"] == 0 and s["mining.weight.calls"] <= 1):
+                keys[f"e5x.{c}.{mk}.weight_share_of_gap"] = (sm["mining.weight.backtrack"] - s["mining.weight.backtrack"]) / gap
             if tb0:
                 v = share(sm["table.mni.backtrack"] + sm["table.weight.backtrack"], tb0)
                 keys[f"e5x.{c}.{mk}.table_bt_ratio"] = v
