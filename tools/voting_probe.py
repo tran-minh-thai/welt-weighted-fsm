@@ -114,24 +114,34 @@ def run(out, cells, modes):
 
 def regress(out, campaign):
     rows = {}
-    for fn in ("B2_voting_grid.csv", "B2_voting_grid_hard.csv"):
+    for fn in ("B2_voting_grid.csv", "B2_voting_grid_hard.csv", "B1_efficiency.csv", "B1_low.csv", "B5_tau_sweep.csv",
+               "B5_welt_only.csv"):
         for r in csv.DictReader(open(campaign / fn, encoding="utf-8")):
-            rows[(r["dataset"], int(r["minSup"]), float(r["minWeight"]), r["voter"])] = r
+            if r.get("algorithm", "WeLT") == "WeLT" and r.get("status") == "OK":
+                rows.setdefault((r["dataset"], int(r["minSup"]), float(r["minWeight"]), r["voter"]), r)
     n = bad = 0
     sets = {}
     for rec in runs_of(out):
         sets.setdefault(rec["cell"], set()).add(rec["result_sha256"])
-        if rec["mode"] != "vote":
-            continue
-        r = rows.get((rec["dataset"], rec["minSup"], float(rec["minWeight"]), rec["voter"]))
-        if r is None:
-            continue
-        for ours, theirs in (("N", "N"), ("M", "M"), ("R", "R"), ("backtrack", "backtrack"),
+        r = None if rec["mode"] != "vote" else rows.get((rec["dataset"], rec["minSup"], float(rec["minWeight"]), rec["voter"]))
+        for ours, theirs in [] if r is None else (("N", "N"), ("M", "M"), ("R", "R"), ("backtrack", "backtrack"),
                              ("mniIsoCallsMine", "mniIsoCallsMine"), ("weightIsoCalls", "weightIsoCalls")):
             n += 1
             if int(rec[ours]) != int(r[theirs]):
                 bad += 1
                 print(f"DIFF {rec['cell']} voter {rec['voter']} {ours}: here {rec[ours]}, campaign {r[theirs]}")
+        s = rec["stats"]
+        parts = [(sum(s[f"{ph}.{k}.backtrack"] for ph in ("table", "mining") for k in ("mni", "weight")), rec["backtrack"]),
+                 (s["table.mni.searches"] + s["mining.mni.searches"], rec["mniIsoCalls"]),
+                 (s["table.weight.searches"] + s["mining.weight.searches"], rec["weightIsoCalls"]),
+                 (s["mining.mni.searches"], rec["mniIsoCallsMine"]),
+                 (s["mining.weight.pass_calls"] + s["mining.weight.fail_calls"], s["mining.weight.calls"]),
+                 (s["mining.mni.searched_values"], s["mining.mni.searches"])]
+        for got, want in parts:
+            n += 1
+            if got != want:
+                bad += 1
+                print(f"DIFF {rec['cell']} {rec['voter_or_mode']}: a part sums to {got}, the total is {want}")
     for cell, hs in sets.items():
         n += 1
         if len(hs) != 1:
