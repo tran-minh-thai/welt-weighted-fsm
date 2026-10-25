@@ -8,6 +8,7 @@ tools/summarise_campaign.py summarises) and writes every value the paper may cit
 formatting or labels, each with its source file (path relative to the checkout that holds it, and
 SHA-256). Sections:
   protocol  machine, JDK, heap, warmup and measured runs, time limit, tie rule, default voter;
+  data      the topology of every graph measured by the campaign (topology.csv);
   e1        efficiency (b1, b1low): per cell and algorithm; WeLT against GraMiFilter by the win rule;
             the gating invariant; result-set equality of WeLT and GraMiFilter; average pattern size;
             the cells where neither WeLT, GraMiFilter nor GraMi completes;
@@ -148,6 +149,14 @@ CELL_FIELDS = ("status", "R", "N", "M", "Mprime", "extended", "frequentSize", "r
                "weightIsoCalls", "backtrack")
 
 
+def data(o):
+    for r in o.rows("topology.csv"):
+        base = f"data.{ds(r)}"
+        for k in ("vertices", "edges", "avgDegree", "maxDegree", "vertexLabels", "weightMin", "weightMax",
+                  "weightMedian", "distinctWeights"):
+            o.put(f"{base}.{k}", num(r[k]), "topology.csv")
+
+
 def e1(o):
     d = collections.defaultdict(dict)
     for name in ("B1_efficiency.csv", "B1_low.csv"):
@@ -164,6 +173,10 @@ def e1(o):
     count, ratios, held, checked = collections.Counter(), [], 0, 0
     for (dname, s), algos in sorted(d.items()):
         base = f"e1.cell.{dname}.{s}"
+        vtx = o.values.get(f"data.{dname}.vertices")
+        o.need(vtx is not None, f"topology.csv: no row for {dname}")
+        if vtx:
+            o.put(f"{base}.sigma_s", s / vtx, "topology.csv")
         for a, r in algos.items():
             f = r["_file"]
             if r["status"] == "OK":
@@ -403,7 +416,7 @@ def e6(o):
     o.need(ad and all(r["sameSet"] == "1" for r in ad), "B7_all_exact_definition.csv: exact ALL differs from its definition")
 
 
-REQUIRED = ("environment.lock", "src.lock", "voting_choice.json", "B1_efficiency.csv", "B1_low.csv", "B7_equivalence.csv",
+REQUIRED = ("environment.lock", "src.lock", "voting_choice.json", "topology.csv", "B1_efficiency.csv", "B1_low.csv", "B7_equivalence.csv",
             "B4_ablation.csv", "B4_ablation_hard.csv", "B4_low.csv", "B4_rep_jvm1.csv", "B4_rep_jvm2.csv",
             "B4_rep_jvm3.csv", "B5_tau_sweep.csv", "B5_shared_table.csv", "B5_all_exact.csv", "B5_welt_only.csv",
             "B3_live_heap.csv", "B2_voting_grid.csv", "B2_voting_grid_hard.csv", "B6_wegm_range.csv",
@@ -420,7 +433,7 @@ def main():
             print(f"ERROR: {f}: missing", file=sys.stderr)
         sys.exit(1)
     o = Out(camp)
-    for f in (protocol, e1, e2, e3, e4, e5, e6):
+    for f in (protocol, data, e1, e2, e3, e4, e5, e6):
         f(o)
     if o.problems:
         for p in o.problems:
