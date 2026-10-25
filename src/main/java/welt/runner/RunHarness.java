@@ -60,6 +60,11 @@ public final class RunHarness {
         public long limitMs = 0;  // 0 = no time limit
         /** Voting for the MNI variable order and the weight-check pivot (both counters). */
         public PivotVoter voter = PivotVoter.DEGREE_ONLY;
+        /** Order mode of both counters (voting analysis); VOTE is the miner. */
+        public welt.core.MniSupportCounter.OrderMode orderMode = welt.core.MniSupportCounter.OrderMode.VOTE;
+        public long orderSeed = 0;
+        /** Voting analysis counters, filled when set; they do not change the search. */
+        public welt.core.VotingStats votingStats;
         /** Weight-aware matching order inside the edge-weight check. */
         public boolean weightOrder = false;
         /** Ablation flags (WeLT): lookup-table filters P1, P2 and weight-gated extension. */
@@ -187,10 +192,14 @@ public final class RunHarness {
         counter.setVoter(cfg.voter);
         counter.setWeightAwareOrdering(cfg.weightOrder);
         counter.setWeightBranchAndBound(cfg.bnb);
+        counter.setOrderMode(cfg.orderMode, cfg.orderSeed);
+        counter.setVotingStats(cfg.votingStats);
         MiningEngine engine = new MiningEngine(g, m);    // engine counter (MNI of the mining phase)
         engine.setSearchBudget(cfg.budget);
         engine.setDeadline(deadline);
         engine.setVoter(cfg.voter);
+        engine.setOrderMode(cfg.orderMode, cfg.orderSeed);
+        engine.setVotingStats(cfg.votingStats);
         engine.setAprioriPruning(cfg.p3);
         engine.setP3AgainstResults(cfg.p3AgainstResults);
 
@@ -215,7 +224,9 @@ public final class RunHarness {
                 WeightedLookupTable.Options opt = new WeightedLookupTable.Options();
                 opt.keepSupports = cfg.tableReuse;
                 if (cfg.tableThreshold) opt.threshold = cfg.minWeight;
+                if (cfg.votingStats != null) cfg.votingStats.phase = welt.core.VotingStats.TABLE;
                 WeightedLookupTable table = WeightedLookupTable.build(g, index, cfg.minSup, counter, m, opt);
+                if (cfg.votingStats != null) cfg.votingStats.phase = welt.core.VotingStats.MINING;
                 r.tableBuildMs = ms(System.nanoTime() - tb);
                 r.tableSize = table.size();
                 WeLTStrategy welt = new WeLTStrategy(g, cfg.minWeight, counter, table, m);

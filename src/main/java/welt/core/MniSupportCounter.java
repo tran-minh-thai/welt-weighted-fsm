@@ -50,6 +50,28 @@ public final class MniSupportCounter {
     private Map<Integer, Integer> labelCountCache;        // vertex label -> count of vertices with that label (domain-size proxy)
     private Map<Long, Double> tripleMaxWCache;            // edge type -> max ω (for the weight signal)
 
+    /**
+     * How the variable order of MNI counting and the start vertex of the weight check are chosen:
+     * {@code VOTE} (the voter, default), {@code INDEX} (pattern vertex order, start at vertex 0),
+     * {@code RANDOM} (a permutation fixed per pattern by its canonical code and {@link #orderSeed}),
+     * {@code REVERSE} (the order of {@link PivotVoter#WELT_DEFAULT} reversed, start at its lowest
+     * score). Changes performance only, not the result set.
+     */
+    public enum OrderMode { VOTE, INDEX, RANDOM, REVERSE }
+
+    private OrderMode orderMode = OrderMode.VOTE;
+    private long orderSeed = 0;
+    private VotingStats stats; // null: no voting analysis
+
+    public void setOrderMode(OrderMode mode, long seed) {
+        this.orderMode = mode;
+        this.orderSeed = seed;
+    }
+
+    public void setVotingStats(VotingStats stats) {
+        this.stats = stats;
+    }
+
     /** Result flag: proven NOT frequent (MNI &lt; minSup). */
     public static final int INFREQUENT = -1;
 
@@ -290,8 +312,11 @@ public final class MniSupportCounter {
             wUB[i] = ub;
         }
         long voteStart = System.nanoTime();
-        Integer[] order = voter.order(domSize, deg, wUB);
+        Integer[] order = variableOrder(p, domSize, deg, wUB);
         metrics.voteNanos += System.nanoTime() - voteStart;
+        VotingStats.Part part = stats == null ? null : stats.part(stats.phase, false);
+        if (part != null) stats.signals(part, p, domSize, deg, wUB, false);
+        long bt0 = metrics.backtrackMni, s0 = metrics.mniIsoCalls;
 
         // ---- OPTIMIZATION: restrict backtrack candidates BY DOMAIN (reduced by AC). Bit
         //      mask: bit i of domMask[v] is set ⇔ v belongs to variable i's domain. During
@@ -320,9 +345,11 @@ public final class MniSupportCounter {
                 for (int idx = 0; idx < dom.length; idx++) {
                     int u = dom[idx];
                     if (valid[i].contains(u)) {
+                        if (part != null) part.pushdownValues++;
                         if (valid[i].size() >= minSup) break;
                         continue;
                     }
+                    if (part != null) part.searchedValues++;
                     if (deadlineExceeded()) return new SupportResult(INFREQUENT, null); // T.O.
                     Arrays.fill(assign, -1);
                     metrics.isoCallCount++;
@@ -344,6 +371,7 @@ public final class MniSupportCounter {
             for (int i = 0; i < n; i++) reduced[i] = domains.get(i);
             return new SupportResult(mni, reduced);
         } finally {
+            if (part != null) stats.cost(part, p, metrics.backtrackMni - bt0, metrics.mniIsoCalls - s0);
             if (useMask) {
                 for (int i = 0; i < n; i++) {
                     for (int v : domains.get(i)) domMaskScratch[v] = 0L;
@@ -710,6 +738,25 @@ public final class MniSupportCounter {
      * is one {@code isoCallCount} — the same unit as each value check in MNI.
      */
     public boolean embedsWithMinWeight(Pattern p, double minEdgeWeight) {
+        if (stats == null) return embedsWithMinWeightSearch(p, minEdgeWeight);
+        VotingStats.Part part = stats.part(stats.phase, true);
+        double[][] f = startFeatures(p);
+        stats.signals(part, p, f[0], toInt(f[1]), f[2], true);
+        long bt0 = metrics.backtrackWeight, s0 = metrics.weightIsoCalls;
+        boolean ok = embedsWithMinWeightSearch(p, minEdgeWeight);
+        long bt = metrics.backtrackWeight - bt0;
+        stats.cost(part, p, bt, metrics.weightIsoCalls - s0);
+        if (ok) { part.passCalls++; part.passBacktrack += bt; } else { part.failCalls++; part.failBacktrack += bt; }
+        return ok;
+    }
+
+    private static int[] toInt(double[] x) {
+        int[] a = new int[x.length];
+        for (int i = 0; i < x.length; i++) a[i] = (int) x[i];
+        return a;
+    }
+
+    private boolean embedsWithMinWeightSearch(Pattern p, double minEdgeWeight) {
         // ONE subgraph-isomorphism question ("does p embed into G_{≥w}") = ONE iso-call,
         // analogous to each value check in MNI. Iterating over many root vertices inside is
         // a search detail (counted in backtrackNodes), not a multiplier on iso-calls.
@@ -878,9 +925,18 @@ public final class MniSupportCounter {
      * reduces to "highest degree".
      */
     private int chooseStart(Pattern p) {
+        double[][] f = startFeatures(p);
+        long voteStart = System.nanoTime();
+        int pivot = pickStart(p, f[0], toInt(f[1]), f[2]);
+        metrics.voteNanos += System.nanoTime() - voteStart;
+        return pivot;
+    }
+
+    /** Signals of the start choice: {domain-size proxy, degree, weight upper bound} per pattern vertex. */
+    private double[][] startFeatures(Pattern p) {
         int n = p.nodeCount();
         double[] domainSize = new double[n];
-        int[] degree = new int[n];
+        double[] degree = new double[n];
         double[] weightUB = new double[n];
         Map<Integer, Integer> lc = labelCount();
         Map<Long, Double> tw = tripleMaxW();
@@ -897,10 +953,59 @@ public final class MniSupportCounter {
             }
             weightUB[v] = ub;
         }
-        long voteStart = System.nanoTime();
-        int pivot = voter.choosePivot(domainSize, degree, weightUB);
-        metrics.voteNanos += System.nanoTime() - voteStart;
-        return pivot;
+        return new double[][]{domainSize, degree, weightUB};
+    }
+
+    /** Variable order of MNI counting under the order mode. */
+    private Integer[] variableOrder(Pattern p, double[] dom, int[] deg, double[] w) {
+        int n = p.nodeCount();
+        switch (orderMode) {
+            case INDEX: {
+                Integer[] o = new Integer[n];
+                for (int i = 0; i < n; i++) o[i] = i;
+                return o;
+            }
+            case RANDOM: {
+                int[] perm = randomPermutation(p);
+                Integer[] o = new Integer[n];
+                for (int i = 0; i < n; i++) o[i] = perm[i];
+                return o;
+            }
+            case REVERSE: {
+                Integer[] o = PivotVoter.WELT_DEFAULT.order(dom, deg, w);
+                Integer[] r = new Integer[n];
+                for (int i = 0; i < n; i++) r[i] = o[n - 1 - i];
+                return r;
+            }
+            default:
+                return voter.order(dom, deg, w);
+        }
+    }
+
+    /** Start vertex of the weight check under the order mode. */
+    private int pickStart(Pattern p, double[] dom, int[] deg, double[] w) {
+        switch (orderMode) {
+            case INDEX: return 0;
+            case RANDOM: return randomPermutation(p)[0];
+            case REVERSE: {
+                Integer[] o = PivotVoter.WELT_DEFAULT.order(dom, deg, w);
+                return o[o.length - 1];
+            }
+            default: return voter.choosePivot(dom, deg, w);
+        }
+    }
+
+    /** A permutation of the pattern vertices fixed by the canonical code of the pattern and the seed. */
+    private int[] randomPermutation(Pattern p) {
+        int n = p.nodeCount();
+        java.util.Random rnd = new java.util.Random(CanonicalCode.of(p).hashCode() * 1_000_003L + orderSeed);
+        int[] perm = new int[n];
+        for (int i = 0; i < n; i++) perm[i] = i;
+        for (int i = n - 1; i > 0; i--) {
+            int j = rnd.nextInt(i + 1);
+            int t = perm[i]; perm[i] = perm[j]; perm[j] = t;
+        }
+        return perm;
     }
 
     /** Count of G vertices per label (domain-size proxy for PivotVoter); built once. */

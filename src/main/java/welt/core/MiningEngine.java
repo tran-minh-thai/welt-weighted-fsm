@@ -58,6 +58,14 @@ public final class MiningEngine {
      * Set the extension-point voter for the internal MNI counting (ablation α,β,γ).
      * Affects performance only (variable order), not the result set.
      */
+    public void setOrderMode(MniSupportCounter.OrderMode mode, long seed) {
+        counter.setOrderMode(mode, seed);
+    }
+
+    public void setVotingStats(VotingStats stats) {
+        counter.setVotingStats(stats);
+    }
+
     public void setVoter(PivotVoter voter) {
         counter.setVoter(voter);
     }
