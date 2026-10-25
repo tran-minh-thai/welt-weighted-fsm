@@ -37,6 +37,8 @@ does less work. Keys, with <c> the cell name with '.' replaced by '_':
   e5x.table_bt_ratio.<mode>.{min,max}       over the cells with a table build
   e5x.count.reverse_weight_above, e5x.reverse.bt_ratio_weight.max   weight-check part under reverse
   e5x.cells_with_work, e5x.cells_without_work, e5x.random.seeds
+  e5x.count.reverse_above_cells             cells with work outside LastFM Asia where reverse needs more nodes
+                                            than the default beyond the floor; e5x.count.non_lastfm_cells their number
   e5x.<c>.<mode>.weight_share_of_gap        (weight-check nodes of the order - of the default) / (controlled
                                             nodes of the order - of the default): the part of the difference
                                             that comes from the start of the weight check
@@ -71,6 +73,7 @@ def main():
     above = below = better = 0
     nv = {"above": 0, "below": 0, "better": 0}
     rev_w_above, rev_w = 0, []
+    rev_above_cells = non_lastfm = 0
     table_r = {}
     cost_count = {"above": 0, "below": 0, "better": 0}
     for cell, rs in cells.items():
@@ -171,6 +174,9 @@ def main():
         for m in modes + ["grid_worst"]:
             r_ = rs[m] if m in rs else rs[worst_v]
             keys[f"{x}.total_bt_ratio.{m.replace(':', '_')}"] = share(r_["backtrack"], d["backtrack"])
+        if not idle and not cell.startswith("lastfm."):
+            non_lastfm += 1
+            rev_above_cells += ratio["reverse"] is not None and ratio["reverse"] > floor
         if not idle:
             for m in modes:
                 v = ratio[m.replace(":", "_")]
@@ -209,6 +215,8 @@ def main():
         keys[f"e5x.count.novote.{kk}"] = vv
     keys["e5x.count.novote.comparisons"] = sum(nv.values())
     keys["e5x.count.reverse_weight_above"] = rev_w_above
+    keys["e5x.count.reverse_above_cells"] = rev_above_cells
+    keys["e5x.count.non_lastfm_cells"] = non_lastfm
     keys["e5x.reverse.bt_ratio_weight.max"] = max(rev_w) if rev_w else None
     for mk, vals in table_r.items():
         keys[f"e5x.table_bt_ratio.{mk}.min"] = min(vals)
