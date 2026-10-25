@@ -33,6 +33,28 @@ def chance_levels(y):
             "prior_macro_f1": 1.0 / k, "uniform_accuracy": q, "prior_accuracy": sum(x * x for x in p)}
 
 
+def run_record():
+    """Command, commit, tree state, host and versions of this run."""
+    import importlib.metadata
+    import platform
+    import socket
+    import subprocess
+    root = os.path.dirname(os.path.dirname(HERE))
+
+    def git(*a):
+        r = subprocess.run(["git", "-C", root, *a], capture_output=True, text=True)
+        return r.stdout.strip() if r.returncode == 0 else None
+    tree = git("status", "--porcelain", "--untracked-files=no")
+    return {"command": " ".join(["python", os.path.relpath(os.path.abspath(sys.argv[0]), root).replace(os.sep, "/"),
+                                 *sys.argv[1:]]),
+            "git_commit": git("rev-parse", "HEAD"),
+            "tree": "clean" if tree == "" else (f"MODIFIED ({len(tree.splitlines())} files)" if tree else "unknown"),
+            "host": socket.gethostname(), "python": platform.python_version(),
+            "packages": {k: importlib.metadata.version(k) for k in ("numpy", "scipy", "scikit-learn")},
+            "tool_sha256": {"tools/downstream/baseline_check.py": lib.sha256(os.path.abspath(__file__)),
+                            "tools/downstream/lib.py": lib.sha256(os.path.join(HERE, "lib.py"))}}
+
+
 def main():
     args = sys.argv[1:]
     min_class = lib.FOLDS
@@ -70,6 +92,9 @@ def main():
     }
     res["B0_folds_above_uniform_chance"] = sum(1 for x in f1 if x > res["chance"]["uniform_macro_f1"])
     res["B0_folds_above_prior_chance"] = sum(1 for x in f1 if x > res["chance"]["prior_macro_f1"])
+    res["design"] = {"model": "lib.model: log1p and standardised continuous columns, balanced logistic regression, "
+                              "C chosen by inner cross-validation", "C_grid": lib.C_GRID, "inner_folds": lib.INNER_FOLDS}
+    res["run"] = run_record()
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         json.dump(res, f, indent=2)
     print(json.dumps(res, indent=2))
