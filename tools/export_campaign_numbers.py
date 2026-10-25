@@ -247,8 +247,27 @@ def ablation_verdict(r, f):
     return "tie" if 1 / sc.MIN_EFFECT < x < sc.MIN_EFFECT else t
 
 
+def rep_verdicts(o):
+    """{(dataset, support, variant): (verdict, ratios, margin)} over the three JVM passes."""
+    passes = [o.rows(f"B4_rep_jvm{i}.csv") for i in (1, 2, 3)]
+    by = [collections.defaultdict(dict) for _ in passes]
+    for b, rows in zip(by, passes):
+        for r in rows:
+            b[(ds(r), int(r["minSup"]))][r["variant"]] = r
+    out = {}
+    for k in sorted(by[0]):
+        o.need(all(sc.ok(b[k].get("full")) for b in by), f"B4_rep: full not complete in every pass at {k}")
+        full = [float(b[k]["full"]["totalMs"]) for b in by]
+        for v in by[0][k]:
+            rs = [b[k].get(v) for b in by]
+            if v != "full" and all(sc.ok(r) for r in rs):
+                out[(k[0], k[1], v)] = sc.rep_verdict(full, [float(r["totalMs"]) for r in rs])
+    return out
+
+
 def e2(o):
     o.put("e2.floor", sc.MIN_EFFECT, "B4_ablation.csv")
+    reps = rep_verdicts(o)
     for name, tag in (("B4_ablation.csv", "b4"), ("B4_ablation_hard.csv", "b4hard"), ("B4_low.csv", "b4low")):
         cells = collections.defaultdict(dict)
         for r in o.rows(name):
@@ -274,34 +293,25 @@ def e2(o):
                 if not sc.ok(r) or not sc.ok(f):
                     tally[(v, r["status"] if not sc.ok(r) else "full not complete")] += 1
                     continue
-                t = ablation_verdict(r, f)
+                one = ablation_verdict(r, f)
+                t = reps[(dname, s, v)][0] if (dname, s, v) in reps else one
                 o.put(f"{base}.{v}.ratio", float(r["totalMs"]) / float(f["totalMs"]), name)
+                o.put(f"{base}.{v}.verdict_one_jvm", one, name)
                 o.put(f"{base}.{v}.verdict", t, name)
+                o.put(f"{base}.{v}.verdict_source", "three JVMs" if (dname, s, v) in reps else "one JVM", name)
                 for k in ("N", "M", "backtrack"):
                     o.put(f"{base}.{v}.{k}", int(r[k]), name)
                 tally[(v, t)] += 1
         for (v, t), n in sorted(tally.items()):
             o.put(f"e2.{tag}.count.{v}.{t.replace(' ', '_')}", n, name)
-    passes = [o.rows(f"B4_rep_jvm{i}.csv") for i in (1, 2, 3)]
-    by = [collections.defaultdict(dict) for _ in passes]
-    for b, rows in zip(by, passes):
-        for r in rows:
-            b[(ds(r), int(r["minSup"]))][r["variant"]] = r
-    o.put("e2.rep.passes", len(passes), "B4_rep_jvm1.csv")
+    o.put("e2.rep.passes", 3, "B4_rep_jvm1.csv")
     o.put("e2.rep.min_effect", sc.MIN_EFFECT, "B4_rep_jvm1.csv")
-    for k in sorted(by[0]):
-        o.need(all(sc.ok(b[k].get("full")) for b in by), f"B4_rep: full not complete in every pass at {k}")
-        full = [float(b[k]["full"]["totalMs"]) for b in by]
-        for v in by[0][k]:
-            rs = [b[k].get(v) for b in by]
-            if v == "full" or not all(sc.ok(r) for r in rs):
-                continue
-            t, ratios, margin = sc.rep_verdict(full, [float(r["totalMs"]) for r in rs])
-            base = f"e2.rep.{k[0]}.{k[1]}.{v}"
-            o.put(base + ".verdict", t, "B4_rep_jvm1.csv")
-            o.put(base + ".ratio_min", min(ratios), "B4_rep_jvm1.csv")
-            o.put(base + ".ratio_max", max(ratios), "B4_rep_jvm1.csv")
-            o.put(base + ".margin", margin, "B4_rep_jvm1.csv")
+    for (d, sup, v), (t, ratios, margin) in sorted(reps.items()):
+        base = f"e2.rep.{d}.{sup}.{v}"
+        o.put(base + ".verdict", t, "B4_rep_jvm1.csv")
+        o.put(base + ".ratio_min", min(ratios), "B4_rep_jvm1.csv")
+        o.put(base + ".ratio_max", max(ratios), "B4_rep_jvm1.csv")
+        o.put(base + ".margin", margin, "B4_rep_jvm1.csv")
     for i in (2, 3):
         o.src(f"B4_rep_jvm{i}.csv")
 
