@@ -1,0 +1,13 @@
+ok    the unchanged copy is exported with the values of the original
+ok    run record on a modified tree: exit 1, ERROR: meta_20261024_145130_b4rep.json: gitTree 'MODIFIED (1 files)'
+ok    run record on another JDK: exit 1, ERROR: meta_20261024_145130_b4rep.json: JDK or JAVA_OPTS differs from environment.lock
+ok    counters differ across runs: exit 1, ERROR: B1_efficiency.csv: citeseer 400 WeLT: counters differ across runs
+ok    WeLT and GraMiFilter differ: exit 1, ERROR: B7_equivalence.csv: WeLT and GraMiFilter differ, or no cell
+ok    gating invariant broken: exit 1, ERROR: gating invariant held in 26 of 27 cells
+ok    ablation result-set violation: exit 1, ERROR: B4_low.csv: result-set violations [(('email_eu', 4), 'noP1')]
+ok    shared table differs from WeLT: exit 1, ERROR: B5_shared_table.csv: ('citeseer', 300, 10.0): R 10 differs from WeLT 9
+ok    nesting violation: exit 1, ERROR: B7_nesting.csv: no comparison or a violation
+ok    ALL outside WeLT: exit 1, ERROR: B7_all_within_welt.csv: an ALL pattern outside WeLT, or no cell
+ok    default voter row missing: exit 1, ERROR: B2_voting_grid.csv: citeseer 250: 0 rows for the default voter
+ok    file missing: exit 1, ERROR: B6_wegm_range.csv: missing
+check_campaign_export: 11/11 faults caught
