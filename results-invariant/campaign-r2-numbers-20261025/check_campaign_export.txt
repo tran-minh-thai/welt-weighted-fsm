@@ -8,6 +8,6 @@ ok    ablation result-set violation: exit 1, ERROR: B4_low.csv: result-set viola
 ok    shared table differs from WeLT: exit 1, ERROR: B5_shared_table.csv: ('citeseer', 300, 10.0): R 10 differs from WeLT 9
 ok    nesting violation: exit 1, ERROR: B7_nesting.csv: no comparison or a violation
 ok    ALL outside WeLT: exit 1, ERROR: B7_all_within_welt.csv: an ALL pattern outside WeLT, or no cell
-ok    default voter row missing: exit 1, ERROR: B2_voting_grid.csv: citeseer 250: 0 rows for the default voter
+ok    default voter row missing: exit 1, ERROR: B2_voting_grid.csv: grid components [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 2.0] are not evenly spaced
 ok    file missing: exit 1, ERROR: B6_wegm_range.csv: missing
 check_campaign_export: 11/11 faults caught
