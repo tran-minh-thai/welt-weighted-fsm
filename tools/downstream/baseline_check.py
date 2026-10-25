@@ -46,7 +46,7 @@ def run_record():
     def git(*a):
         r = subprocess.run(["git", "-C", root, *a], capture_output=True, text=True)
         return r.stdout.strip() if r.returncode == 0 else None
-    tree = git("status", "--porcelain", "--untracked-files=no")
+    tree = git("status", "--porcelain", "--untracked-files=no", "--", ".", ":(exclude)results*")  # code, not outputs
     return {"command": " ".join(["python", os.path.relpath(os.path.abspath(sys.argv[0]), root).replace(os.sep, "/"),
                                  *sys.argv[1:]]),
             "git_commit": git("rev-parse", "HEAD"),

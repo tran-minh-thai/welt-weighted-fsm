@@ -34,6 +34,9 @@
   },
   "B0_folds_above_uniform_chance": 30,
   "B0_folds_above_prior_chance": 30,
+  "edges": 289003,
+  "same_class_edge_share": 0.8453441659775158,
+  "same_class_edge_share_random": 0.6168098290989171,
   "design": {
     "model": "lib.model: log1p and standardised continuous columns, balanced logistic regression, C chosen by inner cross-validation",
     "C_grid": [
@@ -46,8 +49,8 @@
   },
   "run": {
     "command": "python tools/downstream/baseline_check.py datasets/github_struct.lg datasets/github.lg results-invariant/downstream-baseline-check-20261025/github.json",
-    "git_commit": "b3d04ea9f00bffb937252aa728d2a7b468181de5",
-    "tree": "clean",
+    "git_commit": "5997b2c0069296bf28fc94739e84cbc822cd843a",
+    "tree": "MODIFIED (2 files)",
     "host": "ThaiTMs-MacBook-Pro.local",
     "python": "3.14.6",
     "packages": {
@@ -56,7 +59,7 @@
       "scikit-learn": "1.9.1"
     },
     "tool_sha256": {
-      "tools/downstream/baseline_check.py": "4bc43ef9b03bf85526386e141d7a62b2a5ed87c6c6e050124d59b31509df4325",
+      "tools/downstream/baseline_check.py": "c4be86e61e3348aecb4b9f7c690be1e74fb3f1b155e27adb3c6f32dae698eb2a",
       "tools/downstream/lib.py": "e27a1b05fa9e6e0002da42e60a37aae164543eaffe8a41b53425a3d6b4af35cc"
     }
   }
