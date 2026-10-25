@@ -4,7 +4,6 @@ import welt.core.CanonicalCode;
 import welt.core.LabeledWeightedGraph;
 import welt.core.LgGraphReader;
 import welt.core.MiningEngine;
-import welt.core.MniSupportCounter;
 import welt.core.PivotVoter;
 import welt.core.VotingStats;
 
@@ -43,12 +42,6 @@ public final class VotingProbeMain {
         RunHarness.Config cfg = BenchmarkMain.configure(new RunHarness.Config("WeLT", minSup, minWeight));
         cfg.limitMs = limitMs;
         String mode = System.getenv().getOrDefault("WELT_ORDER_MODE", "vote");
-        if (mode.startsWith("random:")) {
-            cfg.orderMode = MniSupportCounter.OrderMode.RANDOM;
-            cfg.orderSeed = Long.parseLong(mode.substring("random:".length()));
-        } else {
-            cfg.orderMode = MniSupportCounter.OrderMode.valueOf(mode.toUpperCase(Locale.ROOT));
-        }
         List<PivotVoter> grid = new ArrayList<>();
         String spec = System.getenv().getOrDefault("WELT_VOTER_GRID", "");
         for (String v : spec.split(";")) if (!v.isBlank()) grid.add(PivotVoter.parse(v));

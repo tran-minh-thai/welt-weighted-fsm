@@ -27,9 +27,13 @@ run_cell "$OUT" datasets/citeseer.lg 300 96 WeLT 0 0 1 > /dev/null
 check "a finished cell is not run again" "$(rows "$OUT")" 1
 WELT_VOTER="1,0,0" run_cell "$OUT" datasets/citeseer.lg 300 96 WeLT 0 0 1 > /dev/null
 check "another voter is another cell" "$(rows "$OUT")" 2
+WELT_ORDER_MODE=reverse run_cell "$OUT" datasets/citeseer.lg 300 96 WeLT 0 0 1 > /dev/null
+WELT_ORDER_MODE=reverse run_cell "$OUT" datasets/citeseer.lg 300 96 WeLT 0 0 1 > /dev/null
+check "an order mode is another cell, and is not run again" "$(rows "$OUT")" 3
+check "the row of an order mode carries its label" "$(tail -1 "$OUT" | tr ',' '\n' | grep -c '^order:reverse$')" 1
 JAVA_OPTS="-Xmx1k" run_cell "$OUT" datasets/citeseer.lg 300 96 GraMi 0 0 1 > /dev/null 2>&1
 run_cell "$OUT" datasets/citeseer.lg 300 96 GraMi 0 0 1 > /dev/null
-check "a recorded crash is not retried" "$(rows "$OUT")" 3
+check "a recorded crash is not retried" "$(rows "$OUT")" 4
 
 # --- resume of an ablation cell
 ABL="$T/ablation.csv"

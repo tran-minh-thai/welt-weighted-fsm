@@ -5,7 +5,7 @@ Usage:  python tools/cell_done.py <csv> <key=value> ...
 
 A row matches when every key equals the given value. Numbers are compared numerically
 (minWeight 96 = 96.000). `voter` is compared as three numbers, separators ',' or ';'
-("0.2,0.8,0" = "0.2;0.8;0.0"). Any status counts as done (OK, TO, OOM, CRASH): a cell is
+("0.2,0.8,0" = "0.2;0.8;0.0"), or as text when it names an order mode ("order:reverse"). Any status counts as done (OK, TO, OOM, CRASH): a cell is
 re-run only when its process left no row. A missing or empty CSV means not done.
 """
 import csv
@@ -19,7 +19,7 @@ def same(a, b, key):
             return [float(x) for x in a.replace(";", ",").split(",")] == \
                    [float(x) for x in b.replace(";", ",").split(",")]
         except ValueError:
-            return False
+            return a == b
     try:
         return float(a) == float(b)
     except ValueError:

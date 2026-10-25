@@ -65,7 +65,9 @@ run_cell() {
 
 # The voter BenchmarkMain uses for an algorithm (WELT_VOTER for WeLT, degree-only otherwise).
 expected_voter() {
-    if [ "$1" = "WeLT" ]; then echo "${WELT_VOTER:-1,1,1}"; else echo "0,1,0"; fi
+    if [ "$1" != "WeLT" ]; then echo "0,1,0"
+    elif [ -n "${WELT_ORDER_MODE:-}" ] && [ "${WELT_ORDER_MODE}" != "vote" ]; then echo "order:${WELT_ORDER_MODE}"
+    else echo "${WELT_VOTER:-1,1,1}"; fi
 }
 
 # cell_done <csv> <key=value>...: true when the CSV already holds a row for the cell (resume).

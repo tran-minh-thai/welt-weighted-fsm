@@ -1,8 +1,8 @@
 {
-  "command": "python3 tools/voting_probe.py run results-invariant/voting-mechanism-20261025",
-  "commit": "12d30e5137abd88753606c1711eb3f03f0552211",
-  "src_tree": "334722c1f4af861fb91b57a0cb57d76ee8fbb925",
-  "tool_sha256": "5536dde59852f1dc39e4048621060655483ec631d3e51fde98702335977663cb",
+  "command": "python3 tools/voting_probe.py run results-invariant/voting-mechanism-20261025 --modes cost",
+  "commit": "1c72a64ecd33345ef1d1959db21e4898ed915d62",
+  "src_tree": "f1363b2b3eb7250983d160ab65cbaafd994adc04",
+  "tool_sha256": "8a98dbb2be9e650d1e998d8cabf09c7af15d2d831ac5bb9decaa3a63cb030e77",
   "java": "openjdk version \"26.0.1\" 2026-04-21",
   "python": "3.14.6",
   "machine": "ThaiTMs-MacBook-Pro.local",

@@ -69,11 +69,33 @@ public final class BenchmarkMain {
             cfg.weightOrder = w == null || w.isBlank() || w.equals("on");
             cfg.tableReuse = onOff("WELT_TABLE_REUSE", true);
             cfg.tableThreshold = onOff("WELT_TABLE_THRESHOLD", true);
+            orderMode(cfg, System.getenv("WELT_ORDER_MODE"));
         } else {
             cfg.voter = PivotVoter.DEGREE_ONLY;
             cfg.weightOrder = false;
         }
         return cfg;
+    }
+
+    /**
+     * Order mode of the voting analysis ({@code vote}, {@code index}, {@code reverse}, {@code cost} or
+     * {@code random:<seed>}); unset or {@code vote} keeps the voter.
+     */
+    static void orderMode(RunHarness.Config cfg, String mode) {
+        if (mode == null || mode.isBlank()) return;
+        if (mode.startsWith("random:")) {
+            cfg.orderMode = welt.core.MniSupportCounter.OrderMode.RANDOM;
+            cfg.orderSeed = Long.parseLong(mode.substring("random:".length()));
+        } else {
+            cfg.orderMode = welt.core.MniSupportCounter.OrderMode.valueOf(mode.toUpperCase(Locale.ROOT));
+        }
+    }
+
+    /** CSV label of the order: the voter, or {@code order:<mode>} when an order mode replaces it. */
+    static String orderLabel(RunHarness.Config cfg) {
+        if (cfg.orderMode == welt.core.MniSupportCounter.OrderMode.VOTE) return cfg.voter.label();
+        String m = cfg.orderMode.name().toLowerCase(Locale.ROOT);
+        return "order:" + (cfg.orderMode == welt.core.MniSupportCounter.OrderMode.RANDOM ? m + ":" + cfg.orderSeed : m);
     }
 
     static String voterSource(String algo) {
@@ -323,7 +345,7 @@ public final class BenchmarkMain {
                 .put("supportReused", none ? "" : last.m.supportReused)
                 .put("weightReused", none ? "" : last.m.weightReused)
                 .put("budgetExceeded", none ? "" : last.m.budgetExceeded)
-                .put("voter", none ? "" : last.cfg.voter.label())
+                .put("voter", none ? "" : orderLabel(last.cfg))
                 .put("worder", none ? "" : (last.cfg.weightOrder ? "on" : "off"))
                 .put("voterSource", none ? "" : voterSource(algo))
                 .put("backtrack", none ? "" : last.m.backtrackNodes)

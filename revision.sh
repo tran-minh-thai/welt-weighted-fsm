@@ -25,6 +25,8 @@
 #   ./revision.sh wegmrange  WEGM, the exact ALL score and WeLT at the supports where WEGM returns patterns
 #   ./revision.sh b5 [ds]    tau_w sweep: comparison at a support where GraMi completes, a WeLT
 #                            shared-table sweep, and a WeLT-only sweep at the lowest WeLT support
+#   ./revision.sh b2modes    run time of WeLT under the order modes of the voting analysis (not part of all;
+#                            needs the JDK of results/v2_revision/r2_environment.lock)
 #   ./revision.sh b7         result sets over every completed cell: GraMiFilter = WeLT,
 #                            exact ALL = its definition and within WeLT; WEGM within ALL within WeLT
 #
@@ -469,6 +471,36 @@ wegmrange)
         run_cell "$RUN_DIR/B6_wegm_range.csv" "datasets/$ds.lg" "$s" "$tw" WEGM "$LIMIT" 0 1
         run_all_exact_cell "$RUN_DIR/B6_wegm_range_all.csv" "datasets/$ds.lg" "$s" "$tw" "$RLIM" 0 1 "$RUN_DIR/patterns_wegm_range_all"
         run_cell "$RUN_DIR/B6_wegm_range.csv" "datasets/$ds.lg" "$s" "$tw" WeLT "$RLIM" 0 1
+    done
+    ;;
+b2modes)
+    # Time protocol of the efficiency experiment at the cells where the backtracking of the voting
+    # analysis (results-invariant/voting-mechanism-20261025) differs from the default voter by more than
+    # the 1.10 floor in at least one compared order. Per cell: the voter 1,1,1, the order modes index,
+    # reverse, random 1-5 and cost, and the best and worst voters of the grid on that count when they
+    # differ from 1,1,1. Cells, modes and voters were fixed from the counts, before any time was measured.
+    REF="results/v2_revision/r2_environment.lock"
+    if ! diff <(tr -d '\r' < "$REF") <(tr -d '\r' < "$RUN_DIR/environment.lock") > /dev/null; then
+        echo "ERROR: the campaign JDK differs from the one of the r2 campaign ($REF):" >&2
+        diff <(tr -d '\r' < "$REF") <(tr -d '\r' < "$RUN_DIR/environment.lock") >&2 || true
+        exit 1
+    fi
+    OUT="$RUN_DIR/B2_order_modes.csv"
+    MODES="index reverse random:1 random:2 random:3 random:4 random:5 cost"
+    for cell in "citeseer 100 96 -" "citeseer 200 96 -" "citeseer 250 96 -" "citeseer 300 96 -" "citeseer 300 90 -" \
+                "email_eu 6 336 0.8,0.0,0.2:0.0,1.0,0.0" "email_eu 12 336 0.4,0.6,0.0:0.0,0.0,1.0" \
+                "email_eu 4 336 0.8,0.2,0.0:0.0,1.0,0.0" "email_eu 3 336 0.6,0.4,0.0:0.0,1.0,0.0" \
+                "lastfm 200 40 0.0,0.2,0.8:0.0,0.0,1.0" "lastfm 100 40 0.0,0.0,1.0:0.0,1.0,0.0" "mico 15000 100 -"; do
+        read -r ds s tw extra <<< "$cell"
+        WELT_VOTER="1,1,1" WELT_WORDER=on run_cell "$OUT" "datasets/$ds.lg" "$s" "$tw" WeLT "$LIMIT" "$WARMUP" "$MEASURED"
+        for m in $MODES; do
+            WELT_VOTER="1,1,1" WELT_WORDER=on WELT_ORDER_MODE="$m" run_cell "$OUT" "datasets/$ds.lg" "$s" "$tw" WeLT "$LIMIT" "$WARMUP" "$MEASURED"
+        done
+        if [ "$extra" != "-" ]; then
+            for v in ${extra//:/ }; do
+                WELT_VOTER="$v" WELT_WORDER=on run_cell "$OUT" "datasets/$ds.lg" "$s" "$tw" WeLT "$LIMIT" "$WARMUP" "$MEASURED"
+            done
+        fi
     done
     ;;
 b5)

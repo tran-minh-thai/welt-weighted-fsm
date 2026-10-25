@@ -6,7 +6,7 @@ Commands (from the repository root, branch voting-mechanism):
   python3 tools/voting_probe.py regress results-invariant/voting-mechanism-20261025 <campaign-revision-r2 run dir>
   python3 tools/summarise_voting.py results-invariant/voting-mechanism-20261025
 
-Cells (19): the 10 cells of the voting experiment; email-Eu-core tau_s 4 and 3 and LastFM Asia tau_s 100
+Cells (19), with a separate run of the order mode cost (19 runs, commit 1c72a64, fixed in the log before it ran): the 10 cells of the voting experiment; email-Eu-core tau_s 4 and 3 and LastFM Asia tau_s 100
 at the tau_w of the efficiency experiment; CiteSeer 300 at tau_w 96 and 90, email-Eu-core 10 and 6 at
 tau_w 4495.3 and 3998.6 (the two largest tau_w with |R| >= 1 on the sweep). Each cell: the 22 voters of
 the grid (simplex step 0.2 plus 1,1,1) and the order modes index, reverse and random with seeds 1 to 5;
