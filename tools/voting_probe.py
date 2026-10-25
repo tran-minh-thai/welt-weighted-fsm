@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Runs of the voting analysis: every cell under the voter grid and the order modes, counters only.
 
-    python3 tools/voting_probe.py run <out dir> [--cells NAME,...] [--modes grid,index,reverse,random]
+    python3 tools/voting_probe.py run <out dir> [--cells NAME,...] [--modes grid|default,index,reverse,random,cost]
     python3 tools/voting_probe.py regress <out dir> <campaign dir>
     python3 tools/voting_probe.py cells
 
@@ -30,7 +30,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 GRID = [f"{a / 5:.1f},{b / 5:.1f},{(5 - a - b) / 5:.1f}" for a in range(6) for b in range(6) if a + b <= 5] + ["1,1,1"]
 SEEDS = [1, 2, 3, 4, 5]
-MODES = {"index": ["index"], "reverse": ["reverse"], "random": [f"random:{s}" for s in SEEDS]}
+MODES = {"index": ["index"], "reverse": ["reverse"], "random": [f"random:{s}" for s in SEEDS], "cost": ["cost"]}
 
 # (name, dataset, tau_s, tau_w, group)
 CELLS = [
@@ -91,7 +91,7 @@ def run(out, cells, modes):
         for name, ds, s, tw, group in CELLS:
             if name not in cells:
                 continue
-            todo = [("vote", v) for v in GRID] if "grid" in modes else []
+            todo = [("vote", v) for v in GRID] if "grid" in modes else ([("vote", "1,1,1")] if "default" in modes else [])
             for m in modes:
                 todo += [(x, "1,1,1") for x in MODES.get(m, [])]
             for mode, voter in todo:

@@ -55,9 +55,11 @@ public final class MniSupportCounter {
      * {@code VOTE} (the voter, default), {@code INDEX} (pattern vertex order, start at vertex 0),
      * {@code RANDOM} (a permutation fixed per pattern by its canonical code and {@link #orderSeed}),
      * {@code REVERSE} (the order of {@link PivotVoter#WELT_DEFAULT} reversed, start at its lowest
-     * score). Changes performance only, not the result set.
+     * score), {@code COST} (variable order by ascending mean degree in G of the domain values, ties by
+     * the smaller index; the start of the weight check stays with the voter). Changes performance
+     * only, not the result set.
      */
-    public enum OrderMode { VOTE, INDEX, RANDOM, REVERSE }
+    public enum OrderMode { VOTE, INDEX, RANDOM, REVERSE, COST }
 
     private OrderMode orderMode = OrderMode.VOTE;
     private long orderSeed = 0;
@@ -312,7 +314,7 @@ public final class MniSupportCounter {
             wUB[i] = ub;
         }
         long voteStart = System.nanoTime();
-        Integer[] order = variableOrder(p, domSize, deg, wUB);
+        Integer[] order = orderMode == OrderMode.COST ? costOrder(domains) : variableOrder(p, domSize, deg, wUB);
         metrics.voteNanos += System.nanoTime() - voteStart;
         VotingStats.Part part = stats == null ? null : stats.part(stats.phase, false);
         if (part != null) stats.signals(part, p, domSize, deg, wUB, false);
@@ -980,6 +982,21 @@ public final class MniSupportCounter {
             default:
                 return voter.order(dom, deg, w);
         }
+    }
+
+    /** Variables by ascending mean degree in G of their domain values; ties by the smaller index. */
+    private Integer[] costOrder(List<int[]> domains) {
+        int n = domains.size();
+        double[] cost = new double[n];
+        for (int i = 0; i < n; i++) {
+            long sum = 0;
+            for (int v : domains.get(i)) sum += g.neighbors(v).size();
+            cost[i] = domains.get(i).length == 0 ? 0 : (double) sum / domains.get(i).length;
+        }
+        Integer[] o = new Integer[n];
+        for (int i = 0; i < n; i++) o[i] = i;
+        Arrays.sort(o, (a, b) -> cost[a] != cost[b] ? Double.compare(cost[a], cost[b]) : Integer.compare(a, b));
+        return o;
     }
 
     /** Start vertex of the weight check under the order mode. */

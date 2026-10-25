@@ -59,6 +59,7 @@ def main():
         cells.setdefault(r["cell"], {})[r["voter_or_mode"]] = r
     keys, rows, problems = {}, [], []
     above = below = better = 0
+    cost_count = {"above": 0, "below": 0, "better": 0}
     for cell, rs in cells.items():
         c = cell.replace(".", "_")
         grid = {k: v for k, v in rs.items() if v["mode"] == "vote"}
@@ -114,6 +115,12 @@ def main():
         keys[f"{k}.no_controlled_work"] = int(idle)
         x = f"e5x.{c}"
         ratio = {}
+        if "cost" in rs:
+            ratio["cost"] = share(controlled(rs["cost"]), base) if base else None
+            for part in ("mni", "weight"):
+                b0 = s[f"mining.{part}.backtrack"]
+                keys[f"{x}.cost.bt_ratio_{part}"] = share(rs["cost"]["stats"][f"mining.{part}.backtrack"], b0) if b0 else None
+            keys[f"{x}.total_bt_ratio.cost"] = share(rs["cost"]["backtrack"], d["backtrack"])
         for m in modes:
             ratio[m.replace(":", "_")] = share(controlled(rs[m]), base) if base else None
         rnd = [ratio[f"random_{s_}"] for s_ in SEEDS]
@@ -145,6 +152,9 @@ def main():
                 better += 1
             else:
                 below += 1
+        if "cost" in ratio and ratio["cost"] is not None and not idle:
+            v = ratio["cost"]
+            cost_count["above" if v > floor else "better" if v < 1 / floor else "below"] += 1
         bysize = {}
         for v in (best_v, worst_v):
             for kind in ("mni", "weight"):
@@ -159,22 +169,24 @@ def main():
     keys["e5x.count.above_floor"] = above
     keys["e5x.count.below_floor"] = below
     keys["e5x.count.mode_better"] = better
+    for kk, vv in cost_count.items():
+        keys[f"e5x.count.cost.{kk}"] = vv
     keys["e5x.floor"] = floor
     keys["e5x.cells"] = len(rows)
     (out / "numbers.json").write_text(json.dumps(keys, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     lines = [f"Voting analysis: {len(rows)} cells; ratio = controlled backtracking of the order / of voter 1,1,1;"
              f" floor {floor}", "",
              "| cell | group | N | M | controlled bt | mni calls | weight calls | controlled share | index | reverse |"
-             " random min-max | grid best | grid worst |",
-             "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|"]
+             " random min-max | grid best | grid worst | cost |",
+             "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|"]
     f = lambda v: "–" if v is None else f"{v:.3f}"
     for cell, grp, N, M, base, mc, wc, sh, ratio in rows:
         rnd = [ratio[f"random_{s_}"] for s_ in SEEDS]
         rr = "–" if None in rnd else f"{min(rnd):.3f}–{max(rnd):.3f}"
         lines.append(f"| {cell} | {grp} | {N} | {M} | {base} | {mc} | {wc} | {sh:.3f} | {f(ratio['index'])} | "
-                     f"{f(ratio['reverse'])} | {rr} | {f(ratio['grid_best'])} | {f(ratio['grid_worst'])} |")
+                     f"{f(ratio['reverse'])} | {rr} | {f(ratio['grid_best'])} | {f(ratio['grid_worst'])} | {f(ratio.get('cost'))} |")
     lines += ["", f"compared orders above the floor: {above}; within the floor: {below}; better than the default "
-                  f"beyond the floor: {better}"]
+                  f"beyond the floor: {better}", f"cost order (separate rule): {cost_count}"]
     if problems:
         lines += ["", "PROBLEMS:"] + problems
     (out / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
