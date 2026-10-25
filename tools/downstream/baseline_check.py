@@ -9,6 +9,8 @@ vertex as its vertex label (same vertex ids, checked). Classes with fewer than -
 members (default: the number of outer folds) are dropped from the evaluation, because stratified
 k-fold needs k members per class; the count of dropped classes and vertices is recorded.
 
+The edge homophily of the class (share of edges joining two vertices of the same class, and its
+expectation under random labels of the same class sizes) is recorded over all vertices.
 Chance levels are exact expectations for the classes kept: a uniform random guess has expected
 per-class F1 2 p_c q / (p_c + q) with q = 1/K, and a guess drawn from the class prior has expected
 per-class F1 p_c, so its macro-F1 is 1/K. B0 is evaluated with the design of lib.evaluate
@@ -92,6 +94,13 @@ def main():
     }
     res["B0_folds_above_uniform_chance"] = sum(1 for x in f1 if x > res["chance"]["uniform_macro_f1"])
     res["B0_folds_above_prior_chance"] = sum(1 for x in f1 if x > res["chance"]["prior_macro_f1"])
+    # edge homophily of the class over all vertices: the share of edges joining two vertices of the same
+    # class, against its expectation when the classes are assigned at random with the same sizes
+    same = sum(1 for a, b, _w in edges if y_all[a] == y_all[b])
+    sizes = collections.Counter(y_all)
+    res["edges"] = len(edges)
+    res["same_class_edge_share"] = same / len(edges)
+    res["same_class_edge_share_random"] = sum((c / len(y_all)) ** 2 for c in sizes.values())
     res["design"] = {"model": "lib.model: log1p and standardised continuous columns, balanced logistic regression, "
                               "C chosen by inner cross-validation", "C_grid": lib.C_GRID, "inner_folds": lib.INNER_FOLDS}
     res["run"] = run_record()

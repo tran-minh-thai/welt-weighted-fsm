@@ -224,6 +224,8 @@ def main():
             o.put(f"check.{ds}.{k}", r[k], sp)
         o.put(f"check.{ds}.chance_uniform_macro_f1", r["chance"]["uniform_macro_f1"], sp)
         o.put(f"check.{ds}.min_class_size", r["min_class"], sp)
+        o.put(f"check.{ds}.same_class_edge_share", r["same_class_edge_share"], sp)
+        o.put(f"check.{ds}.same_class_edge_share_random", r["same_class_edge_share_random"], sp)
         o.put(f"check.{ds}.chance_prior_macro_f1", r["chance"]["prior_macro_f1"], sp)
     o.need(o.values.get("check.lastfm.B0_macro_f1_mean") == o.values.get("lastfm.config.B0.macro_f1_mean"),
            "the baseline check does not reproduce the B0 of the reported LastFM run exactly")
