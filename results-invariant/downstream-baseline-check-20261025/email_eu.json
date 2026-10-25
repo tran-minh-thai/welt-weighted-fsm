@@ -49,8 +49,8 @@
   },
   "run": {
     "command": "python tools/downstream/baseline_check.py datasets/email_eu_struct.lg datasets/email_eu.lg results-invariant/downstream-baseline-check-20261025/email_eu.json",
-    "git_commit": "5997b2c0069296bf28fc94739e84cbc822cd843a",
-    "tree": "MODIFIED (1 files)",
+    "git_commit": "63a4cb9f4152810843ffcc463e8f062db0e61af9",
+    "tree": "clean",
     "host": "ThaiTMs-MacBook-Pro.local",
     "python": "3.14.6",
     "packages": {
@@ -59,7 +59,7 @@
       "scikit-learn": "1.9.1"
     },
     "tool_sha256": {
-      "tools/downstream/baseline_check.py": "c4be86e61e3348aecb4b9f7c690be1e74fb3f1b155e27adb3c6f32dae698eb2a",
+      "tools/downstream/baseline_check.py": "73dbbc2b8598aa1f7e8d8b2009744f4e4eb5a938c83ba4b42a9b51cc8f21179a",
       "tools/downstream/lib.py": "e27a1b05fa9e6e0002da42e60a37aae164543eaffe8a41b53425a3d6b4af35cc"
     }
   }
