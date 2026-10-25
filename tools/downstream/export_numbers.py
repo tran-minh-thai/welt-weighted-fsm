@@ -117,6 +117,16 @@ def main():
         o.put(f"lastfm.set.{k}.empty", dim["empty"], s_sum)
         if not dim["empty"]:
             o.put(f"lastfm.set.{k}.vertices_with_a_feature", dim["vertices_with_a_feature"], s_sum)
+    tim_p = os.path.join(d, "timings_measurement.json")
+    tim = load(tim_p)
+    o.need(tim.get("kind") == "measurement", f"{tim_p}: kind {tim.get('kind')!r}")
+    s_tim = src(tim_p)
+    for name, key in (("FWS", "fws"), ("Frequent (all)", "freq_all"), ("ALL", "all")):
+        o.put(f"lastfm.time.mining_ms.{key}", float(tim["mining"][name]["totalMs"]), s_tim)
+        o.put(f"lastfm.time.mining_runs.{key}", int(tim["mining"][name]["runs"]), s_tim)
+    o.put("lastfm.time.image_sets_ms.fws", tim["image_set_ms"]["FWS"], s_tim)
+    o.put("lastfm.time.image_sets_ms.freq_all", tim["image_set_ms"]["Frequent (all)"], s_tim)
+    o.put("lastfm.time.classification_min", tim["classification_wall_ms"] / 60000, s_tim)
     o.put("lastfm.columns.B0", summ["dimensions"]["B0"], s_sum)
     o.put("lastfm.columns.B1", summ["dimensions"]["B1"], s_sum)
     for n in names:
