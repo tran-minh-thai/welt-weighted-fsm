@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Export the numbers of the downstream experiment as one JSON data file (no formatting, no labels).
 
-    python tools/downstream/export_numbers.py <campaign dir> <baseline-check dir> <out.json>
+    python tools/downstream/export_numbers.py <campaign dir> <baseline-check dir> <out.json> [<github probe choice.json>]
 
 <campaign dir> holds B8_downstream_lastfm (the reported run) and B8_downstream_github (its scan
 outcome); <baseline-check dir> holds lastfm.json, email_eu.json and github.json written by
-baseline_check.py. Every value is read from these artifacts; nothing is typed in. Each key records
+baseline_check.py; the optional <github probe choice.json> is the downstream_choice.json of a
+GitHub probe scan, from which only pattern counts are read (they do not depend on the machine): the
+largest FWS count over the cells of the larger rho_w, all completed. Every value is read from these
+artifacts; nothing is typed in. Each key records
 its source file (path relative to the repository and SHA-256), so a number in the paper can be
 traced back. Exits 1, naming the failed condition, when an artifact is not the one the paper may
 cite: a run that is not a completed measurement on a clean tree with the design settings, a
@@ -55,9 +58,10 @@ def load(path):
 
 
 def main():
-    if len(sys.argv) != 4:
+    if len(sys.argv) not in (4, 5):
         sys.exit(__doc__)
-    camp, checks, out_path = sys.argv[1:]
+    camp, checks, out_path = sys.argv[1:4]
+    probe = sys.argv[4] if len(sys.argv) == 5 else None
     o = Out()
     files = {}
 
@@ -94,6 +98,18 @@ def main():
     src(fold_p)
 
     o.put("lastfm.machine", meta["host"], s_meta)
+    des = meta["design"]
+    o.put("design.degree_classes", meta["leakage_check"]["distinct_labels"], s_meta)
+    o.put("design.rho_grid", ", ".join(str(r) for r in des["rho_w"]), s_meta)
+    o.put("design.R_min", des["pattern_window"][0], s_meta)
+    o.put("design.R_max", des["pattern_window"][1], s_meta)
+    o.put("design.outer_folds", des["folds"], s_meta)
+    seeds_run = sorted({int(r["seed"]) for r in folds})
+    o.need(seeds_run == list(lib.SEEDS) and des["seeds"] == len(seeds_run),
+           f"{fold_p}: seeds {seeds_run}, run record {des['seeds']}, design {list(lib.SEEDS)}")
+    o.put("design.seeds", len(seeds_run), s_meta)
+    o.put("design.inner_folds", des["inner_folds"], s_meta)
+    o.put("design.limit_min", des["limit_ms"] / 60000, s_meta)
     o.put("lastfm.vertices", meta["leakage_check"]["vertices"], s_meta)
     o.put("lastfm.edges", meta["leakage_check"]["edges_compared"], s_meta)
     o.put("lastfm.classes", summ["classes"]["count"], s_sum)
@@ -184,6 +200,18 @@ def main():
     o.put("github.stop.R_lower_bound", last["R"], s_gc)
     o.need(last["decision"] == "undecided", f"{gc_p}: last scanned cell decided {last['decision']!r}")
 
+    if probe is not None:
+        pr = load(probe)
+        sp = src(probe)
+        hi = max(pr["grid"]["rho_w"])
+        cells = [r for r in pr["scanned"] if r["rho_w"] == hi]
+        o.need(cells and all(r["status"] == "OK" for r in cells), f"{probe}: a cell of rho_w {hi} did not complete")
+        o.need(pr["grid"]["rho_w"] == gm["design"]["rho_w"], f"{probe}: rho_w grid differs from the measured run")
+        o.put("github.probe.rho_high", hi, sp)
+        o.put("github.probe.rho_high_cells", len(cells), sp)
+        o.put("github.probe.rho_high_max_R", max(r["R"] for r in cells), sp)
+        o.put("github.probe.rho_high_min_tau_s", min(r["tau_s"] for r in cells), sp)
+
     # ---- baseline checks (B0 against chance)
     for ds in ("lastfm", "email_eu", "github"):
         p = os.path.join(checks, ds + ".json")
@@ -195,6 +223,7 @@ def main():
                   "B0_macro_f1_sd", "B0_folds_above_prior_chance", "fold_rows"):
             o.put(f"check.{ds}.{k}", r[k], sp)
         o.put(f"check.{ds}.chance_uniform_macro_f1", r["chance"]["uniform_macro_f1"], sp)
+        o.put(f"check.{ds}.min_class_size", r["min_class"], sp)
         o.put(f"check.{ds}.chance_prior_macro_f1", r["chance"]["prior_macro_f1"], sp)
     o.need(o.values.get("check.lastfm.B0_macro_f1_mean") == o.values.get("lastfm.config.B0.macro_f1_mean"),
            "the baseline check does not reproduce the B0 of the reported LastFM run exactly")
