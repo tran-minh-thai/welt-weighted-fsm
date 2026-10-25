@@ -158,6 +158,18 @@ def data(o):
             o.put(f"{base}.{k}", num(r[k]), "topology.csv")
 
 
+def tau_w(o):
+    """The weight threshold of every dataset, the same in every experiment that does not vary it."""
+    seen = collections.defaultdict(set)
+    for name in ("B1_efficiency.csv", "B1_low.csv", "B4_ablation.csv", "B4_ablation_hard.csv", "B4_low.csv",
+                 "B4_rep_jvm1.csv", "B3_live_heap.csv", "B2_voting_grid.csv", "B2_voting_grid_hard.csv", "B6_wegm_range.csv"):
+        for r in o.rows(name):
+            seen[ds(r)].add(float(r["minWeight"]))
+    for d, ws in sorted(seen.items()):
+        o.need(len(ws) == 1, f"{d}: weight thresholds {sorted(ws)} differ across the experiments")
+        o.put(f"data.{d}.tau_w", min(ws), "B1_efficiency.csv")
+
+
 def e1(o):
     d = collections.defaultdict(dict)
     for name in ("B1_efficiency.csv", "B1_low.csv"):
@@ -285,6 +297,8 @@ def e2(o):
                 if sc.ok(f):
                     for k in ("ms", "N", "M", "backtrack"):
                         o.put(f"{base}.full.{k}", float(f["totalMs"]) if k == "ms" else int(f[k]), name)
+                    for k, col in (("canon_ms", "canonMs"), ("filter_ms", "filterMs"), ("mni_ms", "mniMs")):
+                        o.put(f"{base}.full.{k}", float(f[col]), name)
             for v in VARIANTS:
                 r = c.get(v)
                 if r is None:
@@ -301,6 +315,8 @@ def e2(o):
                 o.put(f"{base}.{v}.verdict_source", "three JVMs" if (dname, s, v) in reps else "one JVM", name)
                 for k in ("N", "M", "backtrack"):
                     o.put(f"{base}.{v}.{k}", int(r[k]), name)
+                for k, col in (("canon_ms", "canonMs"), ("filter_ms", "filterMs"), ("mni_ms", "mniMs")):
+                    o.put(f"{base}.{v}.{k}", float(r[col]), name)
                 tally[(v, t)] += 1
         for (v, t), n in sorted(tally.items()):
             o.put(f"e2.{tag}.count.{v}.{t.replace(' ', '_')}", n, name)
@@ -311,6 +327,7 @@ def e2(o):
         o.put(base + ".verdict", t, "B4_rep_jvm1.csv")
         o.put(base + ".ratio_min", min(ratios), "B4_rep_jvm1.csv")
         o.put(base + ".ratio_max", max(ratios), "B4_rep_jvm1.csv")
+        o.put(base + ".ratio_median", statistics.median(ratios), "B4_rep_jvm1.csv")
         o.put(base + ".margin", margin, "B4_rep_jvm1.csv")
     for i in (2, 3):
         o.src(f"B4_rep_jvm{i}.csv")
@@ -327,7 +344,9 @@ def e3(o):
     datasets = sorted({k[0] for k in c})
     o.put("e3.datasets", len(datasets), "B5_tau_sweep.csv")
     count = collections.Counter()
+    sweep = {ds(r): r for r in o.rows("B5_shared_table.csv") if r["row"] == "sweep"}
     for dname in datasets:
+        per = collections.Counter()
         pts = sorted(k for k in c if k[0] == dname)
         o.put(f"e3.{dname}.min_sup", pts[0][1], "B5_tau_sweep.csv")
         o.put(f"e3.{dname}.points", len(pts), "B5_tau_sweep.csv")
@@ -346,6 +365,9 @@ def e3(o):
                 o.put(base + ".welt_vs_filter", v, "B5_tau_sweep.csv")
                 o.put(base + ".filter_over_welt", float(g["totalMs"]) / float(w["totalMs"]), "B5_tau_sweep.csv")
                 count[v] += 1
+                per[v] += 1
+            if sc.ok(w):
+                o.put(base + ".WeLT.N", int(w["N"]), "B5_tau_sweep.csv")
             sh = shared.get(k)
             if sh is not None and sh["status"] == "OK":
                 o.put(base + ".shared.query_ms", float(sh["queryMs"]), "B5_shared_table.csv")
@@ -355,6 +377,13 @@ def e3(o):
             ax = allx.get(k)
             if ax is not None and sc.ok(ax):
                 o.put(base + ".ALL.R", int(ax["R"]), "B5_all_exact.csv")
+        for t in ("faster", "slower", "tie"):
+            o.put(f"e3.{dname}.count.welt_{t}", per[t], "B5_tau_sweep.csv")
+        sw = sweep.get(dname)
+        o.need(sw is not None and sw["status"] == "OK", f"B5_shared_table.csv: no completed sweep row for {dname}")
+        if sw is not None and sw["status"] == "OK":
+            for k, col in (("table_ms", "tableBuildMs"), ("index_ms", "indexMs"), ("query_ms", "queryMs"), ("total_ms", "totalMs")):
+                o.put(f"e3.{dname}.shared.{k}", float(sw[col]), "B5_shared_table.csv")
     for v in ("faster", "slower", "tie"):
         o.put(f"e3.count.welt_{v}", count[v], "B5_tau_sweep.csv")
     for r in o.rows("B5_welt_only.csv"):
@@ -378,6 +407,16 @@ def e4(o):
 
 
 def e5(o):
+    comps = set()
+    for r in o.rows("B2_voting_grid.csv"):
+        t = [float(x) for x in r["voter"].replace(";", ",").split(",")]
+        if t != [1.0, 1.0, 1.0]:
+            comps.update(t)
+    vals = sorted(comps)
+    steps = {round(b - a, 9) for a, b in zip(vals, vals[1:])}
+    o.need(len(steps) == 1, f"B2_voting_grid.csv: grid components {vals} are not evenly spaced")
+    o.put("e5.grid_step", min(steps) if steps else None, "B2_voting_grid.csv")
+    o.put("e5.grid_points", len({r["voter"] for r in o.rows("B2_voting_grid.csv")}) - 1, "B2_voting_grid.csv")
     for name in ("B2_voting_grid.csv", "B2_voting_grid_hard.csv"):
         c = collections.defaultdict(list)
         for r in o.rows(name):
@@ -410,9 +449,18 @@ def e6(o):
             base = f"e6.{dname}.{s}.{a}"
             src = "B6_wegm_range_all.csv" if a == "ALL" else "B6_wegm_range.csv"
             o.put(base + ".status", r["status"] if r else None, src)
+            if r is not None:
+                o.put(base + ".limit_min", int(r["limitMs"]) / 60000, src)
+                for k, col in (("N", "N"), ("M", "M"), ("mni_calls", "mniIsoCallsMine"), ("R_found", "R")):
+                    o.put(f"{base}.{k}", int(r[col]), src)
             if sc.ok(r):
                 o.put(base + ".R", int(r["R"]), src)
                 o.put(base + ".ms", float(r["totalMs"]), src)
+    lim = {a: {o.values[k] for k in o.values if k.startswith("e6.") and k.endswith(f".{a}.limit_min")}
+           for a in ("WEGM", "ALL", "WeLT")}
+    o.need(all(len(x) == 1 for x in lim.values()), f"B6: time limits differ within an algorithm: {lim}")
+    for a in ("WEGM", "ALL", "WeLT"):
+        o.put(f"e6.limit_min.{a}", min(lim[a]), "B6_wegm_range.csv")
     nest = o.rows("B7_nesting.csv")
     sk_cmp = sum(1 for r in nest if r["exit"].strip() == "0" and r["skeletonsNotInAll"] not in ("", "-1"))
     sk_bad = sum(1 for r in nest if r["skeletonsNotInAll"] not in ("", "-1", "0"))
@@ -430,6 +478,13 @@ def e6(o):
     o.put("e6.all_within_welt.violations", sum(1 for r in aw if r["onlyA"] != "0"), "B7_all_within_welt.csv")
     o.put("e6.all_within_welt.equal", sum(1 for r in aw if r["sameSet"] == "1"), "B7_all_within_welt.csv")
     o.need(aw and all(r["onlyA"] == "0" for r in aw), "B7_all_within_welt.csv: an ALL pattern outside WeLT, or no cell")
+    # every configuration where both the ALL set and R are computed: the ALL-within-WeLT check of b7
+    # (experiments 1 and 3) and the nesting check (experiment 6), one count per distinct configuration
+    both = {(ds(r), int(r["minSup"]), round(float(r["minWeight"]), 2)) for r in aw}
+    both |= {(ds(r), int(r["minSup"]), round(float(r["minWeight"]), 2)) for r in nest
+             if r["exit"].strip() == "0" and r["allNotInWelt"] not in ("", "-1")}
+    o.put("e6.all_in_welt.configurations", len(both), "B7_all_within_welt.csv")
+    o.src("B7_nesting.csv")
     ad = o.rows("B7_all_exact_definition.csv")
     o.put("e6.all_definition.compared", len(ad), "B7_all_exact_definition.csv")
     o.put("e6.all_definition.equal", sum(1 for r in ad if r["sameSet"] == "1"), "B7_all_exact_definition.csv")
@@ -453,7 +508,7 @@ def main():
             print(f"ERROR: {f}: missing", file=sys.stderr)
         sys.exit(1)
     o = Out(camp)
-    for f in (protocol, data, e1, e2, e3, e4, e5, e6):
+    for f in (protocol, data, tau_w, e1, e2, e3, e4, e5, e6):
         f(o)
     if o.problems:
         for p in o.problems:
