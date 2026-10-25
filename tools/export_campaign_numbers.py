@@ -12,7 +12,8 @@ SHA-256). Sections:
   e1        efficiency (b1, b1low): per cell and algorithm; WeLT against GraMiFilter by the win rule;
             the gating invariant; result-set equality of WeLT and GraMiFilter; average pattern size;
             the cells where neither WeLT, GraMiFilter nor GraMi completes;
-  e2        ablation (b4, b4hard, b4low) against full by the tie rule, and the three-JVM passes
+  e2        ablation (b4, b4hard, b4low) against full by the tie rule with the floor of the three-JVM
+            rule (a ratio within 1 / MIN_EFFECT .. MIN_EFFECT is a tie), and the three-JVM passes
             (b4rep) by the rule of summarise_campaign.rep_verdict;
   e3        tau_w sweep (b5): GraMiFilter, WEGM, WeLT, the shared table, the exact ALL set, WeLT only;
   e4        peak live heap and retained data (b3live);
@@ -238,7 +239,16 @@ VARIANTS = ("noP1", "noP2", "noP2single", "noTable", "noTableBuild", "noP3", "p3
             "noWorder", "noTableReuse", "noTableThreshold", "noTableOptions")
 
 
+def ablation_verdict(r, f):
+    """Tie rule of summarise_campaign.verdict, and a tie whenever the time ratio lies within the floor
+    MIN_EFFECT of the three-JVM rule (the variation between JVMs exceeds the spread within one)."""
+    t = sc.verdict(r, f)
+    x = float(r["totalMs"]) / float(f["totalMs"])
+    return "tie" if 1 / sc.MIN_EFFECT < x < sc.MIN_EFFECT else t
+
+
 def e2(o):
+    o.put("e2.floor", sc.MIN_EFFECT, "B4_ablation.csv")
     for name, tag in (("B4_ablation.csv", "b4"), ("B4_ablation_hard.csv", "b4hard"), ("B4_low.csv", "b4low")):
         cells = collections.defaultdict(dict)
         for r in o.rows(name):
@@ -264,7 +274,7 @@ def e2(o):
                 if not sc.ok(r) or not sc.ok(f):
                     tally[(v, r["status"] if not sc.ok(r) else "full not complete")] += 1
                     continue
-                t = sc.verdict(r, f)
+                t = ablation_verdict(r, f)
                 o.put(f"{base}.{v}.ratio", float(r["totalMs"]) / float(f["totalMs"]), name)
                 o.put(f"{base}.{v}.verdict", t, name)
                 for k in ("N", "M", "backtrack"):
