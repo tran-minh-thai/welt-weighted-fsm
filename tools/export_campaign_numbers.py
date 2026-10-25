@@ -461,6 +461,8 @@ def e6(o):
     o.need(all(len(x) == 1 for x in lim.values()), f"B6: time limits differ within an algorithm: {lim}")
     for a in ("WEGM", "ALL", "WeLT"):
         o.put(f"e6.limit_min.{a}", min(lim[a]), "B6_wegm_range.csv")
+    o.need(lim["ALL"] == lim["WeLT"], f"B6: the ALL computation and WeLT have different limits {lim}")
+    o.put("e6.limit_min", min(lim["WeLT"]), "B6_wegm_range.csv")   # the shared limit of ALL and WeLT
     nest = o.rows("B7_nesting.csv")
     sk_cmp = sum(1 for r in nest if r["exit"].strip() == "0" and r["skeletonsNotInAll"] not in ("", "-1"))
     sk_bad = sum(1 for r in nest if r["skeletonsNotInAll"] not in ("", "-1", "0"))
