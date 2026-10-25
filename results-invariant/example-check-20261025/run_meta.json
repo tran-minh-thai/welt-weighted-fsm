@@ -1,0 +1,13 @@
+{
+  "command": "python3 tools/check_example.py --repo ~/work/welt-r2-res --self-test --out results-invariant/example-check-20261025",
+  "tool_sha256": "84db23a54e5e69446a80592a67012db6cb1808e98e50847adb873dfbaba5b6b9",
+  "trace_sha256": "d3e49e5d16a5ae7d1b40819a26edbc0e1dcd3b23aa5ff5acd7ffb1a4ad31c625",
+  "graph": "example.lg",
+  "graph_sha256": "12faa0c703dcccde2979947014e36e441b18822b782293923eca7251a59d774c",
+  "miner_commit": "3f9783fe7f8fe05124da25c0d672f7643e2252ca",
+  "miner_src_tree": "fb251a5fc550ac22346c30830b9707dd2404847a",
+  "miner_src_clean": true,
+  "java": "openjdk version \"26.0.1\" 2026-04-21",
+  "python": "3.14.6",
+  "machine": "ThaiTMs-MacBook-Pro.local"
+}

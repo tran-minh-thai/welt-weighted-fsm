@@ -1,0 +1,60 @@
+ok       occurrences of A-B-C and their bottlenecks: expected {'a1b1c1': 7.0, 'a1b1c2': 3.0, 'a1b2c2': 4.0, 'a2b2c2': 5.0}, got {'a1b1c1': 7.0, 'a1b1c2': 3.0, 'a1b2c2': 4.0, 'a2b2c2': 5.0}
+ok       MNI of A-B-C: expected 2, got 2
+ok       W of A-B-C: expected 7.0, got 7.0
+ok       occurrences of A-C: expected {'a1c1': 2.0, 'a2c2': 1.0}, got {'a1c1': 2.0, 'a2c2': 1.0}
+ok       MNI of A-C: expected 2, got 2
+ok       W of A-C: expected 2.0, got 2.0
+ok       number of frequent patterns at tau_s=2: expected 7, got 7
+ok       FWS at (2,5) with W: expected {'A-B': 7.0, 'B-C': 8.0, 'A-B-C': 7.0}, got {'B-C': 8.0, 'A-B': 7.0, 'A-B-C': 7.0}
+ok       FWS at (2,7) with W: expected {'A-B': 7.0, 'B-C': 8.0, 'A-B-C': 7.0}, got {'B-C': 8.0, 'A-B': 7.0, 'A-B-C': 7.0}
+ok       edges heavier than alpha=4.5: expected ['a1b1', 'a2b2', 'b1c1', 'b2c2'], got ['a1b1', 'a2b2', 'b1c1', 'b2c2']
+ok       ALL score at alpha=4.5, tau_s=2: expected ['A-B', 'A-B-C', 'B-C'], got ['A-B', 'A-B-C', 'B-C']
+ok       ALL set inside the FWS set at alpha=4.5, tau_w=5: expected True, got True
+ok       edges heavier than alpha=6.5: expected ['a1b1', 'b1c1'], got ['a1b1', 'b1c1']
+ok       ALL score at alpha=6.5, tau_s=2: expected [], got []
+ok       ALL set inside the FWS set at alpha=6.5, tau_w=7: expected True, got True
+ok       lookup-table rows listed in the example: expected {'A-B-C': [2, 7.0], 'B-A-C': [2, 2.0], 'A-C-B': [2, 2.0], 'B-C-B': [1, None]}, got {'A-B-C': [2, 7.0], 'B-A-C': [2, 2.0], 'A-C-B': [2, 2.0], 'B-C-B': [1, None]}
+ok       frequent two-edge paths (all entries of the table): expected ['A-B-C', 'A-C-B', 'B-A-C'], got ['A-B-C', 'A-C-B', 'B-A-C']
+ok       two-edge subpatterns of A-B-C-B missing from the table (P1): expected ['B-C-B'], got ['B-C-B']
+ok       UB_2 of the triangle (P2): expected 2.0, got 2.0
+ok       search, WeLT N: expected 17, got 17
+ok       search, GraMi N: expected 34, got 34
+ok       search, WeLT M: expected 3, got 3
+ok       search, GraMi M: expected 16, got 16
+ok       search, WeLT Mprime: expected 3, got 3
+ok       search, GraMi Mprime: expected 7, got 7
+ok       search, WeLT R: expected 3, got 3
+ok       search, GraMi R: expected 7, got 7
+ok       search, WeLT M without the single-edge bound: expected 4, got 4
+ok       search, WeLT result equals the FWS set: expected {((1, 2), ((0, 1),)): 8.0, ((0, 1), ((0, 1),)): 7.0, ((0, 1, 2), ((0, 1), (1, 2))): 7.0}, got {((0, 1), ((0, 1),)): 7.0, ((1, 2), ((0, 1),)): 8.0, ((0, 1, 2), ((0, 1), (1, 2))): 7.0}
+ok       search, GraMi result equals the frequent set: expected {((0, 1, 2), ((0, 1), (0, 2), (1, 2))), ((1, 2), ((0, 1),)), ((0, 2), ((0, 1),)), ((0, 1), ((0, 1),)), ((0, 1, 2), ((0, 2), (1, 2))), ((0, 1, 2), ((0, 1), (0, 2))), ((0, 1, 2), ((0, 1), (1, 2)))}, got {((0, 1, 2), ((0, 1), (0, 2))), ((0, 1, 2), ((0, 1), (1, 2))), ((0, 1, 2), ((0, 1), (0, 2), (1, 2))), ((1, 2), ((0, 1),)), ((0, 2), ((0, 1),)), ((0, 1), ((0, 1),)), ((0, 1, 2), ((0, 2), (1, 2)))}
+ok       search, table entries equal the frequent two-edge paths: expected {((0, 1, 2), ((0, 1), (1, 2))), ((0, 1, 2), ((0, 1), (0, 2))), ((0, 1, 2), ((0, 2), (1, 2)))}, got {((0, 1, 2), ((0, 1), (1, 2))), ((0, 1, 2), ((0, 1), (0, 2))), ((0, 1, 2), ((0, 2), (1, 2)))}
+ok       miner, WeLT result and W at (2,5): expected {((1, 2), ((0, 1),)): 8.0, ((0, 1), ((0, 1),)): 7.0, ((0, 1, 2), ((0, 1), (1, 2))): 7.0}, got {((0, 1), ((0, 1),)): 7.0, ((0, 1, 2), ((0, 1), (1, 2))): 7.0, ((1, 2), ((0, 1),)): 8.0}
+ok       miner, GraMiFilter result and W at (2,5): expected {((1, 2), ((0, 1),)): 8.0, ((0, 1), ((0, 1),)): 7.0, ((0, 1, 2), ((0, 1), (1, 2))): 7.0}, got {((0, 1), ((0, 1),)): 7.0, ((0, 1, 2), ((0, 1), (1, 2))): 7.0, ((1, 2), ((0, 1),)): 8.0}
+ok       miner, GraMi result at (2,5): expected {((0, 1, 2), ((0, 1), (0, 2), (1, 2))), ((1, 2), ((0, 1),)), ((0, 2), ((0, 1),)), ((0, 1), ((0, 1),)), ((0, 1, 2), ((0, 2), (1, 2))), ((0, 1, 2), ((0, 1), (0, 2))), ((0, 1, 2), ((0, 1), (1, 2)))}, got {((0, 1, 2), ((0, 1), (0, 2))), ((0, 1, 2), ((0, 1), (1, 2))), ((0, 1, 2), ((0, 1), (0, 2), (1, 2))), ((1, 2), ((0, 1),)), ((0, 2), ((0, 1),)), ((0, 1), ((0, 1),)), ((0, 1, 2), ((0, 2), (1, 2)))}
+ok       miner, WeLT result and W at (2,7): expected {((1, 2), ((0, 1),)): 8.0, ((0, 1), ((0, 1),)): 7.0, ((0, 1, 2), ((0, 1), (1, 2))): 7.0}, got {((0, 1), ((0, 1),)): 7.0, ((0, 1, 2), ((0, 1), (1, 2))): 7.0, ((1, 2), ((0, 1),)): 8.0}
+ok       miner, GraMiFilter result and W at (2,7): expected {((1, 2), ((0, 1),)): 8.0, ((0, 1), ((0, 1),)): 7.0, ((0, 1, 2), ((0, 1), (1, 2))): 7.0}, got {((0, 1), ((0, 1),)): 7.0, ((0, 1, 2), ((0, 1), (1, 2))): 7.0, ((1, 2), ((0, 1),)): 8.0}
+ok       miner, GraMi result at (2,7): expected {((0, 1, 2), ((0, 1), (0, 2), (1, 2))), ((1, 2), ((0, 1),)), ((0, 2), ((0, 1),)), ((0, 1), ((0, 1),)), ((0, 1, 2), ((0, 2), (1, 2))), ((0, 1, 2), ((0, 1), (0, 2))), ((0, 1, 2), ((0, 1), (1, 2)))}, got {((0, 1, 2), ((0, 1), (0, 2))), ((0, 1, 2), ((0, 1), (1, 2))), ((0, 1, 2), ((0, 1), (0, 2), (1, 2))), ((1, 2), ((0, 1),)), ((0, 2), ((0, 1),)), ((0, 1), ((0, 1),)), ((0, 1, 2), ((0, 2), (1, 2)))}
+ok       miner, WeLT N at (2,5) against the search: expected 17, got 17
+ok       miner, WeLT M at (2,5) against the search: expected 3, got 3
+ok       miner, WeLT Mprime at (2,5) against the search: expected 3, got 3
+ok       miner, WeLT R at (2,5) against the search: expected 3, got 3
+ok       miner, GraMi N at (2,5) against the search: expected 34, got 34
+ok       miner, GraMi M at (2,5) against the search: expected 16, got 16
+ok       miner, GraMi Mprime at (2,5) against the search: expected 7, got 7
+ok       miner, GraMi R at (2,5) against the search: expected 7, got 7
+ok       miner, WeLT table size against the frequent two-edge paths: expected 3, got 3
+ok       miner, WeLT settings (voter, weight order, reuse, threshold table): expected ['1;1;1', 'on', 'on', 'on'], got ['1;1;1', 'on', 'on', 'on']
+ok       trace, start vertex of the weight check of A-B-C: expected 'B', got 'B'
+ok       trace, matching order: expected 'B,A,C', got 'B,A,C'
+ok       trace, weight check answer with and without branch-and-bound: expected ['true', 'true'], got ['true', 'true']
+WeLT search: N_hat 18, N 17; GraMi search: N_hat 42, N 34
+miner counters at (2,5): WeLT N 17, M 3, Mprime 3, R 3, prunedP1 8, prunedP2 6, prunedP2Single 1, prunedP3 0, supportReused 3, weightReused 1, mniIsoCallsMine 0, weightIsoCalls 5, tableBuildCandidates 12, tableBuildMniIsoCalls 14, tableBuildWeightIsoCalls 3; GraMi N 34, M 16, Mprime 7, R 7, prunedP1 0, prunedP2 0, prunedP2Single 0, prunedP3 18, supportReused 0, weightReused 0, mniIsoCallsMine 24, weightIsoCalls 0, tableBuildCandidates 0, tableBuildMniIsoCalls 0, tableBuildWeightIsoCalls 0
+trace: start_label 1; order_labels 1,0,2; first_start_image 2; first_start_adjacency 0:0:0:7.0,4:0:2:8.0,5:0:2:3.0; embeds_bnb true backtrack=3; embeds_nobnb true backtrack=3
+check_example: 50 comparisons, 0 mismatches
+self-test (each fault must be caught):
+  caught: edge weight b1c1 8 -> 4 (12 of 50 comparisons fail)
+  caught: expected number of frequent patterns 7 -> 6 (1 of 50 comparisons fail)
+  caught: one pattern dropped from the WeLT dump (1 of 50 comparisons fail)
+  caught: single-edge bound switched in the search (5 of 50 comparisons fail)
+self-test: 4/4 faults caught; clean run passes
