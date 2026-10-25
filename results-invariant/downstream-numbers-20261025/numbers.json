@@ -8,7 +8,8 @@
     "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/downstream_choice.json": "f4752f0ad0c0b220d86c5fdb97f14663ba61ca77257003e6fedaddbb59f0587f",
     "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/folds.csv": "093b624e3b19795f8b37a57b96c3c84d5fd5064f1f838c3f1216f1677182b200",
     "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/run_meta.json": "fb7d59ca65665a07a692c1f11a0179c0aeb0d6e5ebbefefc630a075c32ed2607",
-    "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/summary.json": "5f486a41afed138cd3b032c9219a6ed99d5312f133aae2178b117d2c69dee32e"
+    "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/summary.json": "5f486a41afed138cd3b032c9219a6ed99d5312f133aae2178b117d2c69dee32e",
+    "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/timings_measurement.json": "37e47133ddfbf5bbfdc1674c662ef46cf0420a8042536ceed2a7356011dd7207"
   },
   "sources": {
     "check.email_eu.B0_folds_above_prior_chance": "results-invariant/downstream-baseline-check-20261025/email_eu.json",
@@ -238,6 +239,15 @@
     "lastfm.test.B1_fws_vs_B1_freq_same.macro_f1.pairs": "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/summary.json",
     "lastfm.test.B1_fws_vs_B1_freq_same.macro_f1.reference_better": "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/summary.json",
     "lastfm.test.B1_fws_vs_B1_freq_same.macro_f1.t": "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/summary.json",
+    "lastfm.time.classification_min": "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/timings_measurement.json",
+    "lastfm.time.image_sets_ms.freq_all": "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/timings_measurement.json",
+    "lastfm.time.image_sets_ms.fws": "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/timings_measurement.json",
+    "lastfm.time.mining_ms.all": "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/timings_measurement.json",
+    "lastfm.time.mining_ms.freq_all": "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/timings_measurement.json",
+    "lastfm.time.mining_ms.fws": "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/timings_measurement.json",
+    "lastfm.time.mining_runs.all": "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/timings_measurement.json",
+    "lastfm.time.mining_runs.freq_all": "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/timings_measurement.json",
+    "lastfm.time.mining_runs.fws": "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/timings_measurement.json",
     "lastfm.vertices": "results/v2_revision/20261024_1640_Admin-PC/B8_downstream_lastfm/run_meta.json"
   },
   "values": {
@@ -468,6 +478,15 @@
     "lastfm.test.B1_fws_vs_B1_freq_same.macro_f1.pairs": 30,
     "lastfm.test.B1_fws_vs_B1_freq_same.macro_f1.reference_better": 12,
     "lastfm.test.B1_fws_vs_B1_freq_same.macro_f1.t": -0.6132035666476979,
+    "lastfm.time.classification_min": 55.67069333333333,
+    "lastfm.time.image_sets_ms.freq_all": 2392.4,
+    "lastfm.time.image_sets_ms.fws": 308.1,
+    "lastfm.time.mining_ms.all": 2.392,
+    "lastfm.time.mining_ms.freq_all": 1029.109,
+    "lastfm.time.mining_ms.fws": 734.284,
+    "lastfm.time.mining_runs.all": 5,
+    "lastfm.time.mining_runs.freq_all": 5,
+    "lastfm.time.mining_runs.fws": 5,
     "lastfm.vertices": 7624
   }
 }
