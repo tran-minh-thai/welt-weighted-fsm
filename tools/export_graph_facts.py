@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""Facts of the input graph files that the reader resolves: pairs listed twice, conflicting weights, loops.
+
+    python3 tools/export_graph_facts.py <out dir> [--self-test]
+
+Reads datasets/<name>.lg for the six graphs of the experiments, counts per graph the edge lines, the
+self-loops, the vertex pairs listed more than once (in either direction) and, among them, those whose
+lines carry different weights (the reader keeps the first; see LgGraphReader), and writes
+<out dir>/numbers.json with keys data.<ds>.{edge_lines,self_loops,bidir_pairs,bidir_pairs_diff_weight}.
+--self-test changes the weight of one repeated line, and adds a self-loop, in a copy of a graph, and
+requires both counts to change by one.
+"""
+import json
+import shutil
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+GRAPHS = ("citeseer", "mico", "email_eu", "lastfm", "github", "string_ecoli")
+
+
+def facts(path):
+    first, repeated, diff, loops, lines = {}, set(), set(), 0, 0
+    for line in open(path, encoding="utf-8"):
+        t = line.split()
+        if not t or t[0] != "e":
+            continue
+        lines += 1
+        u, v, w = int(t[1]), int(t[2]), float(t[3])
+        if u == v:
+            loops += 1
+            continue
+        k = (min(u, v), max(u, v))
+        if k in first:
+            repeated.add(k)
+            if first[k] != w:
+                diff.add(k)
+        else:
+            first[k] = w
+    return {"edge_lines": lines, "self_loops": loops, "bidir_pairs": len(repeated), "bidir_pairs_diff_weight": len(diff)}
+
+
+def main():
+    out = Path(sys.argv[1])
+    keys = {}
+    for g in GRAPHS:
+        p = ROOT / "datasets" / f"{g}.lg"
+        if not p.exists():
+            sys.exit(f"export_graph_facts: {p} is missing; run tools/fetch_datasets.py")
+        for k, v in facts(p).items():
+            keys[f"data.{g}.{k}"] = v
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "numbers.json").write_text(json.dumps(keys, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    for k in sorted(keys):
+        print(k, keys[k])
+    if "--self-test" in sys.argv:
+        base = facts(ROOT / "datasets" / "citeseer.lg")
+        with tempfile.TemporaryDirectory() as t:
+            p = Path(t) / "g.lg"
+            shutil.copy(ROOT / "datasets" / "citeseer.lg", p)
+            lines = p.read_text(encoding="utf-8").splitlines(keepends=True)
+            seen, idx = {}, None
+            for i, l in enumerate(lines):
+                tt = l.split()
+                if tt and tt[0] == "e":
+                    k = tuple(sorted((int(tt[1]), int(tt[2]))))
+                    if k in seen:
+                        idx = i
+                        break
+                    seen[k] = i
+            tt = lines[idx].split()
+            lines[idx] = f"e {tt[1]} {tt[2]} {float(tt[3]) + 1}\n"
+            lines.append("e 0 0 1\n")
+            p.write_text("".join(lines), encoding="utf-8")
+            got = facts(p)
+        ok = got["bidir_pairs_diff_weight"] == base["bidir_pairs_diff_weight"] + 1 and got["self_loops"] == base["self_loops"] + 1
+        print(f"self-test: {'passed' if ok else 'FAILED'} (diff-weight pairs {base['bidir_pairs_diff_weight']} -> "
+              f"{got['bidir_pairs_diff_weight']}, loops {base['self_loops']} -> {got['self_loops']})")
+        sys.exit(0 if ok else 1)
+
+
+if __name__ == "__main__":
+    main()
