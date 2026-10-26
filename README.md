@@ -156,20 +156,24 @@ exact-mode run that reports an aborted search stops with exit code 4. The result
 
 ## Data (`datasets/`)
 
-| File | Vertices | Edges | Vertex labels | Edge weight | Source |
-|---|---|---|---|---|---|
-| `citeseer.lg` | 3,312 | 4,536 | 6 | publication similarity ∈[0,100] | native |
-| `email_eu.lg` | 677 | 2,462 | 42 | number of emails (≥25), right-skewed | native (SNAP email-Eu-core) |
-| `string_ecoli.lg` | 4,137 | 76,330 | 5 | STRING combined-score ∈[500,999] | native (STRING E. coli) |
-| `bitcoin_otc.lg` | 5,881 | 21,492 | 5 | trust rating shifted to [1,21] | native (SNAP Bitcoin-OTC) |
-| `lastfm.lg` | 7,624 | 27,806 | 18 | Jaccard of node features ×100 | derived (MUSAE LastFM) |
-| `test1/2.lg` | — | — | — | GraMi toy graphs | — |
+| File | Vertices | Edges | Vertex labels | Edge weight | Source | In the repository |
+|---|---|---|---|---|---|---|
+| `citeseer.lg` | 3,312 | 4,536 | 6 | publication similarity ∈[0,100] | GraMi distribution (`Datasets/citeseer.lg`, Elseidy et al.), derived from the CiteSeer dataset (LINQS) | no: downloaded |
+| `mico.lg` | 100,000 | 1,080,156 | 29 | co-authored papers | GraMi distribution (`Datasets/mico.lg`, Elseidy et al.) | no: downloaded |
+| `email_eu.lg` | 677 | 2,462 | 42 | number of emails (≥25), right-skewed | converted from SNAP email-Eu-core (temporal edition and department labels) | no: rebuilt |
+| `lastfm.lg` | 7,624 | 27,806 | 18 | Jaccard of node features ×100 | converted from SNAP MUSAE LastFM Asia | no: rebuilt |
+| `github.lg` | 37,700 | 289,003 | 2 | Jaccard of node features ×100 | converted from SNAP MUSAE GitHub | no: rebuilt |
+| `string_ecoli.lg` | 4,137 | 76,330 | 5 | STRING combined score ∈[500,999] | converted from STRING v12.0, *E. coli* K-12 (taxon 511145), CC BY 4.0 | yes |
+| `bitcoin_otc.lg` | 5,881 | 21,492 | 5 | trust rating shifted to [1,21] | converted from SNAP Bitcoin-OTC | yes |
+| `test1.lg`, `test2.lg` | — | — | — | GraMi toy graphs | GraMi distribution (`Datasets/`, Elseidy et al.) | no: downloaded |
+| `example.lg` | 6 | 8 | 3 | example of the paper | this repository | yes |
 
-Two large graphs are not committed (regenerate them with the converters): `mico.lg`
-(100K vertices, co-authored-paper edge labels) and `github.lg` (37,700 vertices, MUSAE
-GitHub with Jaccard weights). The conversion scripts live in `datasets/`
-(`convert_musae.py`, `convert_string.py`, `convert_bitcoin.py`, `convert_email.py`); each
-prints the resulting size and weight statistics. Raw downloads go under `datasets/raw/`.
+`python3 tools/fetch_datasets.py` downloads and rebuilds every graph that is not in the repository and
+checks each graph, and each downloaded source file, against its SHA-256; the conversions are
+deterministic, so the rebuilt files are byte-identical to those of the experiments. The graphs whose
+sources state no licence that allows redistributing them are not committed. Sources and licences are
+listed in `datasets/NOTICE`. The conversion scripts live in `datasets/` (`convert_musae.py`,
+`convert_string.py`, `convert_bitcoin.py`, `convert_email.py`); raw downloads go under `datasets/raw/`.
 
 > **CiteSeer note:** the edge label is a near-unique real value (similarity). The original
 > GraMi treats it as an *edge label*, so plain FSM returns 0 patterns. Here we treat edges

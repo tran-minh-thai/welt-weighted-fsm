@@ -9,6 +9,12 @@ tools/*.jar
 datasets/raw/
 datasets/mico.lg
 datasets/github.lg
+# Graphs whose sources state no licence that allows redistribution: rebuilt by tools/fetch_datasets.py
+datasets/citeseer.lg
+datasets/email_eu.lg
+datasets/lastfm.lg
+datasets/test1.lg
+datasets/test2.lg
 datasets/derived/
 
 # Third-party GraMi clone (used only to regenerate the oracle; keep reference/oracle/)

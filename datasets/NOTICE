@@ -1,0 +1,36 @@
+Sources of the graphs used by this repository
+
+Graphs that are NOT redistributed here (tools/fetch_datasets.py downloads or rebuilds them and checks
+their SHA-256):
+
+  citeseer.lg, mico.lg, test1.lg, test2.lg
+      Copied without change from the GraMi distribution, Datasets/ of
+      https://github.com/ehab-abdelhamid/GraMi (M. Elseidy, E. Abdelhamid, S. Skiadopoulos, P. Kalnis,
+      "GraMi: Frequent Subgraph and Pattern Mining in a Single Large Graph", PVLDB 7(7), 2014).
+      citeseer.lg is derived from the CiteSeer dataset (LINQS). The GraMi repository is distributed under
+      the GNU LGPL 2.1, whose text does not address the data files.
+
+  email_eu.lg
+      Converted from SNAP email-Eu-core-temporal and email-Eu-core department labels
+      (https://snap.stanford.edu/data/email-Eu-core-temporal.html, https://snap.stanford.edu/data/email-Eu-core.html).
+      The SNAP pages state no licence.
+
+  lastfm.lg, github.lg
+      Converted from SNAP MUSAE LastFM Asia and GitHub
+      (https://snap.stanford.edu/data/feather-lastfm-social.html, https://snap.stanford.edu/data/github-social.html).
+      The SNAP pages state no licence.
+
+Graphs that are redistributed here:
+
+  string_ecoli.lg
+      Converted from STRING v12.0, Escherichia coli K-12 (taxon 511145), file 511145.protein.links.v12.0.txt.gz,
+      keeping the interactions with a combined score of at least 500. STRING data are available under the
+      Creative Commons Attribution 4.0 licence (https://string-db.org/cgi/access); D. Szklarczyk et al.,
+      "The STRING database in 2023", Nucleic Acids Research 51(D1):D638-D646, 2023.
+
+  bitcoin_otc.lg
+      Converted from SNAP soc-sign-bitcoin-otc (https://snap.stanford.edu/data/soc-sign-bitcoin-otc.html).
+      The SNAP page states no licence.
+
+  example.lg
+      The example graph of the paper, created for this repository.
