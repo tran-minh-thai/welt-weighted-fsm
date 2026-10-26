@@ -9,9 +9,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * MNI (Minimum Image-based support) counter — a FAITHFUL port of GraMi's CSP
- * algorithm (Elseidy &amp; Abdelhamid, PVLDB 2014, classes {@code CSP.ConstraintGraph}
- * + {@code CSP.DFSSearch}). We do NOT write a new isomorphism solver: every strategy
+ * MNI (Minimum Image-based support) counter — an independent reimplementation of the
+ * CSP-based MNI evaluation described by Elseidy et al. (PVLDB 2014); no GraMi source code
+ * is included. We do NOT write a new isomorphism solver: every strategy
  * (GraMi/OWGraMi/WEGM/WeLT) SHARES this class; WeLT only REDUCES the number of calls to
  * it rather than replacing it — which keeps the comparison fair.
  *

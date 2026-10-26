@@ -15,7 +15,7 @@ subgraph-mining algorithms on a single large graph:
 
 | Algorithm | Problem solved | Role | Code provenance |
 |---|---|---|---|
-| **GraMi** | frequent subgraphs, no weights | unweighted reference (the τ_w → 0 limit) | *adapted* from the open-source code of Elseidy & Abdelhamid (PVLDB 2014); reproduces the pattern sets of the original GraMi (`GraMiOracleTest`) |
+| **GraMi** | frequent subgraphs, no weights | unweighted reference (the τ_w → 0 limit) | an independent reimplementation of the CSP-based MNI evaluation described by Elseidy et al. (PVLDB 2014); no GraMi source code is included; reproduces the pattern sets of the original GraMi (`GraMiOracleTest`) |
 | **GraMiFilter** | the same problem as WeLT (edge-bottleneck weight) | **baseline**: identical result set | GraMi's search, then an exact weight check of every frequent pattern (the two-step design of ReSuM) |
 | **ALL-exact** | ReSuM's ALL score: MNI over the appearances whose edges all weigh more than α | closest published model, computed exactly; result set contained in WeLT's | GraMi on the graph of the edges weighing at least τ_w (`tools/heavy_subgraph.py`, campaign step `allexact`) |
 | **WEGM** | edge weights are pattern labels (Max method) | published edge-weight method; **different result set** | *reimplementation* of Nguyen et al., J. Inf. Telecommun. 9(4):543-558, 2025 |
@@ -95,7 +95,7 @@ src/main/java/welt/
     EdgeLabelAssigner      structural-label-assignment function (default: edges unlabeled)
     VertexWeightAssigner   vertex-weight derivation (for OWGraMi)
     Pattern, CanonicalCode pattern + minimum-DFS-code canonical form (gSpan-style dedup, any size)
-    MniSupportCounter      MNI counter via CSP (adapted from GraMi) — SHARED across strategies;
+    MniSupportCounter      MNI counter via CSP (independent reimplementation; no GraMi code) — SHARED across strategies;
                            arc consistency (AC-3), parent→child domain inheritance, multi-criteria
                            variable ordering, search budget and time limit
     PivotVoter             multi-criteria matching-order voting (α·domain + β·degree + γ·weight);
