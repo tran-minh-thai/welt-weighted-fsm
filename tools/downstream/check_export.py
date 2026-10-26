@@ -92,7 +92,7 @@ def main():
         base, c = fresh()
         r = run(base, c)
         if r.returncode != 0:
-            print("FAIL  the unchanged copy is refused: " + r.stderr.strip())
+            print("FAIL  the unchanged copy is refused: " + r.stderr.strip().replace(base, "<copy>"))
             sys.exit(1)
         print("ok    the unchanged copy is exported")
         for name, rel, inject, expect in FAULTS:
@@ -108,7 +108,8 @@ def main():
             r = run(base, c)
             ok = r.returncode == 1 and expect in r.stderr
             caught += ok
-            print(f"{'ok   ' if ok else 'FAIL '} {name}: exit {r.returncode}, {r.stderr.strip().splitlines()[0] if r.stderr.strip() else 'no message'}")
+            msg = r.stderr.strip().splitlines()[0] if r.stderr.strip() else "no message"
+            print(f"{'ok   ' if ok else 'FAIL '} {name}: exit {r.returncode}, {msg.replace(base, '<copy>')}")  # no machine path
     print(f"check_export: {caught}/{len(FAULTS)} faults caught")
     sys.exit(0 if caught == len(FAULTS) else 1)
 
