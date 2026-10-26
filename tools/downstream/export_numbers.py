@@ -110,6 +110,22 @@ def main():
     o.put("design.seeds", len(seeds_run), s_meta)
     o.put("design.inner_folds", des["inner_folds"], s_meta)
     o.put("design.limit_min", des["limit_ms"] / 60000, s_meta)
+    # Software of the classification: the versions recorded by the run; the solver read from the model
+    # that lib.model builds, with the scikit-learn version of the run (the export refuses another).
+    o.put("design.env.python", meta["python"], s_meta)
+    for pkg in ("scikit-learn", "scipy", "numpy"):
+        o.put(f"design.env.{pkg.replace('-', '_')}", meta["packages"][pkg], s_meta)
+    try:
+        import sklearn
+    except ImportError:
+        sklearn = None
+    o.need(sklearn is not None and sklearn.__version__ == meta["packages"]["scikit-learn"],
+           f"the solver is read with scikit-learn {meta['packages']['scikit-learn']} (the run's); found "
+           f"{getattr(sklearn, '__version__', 'none')}")
+    if sklearn is not None:
+        lr = lib.model(0).estimator.named_steps["lr"]
+        o.put("design.env.solver", lr.get_params()["solver"], "tools/downstream/lib.py")
+        o.put("design.env.max_iter", lr.get_params()["max_iter"], "tools/downstream/lib.py")
     o.put("lastfm.vertices", meta["leakage_check"]["vertices"], s_meta)
     o.put("lastfm.edges", meta["leakage_check"]["edges_compared"], s_meta)
     o.put("lastfm.classes", summ["classes"]["count"], s_sum)
