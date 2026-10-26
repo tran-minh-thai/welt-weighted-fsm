@@ -82,7 +82,8 @@ both **complete** and **correct**.
 ./run.sh datasets/citeseer.lg 500 GraMi   # mine with GraMi, minSup=500
 ```
 
-Once Maven is installed, `mvn test` also works (see `pom.xml`, target Java 17).
+Once Maven is installed, `mvn test` also works (see `pom.xml`, target Java 17); fetch the test graphs first with
+`python3 tools/fetch_datasets.py citeseer.lg email_eu.lg lastfm.lg`, which `./test.sh` does itself.
 
 ## Architecture
 

@@ -3,7 +3,7 @@
 
 Usage:  python tools/fetch_datasets.py [name.lg ...]          # verify; fetch and rebuild what is missing
         python tools/fetch_datasets.py --check [name.lg ...]  # verify only, never download
-With names, only those graphs are handled (test.sh fetches the two graphs the tests read).
+With names, only those graphs are handled (test.sh fetches the three graphs the tests read).
 
 Committed graphs are only verified. The graphs that are not committed, because their sources state
 no licence that allows redistributing them, are rebuilt from their sources:
