@@ -27,6 +27,13 @@
 #                            shared-table sweep, and a WeLT-only sweep at the lowest WeLT support
 #   ./revision.sh b7         result sets over every completed cell: GraMiFilter = WeLT,
 #                            exact ALL = its definition and within WeLT; WEGM within ALL within WeLT
+#   ./revision.sh r5sweep [ds]  the shared-table sweep against one WeLT run per tau_w, at the supports and tau_w
+#                            of the r2 campaign's b5 step, both timed in one session (sweep with its spread)
+#   ./revision.sh r5grami    the public GraMi (tools/grami_public.py) and GraMiStrategy at CiteSeer 400, 300 and
+#                            MiCo 16000, 15000 (both complete in r2), then the public GraMi alone at CiteSeer 250,
+#                            200, 150, 100 and MiCo 14000 (GraMiStrategy reaches the limit there in r2)
+#   ./revision.sh r5scal     GitHub and STRING E. coli at a high tau_w: WeLT and WEGM, then GraMiFilter
+#   (r5sweep, r5grami and r5scal refuse a JDK other than the one of the r2 campaign, r2_environment.lock)
 #
 # Order: prepare, voting (writes voting_choice.json), then b2grid, b4, b1 and allexact, b5, b7. Every step after
 # prepare writes into the campaign directory named in results/v2_revision/CURRENT (or RUN_DIR).
@@ -613,6 +620,77 @@ b7)
         b7_compare "$P" "$RUN_DIR/B7_resum_definition.csv" - ReSuM-ALL ALL-definition "ReSuM code = ALL definition" recorded
         b7_compare "$P" "$RUN_DIR/B7_resum_within_welt.csv" --subset ReSuM-ALL WeLT "ReSuM code within WeLT" recorded
     fi
+    ;;
+r5sweep|r5grami|r5scal)
+    REF="results/v2_revision/r2_environment.lock"
+    if ! diff <(tr -d '\r' < "$REF") <(tr -d '\r' < "$RUN_DIR/environment.lock") > /dev/null; then
+        echo "ERROR: the campaign JDK differs from the one of the r2 campaign ($REF):" >&2
+        diff <(tr -d '\r' < "$REF") <(tr -d '\r' < "$RUN_DIR/environment.lock") >&2 || true
+        exit 1
+    fi
+    export WELT_VOTER="1,1,1" WELT_WORDER=on
+    case "$CMD" in
+    r5sweep)
+        OUT="$RUN_DIR/R5_sweep_separate.csv"
+        SWEEP="$RUN_DIR/R5_sweep_shared.csv"
+        for cell in "citeseer 300" "email_eu 10" "lastfm 1350"; do
+            read -r ds s <<< "$cell"
+            if [ -n "${2:-}" ] && [ "$ds" != "$2" ]; then continue; fi
+            taus=$(java -cp target/classes welt.runner.SharedTableSweepMain --grid "datasets/$ds.lg" \
+                0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9 "$(tau_w_of "$ds")" | tr -d '\r' | paste -sd, -)
+            echo "=== r5sweep $ds minSup=$s tau_w=$taus"
+            for t in ${taus//,/ }; do
+                run_cell "$OUT" "datasets/$ds.lg" "$s" "$t" WeLT "$LIMIT" "$WARMUP" "$MEASURED"
+            done
+            if cell_done "$SWEEP" "dataset=$ds.lg" "minSup=$s" "row=sweep"; then
+                echo "--- skip (already in $(basename "$SWEEP")): shared-table sweep $ds minSup=$s"
+            else
+                tmp=$(mktemp)
+                BENCH_CSV=1 java ${JAVA_OPTS:-} -cp target/classes welt.runner.SharedTableSweepMain \
+                    "datasets/$ds.lg" "$s" "$taus" "$LIMIT" "$WARMUP" "$MEASURED" > "$tmp" 2>&1 || true
+                cat "$tmp"
+                append_csv "$tmp" "$SWEEP"
+                rm -f "$tmp"
+                checkpoint "r5 shared-table sweep $ds minSup=$s: $(last_status "$SWEEP")"
+            fi
+        done
+        ;;
+    r5grami)
+        W="${GRAMI_WORK:-$HOME/work/grami-public}"
+        $PY tools/grami_public.py build "$W"
+        cp "$W/build_info.json" "$RUN_DIR/R5_grami_build_info.json"
+        PUB="$RUN_DIR/R5_grami_public.csv"
+        OURS="$RUN_DIR/R5_grami_ours.csv"
+        CMP="$RUN_DIR/R5_grami_compare.txt"
+        for cell in "citeseer 400" "citeseer 300" "mico 16000" "mico 15000"; do
+            read -r ds s <<< "$cell"
+            run_cell "$OURS" "datasets/$ds.lg" "$s" "$(tau_w_of "$ds")" GraMi "$LIMIT" "$WARMUP" "$MEASURED"
+            $PY tools/grami_public.py run "$W" "$PUB" "$ds" "$s" "$LIMIT" "$WARMUP" "$MEASURED"
+            if [ -f "$RUN_DIR/grami_output/${ds}_${s}.txt" ] && ! grep -q "^$ds $s " "$CMP" 2>/dev/null; then
+                code=0
+                line=$($PY tools/grami_public.py compare "$W" "$ds" "$s" "$RUN_DIR/grami_output/${ds}_${s}.txt" 2>&1 | tail -1) || code=$?
+                echo "$ds $s exit=$code $line" >> "$CMP"
+            fi
+            checkpoint "r5 public GraMi $ds minSup=$s: $(tail -1 "$PUB" | cut -d, -f5)"
+        done
+        for cell in "citeseer 250" "citeseer 200" "citeseer 150" "citeseer 100" "mico 14000"; do
+            read -r ds s <<< "$cell"
+            $PY tools/grami_public.py run "$W" "$PUB" "$ds" "$s" "$LIMIT" "$WARMUP" "$MEASURED"
+            checkpoint "r5 public GraMi $ds minSup=$s: $(tail -1 "$PUB" | cut -d, -f5)"
+        done
+        ;;
+    r5scal)
+        OUT="$RUN_DIR/R5_scal_high_tau_w.csv"
+        # the cells where WeLT completes in the count probe results-probe/scal-high-tau-w-20261030
+        CELLS=("github 24000 47.8261" "github 22000 47.8261" "string_ecoli 1850 999" "string_ecoli 1850 990")
+        for algo in WeLT WEGM GraMiFilter; do
+            for cell in "${CELLS[@]}"; do
+                read -r ds s t <<< "$cell"
+                run_cell "$OUT" "datasets/$ds.lg" "$s" "$t" "$algo" "$LIMIT" "$WARMUP" "$MEASURED"
+            done
+        done
+        ;;
+    esac
     ;;
 *)
     echo "unknown command: $CMD" >&2
