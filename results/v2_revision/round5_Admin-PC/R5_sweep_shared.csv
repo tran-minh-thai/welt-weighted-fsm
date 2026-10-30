@@ -1,0 +1,12 @@
+dataset,algorithm,minSup,limitMs,runs,status,voter,worder,row,minWeight,R,M,mniIsoCalls,tableSize,tableBuildMs,indexMs,queryMs,totalMs,totalMinMs,totalMaxMs,totalSdMs
+citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,point,10.000,9,27,6330,2,,,10.587,,,,
+citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,point,20.000,9,27,6330,2,,,10.415,,,,
+citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,point,30.000,9,27,6330,2,,,10.996,,,,
+citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,point,40.000,9,27,6330,2,,,11.753,,,,
+citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,point,50.000,9,27,6330,2,,,10.442,,,,
+citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,point,60.000,9,27,6330,2,,,10.536,,,,
+citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,point,70.000,9,27,6330,2,,,11.376,,,,
+citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,point,80.000,9,27,6330,2,,,10.792,,,,
+citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,point,90.000,9,25,6330,2,,,10.080,,,,
+citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,point,96.000,5,10,3041,2,,,4.571,,,,
+citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,sweep,,,,,2,6.997,2.532,102.199,111.758,93.483,149.022,21.266
