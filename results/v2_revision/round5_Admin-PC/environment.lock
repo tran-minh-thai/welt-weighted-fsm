@@ -1,0 +1,3 @@
+java.runtime.version = 21.0.12.1+1-LTS
+java.vendor = Microsoft
+JAVA_OPTS = -Xmx48g
