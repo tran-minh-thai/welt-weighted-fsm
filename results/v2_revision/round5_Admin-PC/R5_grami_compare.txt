@@ -1,0 +1,1 @@
+citeseer 400 exit=0 public_count=5 public_blocks=5 ours=5 both=5 public_only=0 ours_only=0
