@@ -42,6 +42,13 @@ does less work. Keys, with <c> the cell name with '.' replaced by '_':
   e5x.<c>.<mode>.weight_share_of_gap        (weight-check nodes of the order - of the default) / (controlled
                                             nodes of the order - of the default): the part of the difference
                                             that comes from the start of the weight check
+  e5x.<c>.{default,<mode>}.nodes.{mni,weight,table}   backtracking nodes of the MNI counts and of the
+                                            weight checks of the mining phase, and of the lookup-table build
+  e5x.<c>.grid_best.{triple,tied}           the voters of the grid with the fewest controlled nodes (ties listed)
+  e5x.<ds>.grid_best_common.{count,triple}  voters best in every cell with controlled work of a dataset
+  e5x.<ds>.grid_minimax.{triple,cells,ratio.<cell>}   the voter whose largest ratio over those cells is smallest
+  e5x.grid_never_worse.{cells,count,triples}, e5x.grid_never_worse.<voter>.below   voters never above the
+                                            default in any cell with controlled work, and in how many below
 Exits 1 when a cell lacks the default run or a mode, or when runs of a cell disagree on the result set.
 """
 import json
