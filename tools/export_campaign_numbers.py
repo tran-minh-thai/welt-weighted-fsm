@@ -20,8 +20,10 @@ SHA-256). Sections:
   e5        voting-weight sensitivity (b2grid, b2hard);
   e6        WEGM, the exact ALL set and WeLT at WEGM's supports, and the nesting checks (b7).
 Win rule (the protocol of the paper): a time difference counts only when it exceeds the tie rule of
-summarise_campaign.verdict and at least one search counter (candidates that reach MNICount, or
-embedding searches) differs in the same direction; otherwise the cell is a tie.
+summarise_campaign.verdict and at least one search counter (candidates that reach MNICount, embedding
+searches, or backtracking nodes) differs in the same direction; otherwise the cell is a tie. An
+ablation difference must in addition exceed the floor. Each comparison also gets the first condition
+it fails (reason: sigma, direction, floor, three_jvm; marked when it fails none).
 Exits 1, naming each failed condition, when the campaign is not one the paper may cite: a run
 record on a modified tree or another JDK, a measurement row whose counters differ across its runs,
 a missing file, or a result-set check that failed.
@@ -103,14 +105,29 @@ def searches(r):
     return int(r["mniIsoCallsMine"]) + int(r["weightIsoCalls"])
 
 
-def win(a, b):
-    """'faster', 'slower' or 'tie' for a against b by the win rule (tie rule and a counter in the same direction)."""
+def counter_follows(a, b, t):
+    """Does M, the number of embedding searches or the number of backtracking nodes differ in the direction of t?"""
+    sign = -1 if t == "faster" else 1
+    counters = [int(a["M"]) - int(b["M"]), searches(a) - searches(b), int(a["backtrack"]) - int(b["backtrack"])]
+    return any(c * sign > 0 for c in counters)
+
+
+def reason(a, b, floor=False):
+    """(verdict, first failed condition) for a against b: sigma, direction, floor, or marked."""
     t = sc.verdict(a, b)
     if t == "tie":
-        return "tie"
-    sign = -1 if t == "faster" else 1
-    counters = [(int(a["M"]) - int(b["M"])), searches(a) - searches(b)]
-    return t if any(c * sign > 0 for c in counters) else "tie"
+        return "tie", "sigma"
+    if not counter_follows(a, b, t):
+        return "tie", "direction"
+    x = float(a["totalMs"]) / float(b["totalMs"])
+    if floor and 1 / sc.MIN_EFFECT < x < sc.MIN_EFFECT:
+        return "tie", "floor"
+    return t, "marked"
+
+
+def win(a, b):
+    """'faster', 'slower' or 'tie' for a against b by the win rule (tie rule and a counter in the same direction)."""
+    return reason(a, b)[0]
 
 
 def protocol(o):
@@ -183,7 +200,7 @@ def e1(o):
     o.put("e1.equal_sets.compared", len(eq), "B7_equivalence.csv")
     o.put("e1.equal_sets.equal", sum(1 for r in eq if r["sameSet"] == "1"), "B7_equivalence.csv")
     o.need(all(r["sameSet"] == "1" for r in eq) and eq, "B7_equivalence.csv: WeLT and GraMiFilter differ, or no cell")
-    count, ratios, held, checked = collections.Counter(), [], 0, 0
+    count, ratios, held, checked, scal = collections.Counter(), [], 0, 0, []
     for (dname, s), algos in sorted(d.items()):
         base = f"e1.cell.{dname}.{s}"
         vtx = o.values.get(f"data.{dname}.vertices")
@@ -208,6 +225,10 @@ def e1(o):
             ratios.append(float(g["totalMs"]) / float(w["totalMs"]))
             o.put(f"{base}.welt_vs_filter", v, w["_file"])
             o.put(f"{base}.filter_over_welt", ratios[-1], w["_file"])
+            o.put(f"{base}.welt_vs_filter_reason", reason(w, g)[1], w["_file"])
+            if dname in SCALABILITY:
+                scal.append((dname, s, float(w["totalMs"]) / float(g["totalMs"]), reason(w, g)[1],
+                             counter_follows(w, g, "slower" if float(w["totalMs"]) > float(g["totalMs"]) else "faster")))
             count[v] += 1
         elif sc.ok(w):
             count["only WeLT completes" if g else "GraMiFilter not run"] += 1
@@ -226,6 +247,15 @@ def e1(o):
         o.put("e1.filter_over_welt.min", min(ratios), "B1_efficiency.csv")
         o.put("e1.filter_over_welt.median", statistics.median(ratios), "B1_efficiency.csv")
         o.put("e1.filter_over_welt.max", max(ratios), "B1_efficiency.csv")
+    if scal:
+        o.put("e1.scal.cells", len(scal), "B1_efficiency.csv")
+        o.put("e1.scal.ratio.min", min(x[2] for x in scal), "B1_efficiency.csv")
+        o.put("e1.scal.ratio.max", max(x[2] for x in scal), "B1_efficiency.csv")
+        for dname, s, _x, why, _f in scal:
+            o.put(f"e1.scal.tie_reason.{dname}.{s}", why, "B1_efficiency.csv")
+        for why in ("sigma", "direction", "marked"):
+            o.put(f"e1.scal.count.{why}", sum(1 for x in scal if x[3] == why), "B1_efficiency.csv")
+        o.put("e1.scal.count.counter_follows_time", sum(1 for x in scal if x[4]), "B1_efficiency.csv")
     o.put("e1.gating.checked", checked, "B1_efficiency.csv")
     o.put("e1.gating.held", held, "B1_efficiency.csv")
     o.need(held == checked and checked > 0, f"gating invariant held in {held} of {checked} cells")
@@ -247,16 +277,15 @@ def e1(o):
     o.put("e1.hard.wegm_completes", sum(1 for k in hard if sc.ok(d[k].get("WEGM"))), "B1_efficiency.csv")
 
 
+SCALABILITY = ("github", "mico", "string_ecoli")   # the scalability group of the paper
 VARIANTS = ("noP1", "noP2", "noP2single", "noTable", "noTableBuild", "noP3", "p3R", "noWext", "noBnb", "voteDeg",
             "noWorder", "noTableReuse", "noTableThreshold", "noTableOptions")
 
 
 def ablation_verdict(r, f):
-    """Tie rule of summarise_campaign.verdict, and a tie whenever the time ratio lies within the floor
-    MIN_EFFECT of the three-JVM rule (the variation between JVMs exceeds the spread within one)."""
-    t = sc.verdict(r, f)
-    x = float(r["totalMs"]) / float(f["totalMs"])
-    return "tie" if 1 / sc.MIN_EFFECT < x < sc.MIN_EFFECT else t
+    """The win rule, and a tie whenever the time ratio lies within the floor MIN_EFFECT of the three-JVM
+    rule (the variation between JVMs exceeds the spread within one)."""
+    return reason(r, f, floor=True)[0]
 
 
 def rep_verdicts(o):
@@ -280,6 +309,7 @@ def rep_verdicts(o):
 def e2(o):
     o.put("e2.floor", sc.MIN_EFFECT, "B4_ablation.csv")
     reps = rep_verdicts(o)
+    unmarked, p3r = [], []
     for name, tag in (("B4_ablation.csv", "b4"), ("B4_ablation_hard.csv", "b4hard"), ("B4_low.csv", "b4low")):
         cells = collections.defaultdict(dict)
         for r in o.rows(name):
@@ -313,6 +343,14 @@ def e2(o):
                 o.put(f"{base}.{v}.verdict_one_jvm", one, name)
                 o.put(f"{base}.{v}.verdict", t, name)
                 o.put(f"{base}.{v}.verdict_source", "three JVMs" if (dname, s, v) in reps else "one JVM", name)
+                why = reason(r, f, floor=True)[1] if (dname, s, v) not in reps else ("marked" if t != "tie" else "three_jvm")
+                o.put(f"{base}.{v}.reason", why, name)
+                passes = reps[(dname, s, v)][1] if (dname, s, v) in reps else None
+                shown = statistics.median(passes) if passes else float(r["totalMs"]) / float(f["totalMs"])
+                if t == "tie" and not (1 / sc.MIN_EFFECT < shown < sc.MIN_EFFECT) and tag in ("b4hard", "b4low"):
+                    unmarked.append((v, dname, s, why))
+                if v == "p3R":
+                    p3r.append((int(r["M"]) - int(f["M"]), int(r["N"]) - int(f["N"]), t, float(r["totalMs"]) / float(f["totalMs"])))
                 for k in ("N", "M", "backtrack"):
                     o.put(f"{base}.{v}.{k}", int(r[k]), name)
                 for k, col in (("canon_ms", "canonMs"), ("filter_ms", "filterMs"), ("mni_ms", "mniMs")):
@@ -320,6 +358,23 @@ def e2(o):
                 tally[(v, t)] += 1
         for (v, t), n in sorted(tally.items()):
             o.put(f"e2.{tag}.count.{v}.{t.replace(' ', '_')}", n, name)
+    # the ablation table (b4hard, b4low): unmarked cells whose ratio lies beyond the floor, and why
+    o.put("e2.unmarked.count", len(unmarked), "B4_low.csv")
+    for v, dname, s, why in unmarked:
+        o.put(f"e2.unmarked.{v}.{dname}.{s}.reason", why, "B4_low.csv")
+    for why in ("sigma", "direction", "three_jvm"):
+        o.put(f"e2.unmarked.count.{why}", sum(1 for u in unmarked if u[3] == why), "B4_low.csv")
+    # P3 against the result set, over every ablation cell where it ran
+    o.put("e2.p3r.cells", len(p3r), "B4_ablation.csv")
+    o.put("e2.p3r.M_lower", sum(1 for x in p3r if x[0] < 0), "B4_ablation.csv")
+    o.put("e2.p3r.M_equal", sum(1 for x in p3r if x[0] == 0), "B4_ablation.csv")
+    o.put("e2.p3r.M_higher", sum(1 for x in p3r if x[0] > 0), "B4_ablation.csv")
+    o.put("e2.p3r.N_equal", sum(1 for x in p3r if x[1] == 0), "B4_ablation.csv")
+    for t in ("faster", "slower", "tie"):
+        o.put(f"e2.p3r.{t}", sum(1 for x in p3r if x[2] == t), "B4_ablation.csv")
+    if p3r:
+        o.put("e2.p3r.ratio_min", min(x[3] for x in p3r), "B4_ablation.csv")
+        o.put("e2.p3r.ratio_max", max(x[3] for x in p3r), "B4_ablation.csv")
     o.put("e2.rep.passes", 3, "B4_rep_jvm1.csv")
     o.put("e2.rep.min_effect", sc.MIN_EFFECT, "B4_rep_jvm1.csv")
     for (d, sup, v), (t, ratios, margin) in sorted(reps.items()):
