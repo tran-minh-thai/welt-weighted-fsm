@@ -1,0 +1,21 @@
+{
+ "repository": "https://github.com/ehab-abdelhamid/GraMi.git",
+ "commit": "d2875ae80afa2f141323a3f6b89a387787fcda38",
+ "removed_lines": [
+  "import javax.jws.Oneway;",
+  "import javax.rmi.CORBA.Util;"
+ ],
+ "sources": 68,
+ "classes": 80,
+ "java": "openjdk version \"21.0.12.1\" 2026-08-18 LTS",
+ "inputs": {
+  "citeseer": {
+   "graph_sha256": "1150fe20d702c49419a5296dc9d8ada47e912a48eda5fdab2d2f987510200a02",
+   "unlabeled_sha256": "f1f049e12b5d87fe7a3e43ac379199e8a5ae88a36fb96870eada2dc78f21e4d9"
+  },
+  "mico": {
+   "graph_sha256": "f94eabe3659b8b35027323f2df00b749c63c78d1e954d36a4036218001333aa1",
+   "unlabeled_sha256": "9ff6a4b39a95bb3fdd5461896d77eec04d9e516dcf72fa5305a1bba5129cb408"
+  }
+ }
+}
