@@ -30,6 +30,12 @@ check "another voter is another cell" "$(rows "$OUT")" 2
 JAVA_OPTS="-Xmx1k" run_cell "$OUT" datasets/citeseer.lg 300 96 GraMi 0 0 1 > /dev/null 2>&1
 run_cell "$OUT" datasets/citeseer.lg 300 96 GraMi 0 0 1 > /dev/null
 check "a recorded crash is not retried" "$(rows "$OUT")" 3
+FOUR="$T/four_decimals.csv"
+run_cell "$FOUR" datasets/lastfm.lg 1350 5.7544 WeLT 0 0 1 > /dev/null
+run_cell "$FOUR" datasets/lastfm.lg 1350 5.7544 WeLT 0 0 1 > /dev/null
+check "a tau_w with more decimals than the CSV writes is not run again" "$(rows "$FOUR")" 1
+run_cell "$FOUR" datasets/lastfm.lg 1350 5.7600 WeLT 0 0 1 > /dev/null
+check "a tau_w that differs at the CSV precision is another cell" "$(rows "$FOUR")" 2
 
 # --- resume of an ablation cell
 ABL="$T/ablation.csv"
