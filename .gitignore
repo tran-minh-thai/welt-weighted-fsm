@@ -13,6 +13,7 @@ datasets/github.lg
 datasets/citeseer.lg
 datasets/email_eu.lg
 datasets/lastfm.lg
+datasets/bitcoin_otc.lg
 datasets/test1.lg
 datasets/test2.lg
 datasets/derived/

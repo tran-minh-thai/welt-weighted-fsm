@@ -13,6 +13,8 @@ no licence that allows redistributing them, are rebuilt from their sources:
              converted with datasets/convert_email.py from the SNAP files email-Eu-core-temporal.txt.gz
              and email-Eu-core-department-labels.txt.gz, keeping the pairs with at least 25 emails;
   lastfm.lg  converted with datasets/convert_musae.py from the SNAP archive lastfm_asia.zip (MUSAE LastFM Asia);
+  bitcoin_otc.lg
+             converted with datasets/convert_bitcoin.py from the SNAP file soc-sign-bitcoinotc.csv.gz;
   github.lg  converted with datasets/convert_musae.py from the SNAP archive git_web_ml.zip (MUSAE GitHub).
 Every download is checked against its SHA-256 before use, and the conversions are deterministic.
 Every file is checked against the SHA-256 below; a mismatch stops with exit code 1, so a run
@@ -55,6 +57,7 @@ EMAIL_SOURCES = (("email-Eu-core-temporal.txt.gz", "f6cc93249978e59d1aba111b55ea
                  ("email-Eu-core-department-labels.txt.gz", "e5abe5b4581a480032a63adcf2576c161785f45692642c6ebb0b1276f0f33669"))
 EMAIL_MIN_EMAILS = 25
 LASTFM_ZIP = ("lastfm_asia.zip", "51acb78a923bb223ed6e61be88f91122fb29adca3f07beff7289cafd98601d47")
+BITCOIN_SOURCE = ("soc-sign-bitcoinotc.csv.gz", "6424ac981dad3a019f697fc1b9fcd85c19d8d9f039797758e9ffb6fea100c373")
 GITHUB_ZIP_URL = "https://snap.stanford.edu/data/git_web_ml.zip"
 GITHUB_ZIP_SHA = "56c0c1c2c460dc4c7bf89357b1fec020f45e2ecebab81d131d073b10e28ec031"
 
@@ -122,6 +125,10 @@ def rebuild(name):
         subprocess.run([sys.executable, os.path.join(DATA, "convert_musae.py"),
                         os.path.join(src, "lastfm_asia_edges.csv"), os.path.join(src, "lastfm_asia_features.json"),
                         os.path.join(src, "lastfm_asia_target.csv"), os.path.join(DATA, name)], check=True)
+    elif name == "bitcoin_otc.lg":
+        ratings = gunzip(source(*BITCOIN_SOURCE))
+        subprocess.run([sys.executable, os.path.join(DATA, "convert_bitcoin.py"), ratings,
+                        os.path.join(DATA, name)], check=True)
     elif name == "github.lg":
         os.makedirs(RAW, exist_ok=True)
         zpath = os.path.join(RAW, "git_web_ml.zip")

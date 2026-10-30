@@ -20,6 +20,13 @@ their SHA-256):
       (https://snap.stanford.edu/data/feather-lastfm-social.html, https://snap.stanford.edu/data/github-social.html).
       The SNAP pages state no licence.
 
+  bitcoin_otc.lg
+      Converted with datasets/convert_bitcoin.py from SNAP soc-sign-bitcoinotc.csv.gz
+      (https://snap.stanford.edu/data/soc-sign-bitcoin-otc.html). The SNAP page states no licence and asks
+      users to cite S. Kumar, F. Spezzano, V.S. Subrahmanian, C. Faloutsos, "Edge Weight Prediction in Weighted
+      Signed Networks", IEEE ICDM 2016, and S. Kumar, B. Hooi, D. Makhija, M. Kumar, V.S. Subrahmanian,
+      C. Faloutsos, "REV2: Fraudulent User Prediction in Rating Platforms", ACM WSDM 2018.
+
 Graphs that are redistributed here:
 
   string_ecoli.lg
@@ -27,10 +34,6 @@ Graphs that are redistributed here:
       keeping the interactions with a combined score of at least 500. STRING data are available under the
       Creative Commons Attribution 4.0 licence (https://string-db.org/cgi/access); D. Szklarczyk et al.,
       "The STRING database in 2023", Nucleic Acids Research 51(D1):D638-D646, 2023.
-
-  bitcoin_otc.lg
-      Converted from SNAP soc-sign-bitcoin-otc (https://snap.stanford.edu/data/soc-sign-bitcoin-otc.html).
-      The SNAP page states no licence.
 
   example.lg
       The example graph of the paper, created for this repository.

@@ -165,7 +165,7 @@ exact-mode run that reports an aborted search stops with exit code 4. The result
 | `lastfm.lg` | 7,624 | 27,806 | 18 | Jaccard of node features ×100 | converted from SNAP MUSAE LastFM Asia | no: rebuilt |
 | `github.lg` | 37,700 | 289,003 | 2 | Jaccard of node features ×100 | converted from SNAP MUSAE GitHub | no: rebuilt |
 | `string_ecoli.lg` | 4,137 | 76,330 | 5 | STRING combined score ∈[500,999] | converted from STRING v12.0, *E. coli* K-12 (taxon 511145), CC BY 4.0 | yes |
-| `bitcoin_otc.lg` | 5,881 | 21,492 | 5 | trust rating shifted to [1,21] | converted from SNAP Bitcoin-OTC | yes |
+| `bitcoin_otc.lg` | 5,881 | 21,492 | 5 | trust rating shifted to [1,21] | converted from SNAP Bitcoin-OTC (`soc-sign-bitcoinotc.csv.gz`) | no: rebuilt |
 | `test1.lg`, `test2.lg` | — | — | — | GraMi toy graphs | GraMi distribution (`Datasets/`, Elseidy et al.) | no: downloaded |
 | `example.lg` | 6 | 8 | 3 | example of the paper | this repository | yes |
 
