@@ -10,3 +10,14 @@ citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,point,80.000,9,27,6330,2
 citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,point,90.000,9,25,6330,2,,,10.080,,,,
 citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,point,96.000,5,10,3041,2,,,4.571,,,,
 citeseer.lg,WeLT-shared-table,300,3600000,5,OK,1;1;1,on,sweep,,,,,2,6.997,2.532,102.199,111.758,93.483,149.022,21.266
+email_eu.lg,WeLT-shared-table,10,3600000,5,OK,1;1;1,on,point,521.700,16,42,194,53,,,8.532,,,,
+email_eu.lg,WeLT-shared-table,10,3600000,5,OK,1;1;1,on,point,1018.400,5,10,59,53,,,3.689,,,,
+email_eu.lg,WeLT-shared-table,10,3600000,5,OK,1;1;1,on,point,1515.100,3,4,34,53,,,3.208,,,,
+email_eu.lg,WeLT-shared-table,10,3600000,5,OK,1;1;1,on,point,2011.800,2,2,23,53,,,2.797,,,,
+email_eu.lg,WeLT-shared-table,10,3600000,5,OK,1;1;1,on,point,2508.500,1,1,13,53,,,2.352,,,,
+email_eu.lg,WeLT-shared-table,10,3600000,5,OK,1;1;1,on,point,3005.200,1,1,13,53,,,2.567,,,,
+email_eu.lg,WeLT-shared-table,10,3600000,5,OK,1;1;1,on,point,3501.900,1,1,13,53,,,3.139,,,,
+email_eu.lg,WeLT-shared-table,10,3600000,5,OK,1;1;1,on,point,3998.600,1,1,13,53,,,3.328,,,,
+email_eu.lg,WeLT-shared-table,10,3600000,5,OK,1;1;1,on,point,4495.300,1,1,13,53,,,2.985,,,,
+email_eu.lg,WeLT-shared-table,10,3600000,5,OK,1;1;1,on,point,336.000,43,157,1294,53,,,47.975,,,,
+email_eu.lg,WeLT-shared-table,10,3600000,5,OK,1;1;1,on,sweep,,,,,53,33.454,2.001,78.903,110.170,77.042,168.406,35.893
