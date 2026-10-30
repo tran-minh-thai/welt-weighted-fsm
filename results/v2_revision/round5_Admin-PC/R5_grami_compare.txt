@@ -1,1 +1,2 @@
 citeseer 400 exit=0 public_count=5 public_blocks=5 ours=5 both=5 public_only=0 ours_only=0
+citeseer 300 exit=0 public_count=9 public_blocks=9 ours=9 both=9 public_only=0 ours_only=0
