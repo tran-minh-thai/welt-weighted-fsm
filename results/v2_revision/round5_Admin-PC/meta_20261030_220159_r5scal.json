@@ -18,5 +18,6 @@
   "command": "revision.sh r5scal",
   "limitMs": "3600000",
   "warmup": "1",
-  "measured": "5"
+  "measured": "5",
+  "endTime": "2026-10-31T02:26:46.0658858+07:00"
 }
