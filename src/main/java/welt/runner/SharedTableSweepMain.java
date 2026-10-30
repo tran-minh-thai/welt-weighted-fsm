@@ -31,7 +31,8 @@ import java.util.Locale;
  * range, followed by the extra values, one per line (used by the experiment script).
  *
  * <p>With {@code BENCH_CSV} set, prints {@code CSV,} rows: one per tau_w ({@code row=point}) and
- * one summary ({@code row=sweep}: table construction, sum of the queries, total). The matching
+ * one summary ({@code row=sweep}: table construction, sum of the queries, total, and the minimum,
+ * maximum and sample standard deviation of the total over the measured sweeps). The matching
  * order follows WELT_VOTER / WELT_WORDER as in BenchmarkMain. {@code limitMs} bounds the whole
  * sweep; a sweep that reaches it is reported with status TO.
  */
@@ -90,7 +91,10 @@ public final class SharedTableSweepMain {
                     .put("tableBuildMs", "")
                     .put("indexMs", "")
                     .put("queryMs", done ? median(runs, s -> idx < s.points.size() ? s.points.get(idx)[0] : Double.NaN) : "")
-                    .put("totalMs", "");
+                    .put("totalMs", "")
+                    .put("totalMinMs", "")
+                    .put("totalMaxMs", "")
+                    .put("totalSdMs", "");
             System.out.printf(Locale.ROOT, "tau_w=%-10.3f R=%-6s queryMs=%s%n", taus[idx],
                     done ? String.valueOf((long) last.points.get(idx)[1]) : "-",
                     done ? String.format(Locale.ROOT, "%.1f", median(runs, s -> s.points.get(idx)[0])) : "-");
@@ -110,7 +114,10 @@ public final class SharedTableSweepMain {
                 .put("tableBuildMs", median(runs, s -> s.tableMs))
                 .put("indexMs", median(runs, s -> s.indexMs))
                 .put("queryMs", sumQuery)
-                .put("totalMs", median(runs, s -> s.totalMs));
+                .put("totalMs", median(runs, s -> s.totalMs))
+                .put("totalMinMs", runs.stream().mapToDouble(s -> s.totalMs).min().orElse(Double.NaN))
+                .put("totalMaxMs", runs.stream().mapToDouble(s -> s.totalMs).max().orElse(Double.NaN))
+                .put("totalSdMs", sd(runs, s -> s.totalMs));
         System.out.printf(Locale.ROOT, "sweep: table %.1f ms, %d queries %.1f ms, total %.1f ms, status %s%n",
                 median(runs, s -> s.tableMs), taus.length, sumQuery, median(runs, s -> s.totalMs), status);
         if (csv) System.out.println("CSV," + summary.values());
@@ -170,6 +177,21 @@ public final class SharedTableSweepMain {
         }
         s.totalMs = (System.nanoTime() - t0) / 1e6;
         return s;
+    }
+
+    /** Sample standard deviation (n-1) of the measured sweeps, as BenchmarkMain reports for one run; 0 for one sweep. */
+    static double sd(List<Sweep> runs, java.util.function.ToDoubleFunction<Sweep> f) {
+        int n = runs.size();
+        if (n < 2) return 0.0;
+        double mean = 0;
+        for (Sweep s : runs) mean += f.applyAsDouble(s);
+        mean /= n;
+        double ss = 0;
+        for (Sweep s : runs) {
+            double d = f.applyAsDouble(s) - mean;
+            ss += d * d;
+        }
+        return Math.sqrt(ss / (n - 1));
     }
 
     private static double median(List<Sweep> runs, java.util.function.ToDoubleFunction<Sweep> f) {
