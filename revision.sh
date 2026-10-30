@@ -55,7 +55,7 @@ CURRENT_FILE="results/v2_revision/CURRENT"
 CMD="${1:-list}"
 
 if [ "$CMD" = "list" ] || [ "$CMD" = "-h" ] || [ "$CMD" = "--help" ]; then
-    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+    awk 'NR > 1 && /^# Order:/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"
     exit 0
 fi
 
