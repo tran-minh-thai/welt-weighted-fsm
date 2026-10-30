@@ -75,6 +75,7 @@ def main():
     rev_w_above, rev_w = 0, []
     rev_above_cells = non_lastfm = 0
     table_r = {}
+    gridwork = {}
     cost_count = {"above": 0, "below": 0, "better": 0}
     for cell, rs in cells.items():
         c = cell.replace(".", "_")
@@ -131,6 +132,16 @@ def main():
         keys[f"{k}.controlled_bt.grid_distinct"] = len(set(cg.values()))
         idle = s["mining.mni.calls"] == 0 and s["mining.weight.calls"] <= 1
         keys[f"{k}.no_controlled_work"] = int(idle)
+        tied = sorted(v for v in cg if cg[v] == cg[best_v])
+        keys[f"e5x.{c}.grid_best.triple"] = "; ".join(tied)
+        keys[f"e5x.{c}.grid_best.tied"] = len(tied)
+        if not idle:
+            gridwork[cell] = (cg, base)
+        for mk, run in [("default", d)] + [(m.replace(":", "_"), rs[m]) for m in modes + (["cost"] if "cost" in rs else [])]:
+            st = run["stats"]
+            keys[f"e5x.{c}.{mk}.nodes.mni"] = st["mining.mni.backtrack"]
+            keys[f"e5x.{c}.{mk}.nodes.weight"] = st["mining.weight.backtrack"]
+            keys[f"e5x.{c}.{mk}.nodes.table"] = st["table.mni.backtrack"] + st["table.weight.backtrack"]
         x = f"e5x.{c}"
         ratio = {}
         keys[f"e5x.{c}.default.nodes_per_search"] = share(s["mining.mni.backtrack"], s["mining.mni.searches"])
@@ -221,6 +232,28 @@ def main():
     for mk, vals in table_r.items():
         keys[f"e5x.table_bt_ratio.{mk}.min"] = min(vals)
         keys[f"e5x.table_bt_ratio.{mk}.max"] = max(vals)
+    # grid triples across the cells with controlled work: best in every cell of a dataset, the triple with the
+    # smallest largest ratio, and the triples whose node count never exceeds the default in any cell
+    by_ds = {}
+    for cell in gridwork:
+        by_ds.setdefault(cell.split(".")[0], []).append(cell)
+    for dname, cs in sorted(by_ds.items()):
+        triples = sorted(set.intersection(*[set(gridwork[x][0]) for x in cs]) - {"1,1,1"})
+        best_all = [t for t in triples if all(gridwork[x][0][t] == min(v for k2, v in gridwork[x][0].items() if k2 != "1,1,1") for x in cs)]
+        keys[f"e5x.{dname}.grid_best_common.count"] = len(best_all)
+        keys[f"e5x.{dname}.grid_best_common.triple"] = "; ".join(best_all)
+        mm = min(triples, key=lambda t: (max(share(gridwork[x][0][t], gridwork[x][1]) for x in cs), t))
+        keys[f"e5x.{dname}.grid_minimax.triple"] = mm
+        keys[f"e5x.{dname}.grid_minimax.cells"] = len(cs)
+        for x in cs:
+            keys[f"e5x.{dname}.grid_minimax.ratio.{x.split('.', 1)[1].replace('.', '_')}"] = share(gridwork[x][0][mm], gridwork[x][1])
+    allt = sorted(set.intersection(*[set(cg) for cg, _b in gridwork.values()]) - {"1,1,1"}) if gridwork else []
+    never = [t for t in allt if all(cg[t] <= b for cg, b in gridwork.values())]
+    keys["e5x.grid_never_worse.cells"] = len(gridwork)
+    keys["e5x.grid_never_worse.count"] = len(never)
+    keys["e5x.grid_never_worse.triples"] = "; ".join(never)
+    for t in never:
+        keys[f"e5x.grid_never_worse.{t.replace(',', '_')}.below"] = sum(1 for cg, b in gridwork.values() if cg[t] < b)
     keys["e5x.cells_with_work"] = len(rows) - sum(1 for r in rows if r[0].endswith("(no controlled work)"))
     keys["e5x.cells_without_work"] = sum(1 for r in rows if r[0].endswith("(no controlled work)"))
     keys["e5x.random.seeds"] = len(SEEDS)
