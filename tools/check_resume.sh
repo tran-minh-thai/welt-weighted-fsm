@@ -30,6 +30,10 @@ check "another voter is another cell" "$(rows "$OUT")" 2
 JAVA_OPTS="-Xmx1k" run_cell "$OUT" datasets/citeseer.lg 300 96 GraMi 0 0 1 > /dev/null 2>&1
 run_cell "$OUT" datasets/citeseer.lg 300 96 GraMi 0 0 1 > /dev/null
 check "a recorded crash is not retried" "$(rows "$OUT")" 3
+NTB="$T/no_table_build.csv"
+run_cell "$NTB" datasets/citeseer.lg 300 96 WeLT-noTableBuild 0 0 1 > /dev/null
+run_cell "$NTB" datasets/citeseer.lg 300 96 WeLT-noTableBuild 0 0 1 > /dev/null
+check "a finished WeLT-noTableBuild cell (WeLT's voter) is not run again" "$(rows "$NTB")" 1
 FOUR="$T/four_decimals.csv"
 run_cell "$FOUR" datasets/lastfm.lg 1350 5.7544 WeLT 0 0 1 > /dev/null
 run_cell "$FOUR" datasets/lastfm.lg 1350 5.7544 WeLT 0 0 1 > /dev/null
