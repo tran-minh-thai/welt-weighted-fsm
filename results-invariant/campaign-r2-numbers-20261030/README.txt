@@ -1,4 +1,4 @@
-# How these files were made (commit 57b61e6, tree clean)
+# How these files were made (commit 1b0c2fa, tree clean)
 python tools/export_campaign_numbers.py <campaign-revision-r2 checkout>/results/v2_revision/20261021_2047_Admin-PC results-invariant/campaign-r2-numbers-20261030/numbers.json
 python tools/check_campaign_export.py <same campaign dir>  (output: check_campaign_export.txt)
 campaign results: branch campaign-revision-r2, commit 3f9783f
@@ -10,3 +10,5 @@ and is unchanged); 240 keys are added. Backtracking nodes now count as a search 
 ablation marks of the branch-and-bound variant follow the rule stated for every comparison.
 
 Re-exported at commit 57b61e6: 8 keys added (e2.<table>.cell_list, e6.all_in_welt.by_exp.*, e6.all_in_welt.equal_cells); no value changed.
+
+Re-exported at commit 1b0c2fa: 14 keys added (e1.cell.<ds>.<tau_s>.filter_limit_over_welt for the 11 configurations where only WeLT completes, e1.only_welt.lb_ratio.{cells,min,max}); no value changed.
