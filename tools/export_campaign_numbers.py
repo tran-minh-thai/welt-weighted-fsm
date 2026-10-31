@@ -316,6 +316,7 @@ def e2(o):
             cells[(ds(r), int(r["minSup"]))][r["variant"]] = r
         bad = [(k, v) for k, c in cells.items() for v, r in c.items() if sc.ok(r) and r["invariant"] not in ("OK", "REF")]
         o.put(f"e2.{tag}.cells", len(cells), name)
+        o.put(f"e2.{tag}.cell_list", "; ".join(f"{d} {s_}" for d, s_ in sorted(cells)), name)
         o.put(f"e2.{tag}.result_set_violations", len(bad), name)
         o.need(not bad, f"{name}: result-set violations {bad}")
         tally = collections.Counter()
@@ -541,6 +542,30 @@ def e6(o):
     both |= {(ds(r), int(r["minSup"]), round(float(r["minWeight"]), 2)) for r in nest
              if r["exit"].strip() == "0" and r["allNotInWelt"] not in ("", "-1")}
     o.put("e6.all_in_welt.configurations", len(both), "B7_all_within_welt.csv")
+    # the same configurations by experiment: an ALL-within-WeLT row at the dataset's tau_w is a configuration
+    # of experiment 1, at another tau_w one of experiment 3 (the tau_w sweep); a nesting row is experiment 6.
+    # A configuration may belong to more than one experiment (the sweep includes the dataset's tau_w).
+    tw = {d: o.values.get(f"data.{d}.tau_w") for d in {c[0] for c in both}}
+    by = {"e1": set(), "e3": set(), "e6": set()}
+    sweep = {(d, int(o.values[f"e3.{d}.min_sup"])) for d in tw if f"e3.{d}.min_sup" in o.values}
+    for r in aw:
+        c = (ds(r), int(r["minSup"]), round(float(r["minWeight"]), 2))
+        if (c[0], c[1]) in sweep:
+            by["e3"].add(c)
+        if tw.get(c[0]) is not None and abs(c[2] - tw[c[0]]) < 1e-9:
+            by["e1"].add(c)
+    for r in nest:
+        if r["exit"].strip() == "0" and r["allNotInWelt"] not in ("", "-1"):
+            by["e6"].add((ds(r), int(r["minSup"]), round(float(r["minWeight"]), 2)))
+    for e, cs in by.items():
+        o.put(f"e6.all_in_welt.by_exp.{e}", len(cs), "B7_all_within_welt.csv")
+    o.put("e6.all_in_welt.by_exp.in_more_than_one", sum(1 for c in both if sum(c in cs for cs in by.values()) > 1),
+          "B7_all_within_welt.csv")
+    o.need(set().union(*by.values()) == both, "B7: a configuration of the ALL-within-WeLT checks belongs to no experiment")
+    eq_cells = sorted({(ds(r), int(r["minSup"]), round(float(r["minWeight"]), 2)) for r in aw if r["sameSet"] == "1"}
+                      | {(ds(r), int(r["minSup"]), round(float(r["minWeight"]), 2)) for r in nest if r["exit"].strip() == "0"
+                         and r["allNotInWelt"] not in ("", "-1") and r["all"] == r["welt"]})
+    o.put("e6.all_in_welt.equal_cells", "; ".join(f"{d} {s_} {w:g}" for d, s_, w in eq_cells), "B7_all_within_welt.csv")
     eq6 = sum(1 for r in nest if r["exit"].strip() == "0" and r["allNotInWelt"] not in ("", "-1") and r["all"] == r["welt"])
     o.put("e6.all_in_welt.equal", sum(1 for r in aw if r["sameSet"] == "1") + eq6, "B7_all_within_welt.csv")
     o.src("B7_nesting.csv")
