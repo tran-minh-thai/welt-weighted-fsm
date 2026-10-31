@@ -93,11 +93,11 @@ def tau_key(t):
     return "w" + s.replace(".", "_")
 
 
-def protocol(o):
+def protocol(o, prefix="r5"):
     lock = open(os.path.join(o.camp, "environment.lock"), encoding="utf-8").read().replace("\r", "")
     ref = open(LOCK, encoding="utf-8").read().replace("\r", "")
     o.need(lock == ref, "environment.lock differs from the r2 lock")
-    o.put("r5.protocol.jdk_lock_equals_r2", int(lock == ref), "environment.lock")
+    o.put(f"{prefix}.protocol.jdk_lock_equals_r2", int(lock == ref), "environment.lock")
     metas = sorted(glob.glob(os.path.join(o.camp, "meta_*.json")))
     o.need(bool(metas), "no run record meta_*.json")
     steps = 0
@@ -110,8 +110,8 @@ def protocol(o):
         o.need(m.get("gitTree") == "clean", f"{n}: gitTree {m.get('gitTree')!r}")
         o.need(f"java.runtime.version = {m.get('javaRuntimeVersion')}" in lock and f"java.vendor = {m.get('javaVendor')}" in lock
                and f"JAVA_OPTS = {m.get('JAVA_OPTS')}" in lock, f"{n}: JDK or JAVA_OPTS differs from environment.lock")
-    o.put("r5.protocol.run_records", steps, "environment.lock")
-    o.put("r5.protocol.src_tree", open(os.path.join(o.camp, "src.lock"), encoding="utf-8").read().strip(), "src.lock")
+    o.put(f"{prefix}.protocol.run_records", steps, "environment.lock")
+    o.put(f"{prefix}.protocol.src_tree", open(os.path.join(o.camp, "src.lock"), encoding="utf-8").read().strip(), "src.lock")
 
 
 def deterministic(o, name, rows):
