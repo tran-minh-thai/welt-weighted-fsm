@@ -26,3 +26,8 @@ jobs:
 
       - name: Build + run tests
         run: ./test.sh
+
+      - name: Brute-force oracle against WeLT
+        run: |
+          python3 tools/bruteforce_oracle.py --self-test
+          python3 tools/bruteforce_oracle.py run
