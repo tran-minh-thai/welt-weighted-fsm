@@ -1,0 +1,6 @@
+data.mico.merge.cells = 3
+data.mico.merge.pairs_on_result_labels = 0
+data.mico.merge.pairs_two_weights = 138
+data.mico.merge_max.changed_cells = 0
+data.mico.merge_min.changed_cells = 0
+rows: 39 (3 cells x 3 graphs)
