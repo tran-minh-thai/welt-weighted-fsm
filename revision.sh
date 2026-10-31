@@ -33,7 +33,11 @@
 #                            MiCo 16000, 15000 (both complete in r2), then the public GraMi alone at CiteSeer 250,
 #                            200, 150, 100 and MiCo 14000 (GraMiStrategy reaches the limit there in r2)
 #   ./revision.sh r5scal     GitHub and STRING E. coli at a high tau_w: WeLT and WEGM, then GraMiFilter
-#   (r5sweep, r5grami and r5scal refuse a JDK other than the one of the r2 campaign, r2_environment.lock)
+#   ./revision.sh r6abl      ablation at email_eu 10, 8, 6: full, weight-gated extension off with P2 off, and with
+#                            P1 and P2 off
+#   ./revision.sh r6etb      WeLT-noTableBuild (the per-edge-type bound in place of the lookup table) at the
+#                            configurations of the efficiency experiment that WeLT completes and the r5scal cells
+#   (r5sweep, r5grami, r5scal, r6abl and r6etb refuse a JDK other than the one of the r2 campaign, r2_environment.lock)
 #
 # Order: prepare, voting (writes voting_choice.json), then b2grid, b4, b1 and allexact, b5, b7. Every step after
 # prepare writes into the campaign directory named in results/v2_revision/CURRENT (or RUN_DIR).
@@ -168,6 +172,17 @@ tau_w_of() {
         github) echo 30 ;; string_ecoli) echo 750 ;; *) echo "unknown dataset $1" >&2; exit 1 ;;
     esac
 }
+
+# r6etb cells, "dataset minSup [tau_w]" (tau_w of the dataset when omitted), in the order of the count probe's
+# run time (results-probe/review2-count-probes-20261031), shortest first; the three b1 cells where WeLT reaches
+# the limit (github 24000, mico 14000, string_ecoli 1850 at the dataset's tau_w) are not run
+R6_ETB_CELLS=(
+    "email_eu 20" "citeseer 150" "citeseer 250" "citeseer 300" "citeseer 400" "string_ecoli 2000" "citeseer 200"
+    "email_eu 15" "citeseer 100" "string_ecoli 1900" "email_eu 12" "email_eu 10" "email_eu 8" "lastfm 400"
+    "lastfm 300" "lastfm 200" "email_eu 6" "lastfm 500" "lastfm 600" "github 25000" "github 26000" "lastfm 100"
+    "mico 16000" "mico 15000" "email_eu 4" "github 24000 47.8261" "github 22000 47.8261" "string_ecoli 1850 999"
+    "email_eu 3" "string_ecoli 1850 990" "lastfm 50"
+)
 
 # B1 support ranges.
 B1_CELLS=(
@@ -621,7 +636,7 @@ b7)
         b7_compare "$P" "$RUN_DIR/B7_resum_within_welt.csv" --subset ReSuM-ALL WeLT "ReSuM code within WeLT" recorded
     fi
     ;;
-r5sweep|r5grami|r5scal)
+r5sweep|r5grami|r5scal|r6abl|r6etb)
     REF="results/v2_revision/r2_environment.lock"
     if ! diff <(tr -d '\r' < "$REF") <(tr -d '\r' < "$RUN_DIR/environment.lock") > /dev/null; then
         echo "ERROR: the campaign JDK differs from the one of the r2 campaign ($REF):" >&2
@@ -688,6 +703,24 @@ r5sweep|r5grami|r5scal)
                 read -r ds s t <<< "$cell"
                 run_cell "$OUT" "datasets/$ds.lg" "$s" "$t" "$algo" "$LIMIT" "$WARMUP" "$MEASURED"
             done
+        done
+        ;;
+    r6abl)
+        # weight-gated extension off together with P2, and with P1 and P2, beside full WeLT (one JVM each)
+        OUT="$RUN_DIR/R6_ablation_wext.csv"
+        for s in 10 8 6; do
+            ABLATION_ONLY="full noWextP2 noWextP1P2" run_ablation_cell "$OUT" datasets/email_eu.lg "$s" \
+                "$(tau_w_of email_eu)" "$LIMIT" "$WARMUP" "$MEASURED"
+        done
+        ;;
+    r6etb)
+        # WeLT with the per-edge-type bound in place of the lookup table, at every configuration of the
+        # efficiency experiment that WeLT completes and at the four scalability cells of r5scal; the cells
+        # are ordered by the time of the count probe, shortest first
+        OUT="$RUN_DIR/R6_edge_type_bound.csv"
+        for cell in "${R6_ETB_CELLS[@]}"; do
+            read -r ds s t <<< "$cell"
+            run_cell "$OUT" "datasets/$ds.lg" "$s" "${t:-$(tau_w_of "$ds")}" WeLT-noTableBuild "$LIMIT" "$WARMUP" "$MEASURED"
         done
         ;;
     esac
