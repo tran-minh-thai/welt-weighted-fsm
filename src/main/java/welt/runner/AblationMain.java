@@ -17,8 +17,9 @@ import java.util.function.Consumer;
 /**
  * ABLATION of WeLT on one {@code (dataset, minSup, minWeight)} cell. Each variant differs from
  * {@code full} in exactly ONE factor (except {@code noTable}, the combination P1 off + P2 off,
- * which completes the four {P1, P2} combinations with P3 on, and {@code noTableOptions}, both
- * table cost options off):
+ * which completes the four {P1, P2} combinations with P3 on, {@code noTableOptions}, both
+ * table cost options off, and {@code noWextP2} and {@code noWextP1P2}, which remove the table
+ * filters on top of weight-gated extension):
  * <pre>
  *   full      p1 on, p2 on (with its k = 1 part), p3 on, P3 against F, wext on, voter = WELT_VOTER, worder on,
  *             table cost options on (kept supports, threshold table)
@@ -31,6 +32,9 @@ import java.util.function.Consumer;
  *   noTableReuse  the miner counts the 1- and 2-edge patterns again
  *   noTableThreshold  the table stores exact MaxW values
  *   noTableOptions    both table cost options off
+ *   noWextP2      wext off and p2 off
+ *   noWextP1P2    wext off, p1 off and p2 off: of the weight mechanisms only P3 and the
+ *                 branch-and-bound remain
  * </pre>
  * Every variant is measured with the same protocol as BenchmarkMain (probe, warmup, median of
  * the measured runs). Phase timers (canonical codes, filters, MNI, weight checks) are switched
@@ -85,7 +89,10 @@ public final class AblationMain {
             new Variant("noTableReuse", "tableReuse=off", c -> c.tableReuse = false),
             new Variant("noTableThreshold", "tableThreshold=off", c -> c.tableThreshold = false),
             new Variant("noTableOptions", "tableReuse=off+tableThreshold=off (combination)",
-                    c -> { c.tableReuse = false; c.tableThreshold = false; }));
+                    c -> { c.tableReuse = false; c.tableThreshold = false; }),
+            new Variant("noWextP2", "wext=off+p2=off (combination)", c -> { c.wext = false; c.p2 = false; }),
+            new Variant("noWextP1P2", "wext=off+p1=off+p2=off (combination)",
+                    c -> { c.wext = false; c.p1 = false; c.p2 = false; }));
 
     /** The full WeLT configuration: voter from WELT_VOTER (see BenchmarkMain), every mechanism on. */
     static RunHarness.Config full(int minSup, double minWeight, long limitMs) {

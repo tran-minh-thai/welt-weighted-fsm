@@ -1,0 +1,9 @@
+{
+ "failed_runs": 0,
+ "fn": 0,
+ "fp": 0,
+ "graphs": 30,
+ "patterns": 5434,
+ "threshold_pairs": 432,
+ "w_mismatch": 0
+}

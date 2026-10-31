@@ -30,6 +30,16 @@ check "another voter is another cell" "$(rows "$OUT")" 2
 JAVA_OPTS="-Xmx1k" run_cell "$OUT" datasets/citeseer.lg 300 96 GraMi 0 0 1 > /dev/null 2>&1
 run_cell "$OUT" datasets/citeseer.lg 300 96 GraMi 0 0 1 > /dev/null
 check "a recorded crash is not retried" "$(rows "$OUT")" 3
+NTB="$T/no_table_build.csv"
+run_cell "$NTB" datasets/citeseer.lg 300 96 WeLT-noTableBuild 0 0 1 > /dev/null
+run_cell "$NTB" datasets/citeseer.lg 300 96 WeLT-noTableBuild 0 0 1 > /dev/null
+check "a finished WeLT-noTableBuild cell (WeLT's voter) is not run again" "$(rows "$NTB")" 1
+FOUR="$T/four_decimals.csv"
+run_cell "$FOUR" datasets/lastfm.lg 1350 5.7544 WeLT 0 0 1 > /dev/null
+run_cell "$FOUR" datasets/lastfm.lg 1350 5.7544 WeLT 0 0 1 > /dev/null
+check "a tau_w with more decimals than the CSV writes is not run again" "$(rows "$FOUR")" 1
+run_cell "$FOUR" datasets/lastfm.lg 1350 5.7600 WeLT 0 0 1 > /dev/null
+check "a tau_w that differs at the CSV precision is another cell" "$(rows "$FOUR")" 2
 
 # --- resume of an ablation cell
 ABL="$T/ablation.csv"
@@ -51,13 +61,13 @@ git init -q "$T/work"
     git config user.name check; git config user.email check@example.invalid
     git remote add origin "$T/origin.git"
     mkdir -p results; echo "a,b" > results/x.csv
-    CHECKPOINT=1 RUN_STATUS_DIR="$T/status" STATUS_PROJECT=check COMPUTERNAME=M1 checkpoint "cell one" > /dev/null
+    CHECKPOINT=1 CAMPAIGN_BRANCH=check-campaign RUN_STATUS_DIR="$T/status" STATUS_PROJECT=check COMPUTERNAME=M1 checkpoint "cell one" > /dev/null
     git remote set-url origin "$T/missing.git"
     echo "c,d" >> results/x.csv
-    CHECKPOINT=1 RUN_STATUS_DIR="$T/status" STATUS_PROJECT=check COMPUTERNAME=M1 checkpoint "cell two" > /dev/null 2>&1
+    CHECKPOINT=1 CAMPAIGN_BRANCH=check-campaign RUN_STATUS_DIR="$T/status" STATUS_PROJECT=check COMPUTERNAME=M1 checkpoint "cell two" > /dev/null 2>&1
 )
 check "checkpoint pushed results to the campaign branch" \
-    "$(git --git-dir="$T/origin.git" show campaign-revision-r2:results/x.csv 2>/dev/null | head -1)" "a,b"
+    "$(git --git-dir="$T/origin.git" show check-campaign:results/x.csv 2>/dev/null | tail -n 1)" "a,b"
 check "the status line reached the status remote" \
     "$(git --git-dir="$T/status.git" show HEAD:check/M1.log 2>/dev/null | grep -c 'cell one')" 1
 check "a failed push is reported and the run goes on" \

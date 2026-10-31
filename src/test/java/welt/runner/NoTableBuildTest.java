@@ -45,6 +45,24 @@ class NoTableBuildTest {
     }
 
     @Test
+    void algorithmOfItsOwnEqualsTheAblationVariant() throws IOException {
+        LabeledWeightedGraph g = new LgGraphReader().read(Path.of("datasets/email_eu.lg")).graph;
+        RunHarness.Config variant = AblationMain.full(10, 336, 0);
+        variant.tableBuild = false;
+        variant.phaseTiming = false;
+        RunHarness.Config algo = BenchmarkMain.configure(new RunHarness.Config("WeLT-noTableBuild", 10, 336));
+        RunHarness.Result a = RunHarness.runOnce(g, variant), b = RunHarness.runOnce(g, algo);
+        assertEquals(codes(a), codes(b));
+        assertEquals(a.m.candidateCount, b.m.candidateCount);
+        assertEquals(a.m.mniIsoCalls, b.m.mniIsoCalls);
+        assertEquals(a.m.backtrackNodes, b.m.backtrackNodes);
+        assertEquals(variant.voter.label(), algo.voter.label());
+        assertTrue(algo.weightOrder && algo.wext && algo.bnb && algo.p3);
+        assertEquals("baseline", BenchmarkMain.voterSource("EdgeTypeBound"));
+        assertEquals("default", BenchmarkMain.voterSource("WeLT-noTableBuild"));
+    }
+
+    @Test
     void gateFollowsTheConfiguration() throws IOException {
         LabeledWeightedGraph g = new LgGraphReader().read(Path.of("datasets/email_eu.lg")).graph;
         RunHarness.Config gated = AblationMain.full(12, 336, 0), ungated = AblationMain.full(12, 336, 0);

@@ -17,6 +17,8 @@ datasets/bitcoin_otc.lg
 datasets/test1.lg
 datasets/test2.lg
 datasets/derived/
+# Structure graph written by the classification experiment (tools/downstream on the downstream branch)
+datasets/github_struct.lg
 
 # Third-party GraMi clone (used only to regenerate the oracle; keep reference/oracle/)
 reference/GraMi/
@@ -42,3 +44,4 @@ __pycache__/
 
 # External programs fetched and built by tools/build_resum.py (not part of this repository)
 third_party/
+datasets/mico_merge_*.lg

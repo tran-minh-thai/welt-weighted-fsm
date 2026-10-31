@@ -1,0 +1,20 @@
+{
+ "kind": "invariant (counts and result sets; the run times of these runs are not kept)",
+ "machine": "ThaiTMs-MacBook-Pro",
+ "os": "Darwin 27.2.0",
+ "java": "openjdk version 25.0.4.1",
+ "code": "commit 4c96db6 (branch round5-checks) for the runs, c5d3892 for the tools; core and strategy bytecode identical to the r2 lock src tree fb251a5",
+ "datasets": {
+  "mico.lg": "f94eabe3659b8b35027323f2df00b749c63c78d1e954d36a4036218001333aa1",
+  "mico_merge_max.lg": "3d4bbb813bfe84b6eb480fa2666761c3cfce301f59be71c915e72b28ae0f8711",
+  "mico_merge_min.lg": "1e651174b687f756683cd64586be51c48548529725020549c21b8422175b659f"
+ },
+ "commands": [
+  "python3 tools/merge_weights.py datasets/mico.lg max|min datasets/mico_merge_max|min.lg",
+  "for g in mico mico_merge_max mico_merge_min; for s in 16000 15000 14826: DUMP_PATTERNS=<probe>/patterns BENCH_CSV=1 BENCH_ALGOS=GraMi,GraMiFilter,WEGM,WeLT java -Xmx12g -cp target/classes welt.runner.BenchmarkMain datasets/$g.lg $s 100 0 600000 0 1 > <probe>/bench_$g_$s.txt",
+  "java -Xmx12g -cp target/classes welt.runner.ResumMain definition datasets/$g.lg 14826 100 <probe>/patterns > <probe>/all_$g_14826.txt",
+  "python3 tools/summarise_merge_probe.py <probe> datasets/mico.lg results-invariant/mico-merge-weights-20261031"
+ ],
+ "started": "2026-10-31T09:58:01Z",
+ "ended": "2026-10-31T10:00:14Z"
+}

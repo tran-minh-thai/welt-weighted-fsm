@@ -1,0 +1,14 @@
+{
+ "kind": "probe",
+ "machine": "ThaiTMs-MacBook-Pro",
+ "os": "Darwin 27.2.0",
+ "java": "openjdk version 25.0.4.1",
+ "code": "branch round5-checks: K1 at 4c96db6 (noWextP1P2 rerun at c9d5e10), K3 at c9d5e10; core and strategy bytecode identical to the r2 lock",
+ "commands": [
+  "ABLATION_CSV=1 ABLATION_VARIANT=<variant> java -Xmx8g -cp target/classes welt.runner.AblationMain datasets/email_eu.lg <tau_s> 336 600000 0 1",
+  "BENCH_CSV=1 BENCH_ALGOS=GraMiFilter java -Xmx8g -cp target/classes welt.runner.BenchmarkMain datasets/email_eu.lg <tau_s> 336 0 600000 0 1",
+  "BENCH_CSV=1 BENCH_ALGOS=WeLT-noTableBuild java -Xmx16g -cp target/classes welt.runner.BenchmarkMain datasets/<ds>.lg <tau_s> <tau_w> 0 600000 0 1"
+ ],
+ "k1_started": "2026-10-31T09:46:25Z", "k1_ended": "2026-10-31T10:26:29Z", "k1_rerun_ended": "2026-10-31T10:38:27Z",
+ "k3_started": "2026-10-31T10:17:25Z", "k3_ended": "2026-10-31T10:42:57Z"
+}

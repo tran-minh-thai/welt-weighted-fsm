@@ -3,8 +3,9 @@
 
 Usage:  python tools/cell_done.py <csv> <key=value> ...
 
-A row matches when every key equals the given value. Numbers are compared numerically
-(minWeight 96 = 96.000). `voter` is compared as three numbers, separators ',' or ';'
+A row matches when every key equals the given value. Numbers are compared numerically, after
+rounding the given value to the decimals the CSV wrote (minWeight 96 = 96.000, 5.7544 = 5.754: the
+runners print three decimals); a value written without decimals is compared exactly. `voter` is compared as three numbers, separators ',' or ';'
 ("0.2,0.8,0" = "0.2;0.8;0.0"). Any status counts as done (OK, TO, OOM, CRASH): a cell is
 re-run only when its process left no row. A missing or empty CSV means not done.
 """
@@ -21,9 +22,13 @@ def same(a, b, key):
         except ValueError:
             return False
     try:
-        return float(a) == float(b)
+        x, y = float(a), float(b)
     except ValueError:
         return a == b
+    t = a.strip()
+    if "." in t and "e" not in t.lower():
+        return round(y, len(t.split(".")[1])) == x
+    return x == y
 
 
 def main():

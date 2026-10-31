@@ -63,9 +63,13 @@ run_cell() {
     checkpoint "$algo $(basename "$ds") minSup=$s tau_w=$tw: $(last_status "$out")"
 }
 
-# The voter BenchmarkMain uses for an algorithm (WELT_VOTER for WeLT, degree-only otherwise).
+# The voter BenchmarkMain uses for an algorithm (WELT_VOTER for WeLT and WeLT-noTableBuild,
+# degree-only otherwise).
 expected_voter() {
-    if [ "$1" = "WeLT" ]; then echo "${WELT_VOTER:-1,1,1}"; else echo "0,1,0"; fi
+    case "$1" in
+        WeLT|WeLT-noTableBuild) echo "${WELT_VOTER:-1,1,1}" ;;
+        *) echo "0,1,0" ;;
+    esac
 }
 
 # cell_done <csv> <key=value>...: true when the CSV already holds a row for the cell (resume).

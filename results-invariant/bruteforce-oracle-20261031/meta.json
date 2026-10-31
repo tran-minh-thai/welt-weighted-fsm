@@ -1,0 +1,17 @@
+{
+ "kind": "invariant (result sets and counts; no times)",
+ "machine": "ThaiTMs-MacBook-Pro",
+ "os": "Darwin 27.2.0",
+ "java": "openjdk version 25.0.4.1",
+ "python": "3.14.6",
+ "code": "commit ca34cc9 (branch round5-checks); core and strategy bytecode identical to the r2 lock src tree fb251a5",
+ "commands": [
+  "./build.sh",
+  "python3 tools/bruteforce_oracle.py run --json results-invariant/bruteforce-oracle-20261031/oracle_counts.json",
+  "python3 tools/check_bruteforce_faults.py <work dir> --jobs 3 > results-invariant/bruteforce-oracle-20261031/faults.txt",
+  "python3 tools/bruteforce_oracle.py --self-test > results-invariant/bruteforce-oracle-20261031/self_test.txt",
+  "numbers.json: the counts of oracle_counts.json and the caught/missed lines of faults.txt"
+ ],
+ "faults_started": "2026-10-31T10:13:00Z",
+ "faults_ended": "2026-10-31T10:18:00Z"
+}

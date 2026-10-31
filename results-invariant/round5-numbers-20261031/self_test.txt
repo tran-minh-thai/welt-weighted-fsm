@@ -1,0 +1,7 @@
+ok    the unchanged copy is exported: exported
+ok    a JDK lock other than r2: environment.lock differs from the r2 lock; meta_20261030_215520_prepare.json: JDK or JAVA_OPTS differs from en
+ok    a run record on a modified tree: meta_20261030_215726_r5sweep.json: gitTree 'MODIFIED (1 files)'
+ok    counters differ across runs: R5_sweep_separate.csv: citeseer 300 WeLT: counters differ across runs
+ok    a failed pattern comparison: R5_grami_compare.txt: 1 of 4 comparisons failed
+ok    a missing file: R5_grami_public.csv: missing
+export_round5_numbers self-test: 6/6

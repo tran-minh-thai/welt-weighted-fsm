@@ -1,0 +1,12 @@
+{
+ "values": {
+  "val.bruteforce.fn": 0,
+  "val.bruteforce.fp": 0,
+  "val.bruteforce.graphs": 30,
+  "val.bruteforce.injected": 7,
+  "val.bruteforce.injected_caught": 7,
+  "val.bruteforce.patterns": 5434,
+  "val.bruteforce.threshold_pairs": 432,
+  "val.bruteforce.w_mismatch": 0
+ }
+}

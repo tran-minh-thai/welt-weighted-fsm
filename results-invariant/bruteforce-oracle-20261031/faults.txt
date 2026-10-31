@@ -1,0 +1,8 @@
+caught  weight_ge_to_gt: exit 1, {'failed_runs': 0, 'fn': 3508, 'fp': 0, 'graphs': 30, 'patterns': 5434, 'threshold_pairs': 432, 'w_mismatch': 1926}
+caught  weight_lenient: exit 1, {'failed_runs': 0, 'fn': 0, 'fp': 242, 'graphs': 30, 'patterns': 5676, 'threshold_pairs': 432, 'w_mismatch': 414}
+caught  mni_off_by_one: exit 1, {'failed_runs': 0, 'fn': 5434, 'fp': 0, 'graphs': 30, 'patterns': 5434, 'threshold_pairs': 432, 'w_mismatch': 0}
+caught  mni_lenient: exit 1, {'failed_runs': 0, 'fn': 0, 'fp': 241, 'graphs': 30, 'patterns': 5675, 'threshold_pairs': 432, 'w_mismatch': 0}
+caught  p2_single_tie: exit 1, {'failed_runs': 0, 'fn': 882, 'fp': 0, 'graphs': 30, 'patterns': 5434, 'threshold_pairs': 432, 'w_mismatch': 0}
+caught  table_strict: exit 1, {'failed_runs': 0, 'fn': 1571, 'fp': 0, 'graphs': 30, 'patterns': 5434, 'threshold_pairs': 432, 'w_mismatch': 0}
+caught  no_cycle_closing_edge: exit 1, {'failed_runs': 0, 'fn': 2273, 'fp': 0, 'graphs': 30, 'patterns': 5434, 'threshold_pairs': 432, 'w_mismatch': 0}
+check_bruteforce_faults: 7/7 faults caught

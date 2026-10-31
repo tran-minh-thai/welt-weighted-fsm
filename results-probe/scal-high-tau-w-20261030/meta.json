@@ -1,0 +1,12 @@
+{
+ "kind": "probe",
+ "machine": "ThaiTMs-MacBook-Pro",
+ "os": "Darwin 27.2.0",
+ "arch": "arm64",
+ "java": "openjdk version \"25.0.4.1\" 2026-08-18 LTS",
+ "code": "campaign-revision-r2 checkout, commit 3f9783f, src tree fb251a5 (the r2 lock)",
+ "command": "WELT_VOTER=1,1,1 WELT_WORDER=on DUMP_PATTERNS=patterns BENCH_CSV=1 BENCH_ALGOS=WeLT java -Xmx8g -cp target/classes welt.runner.BenchmarkMain datasets/<ds>.lg <minSup> <tau_w> 0 600000 1 1",
+ "parallel": "six cells at once",
+ "started": "2026-10-30T14:09:28Z",
+ "ended": "2026-10-30T14:19:29Z"
+}

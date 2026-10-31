@@ -34,7 +34,12 @@ class AblationTest {
         for (AblationMain.Variant v : AblationMain.VARIANTS) {
             RunHarness.Config c = AblationMain.full(15, 336, 0);
             v.change.accept(c);
-            int expected = v.name.equals("full") ? 0 : (v.name.equals("noTable") || v.name.equals("noTableOptions")) ? 2 : 1;
+            int expected = switch (v.name) {
+                case "full" -> 0;
+                case "noTable", "noTableOptions", "noWextP2" -> 2;
+                case "noWextP1P2" -> 3;
+                default -> 1;
+            };
             assertEquals(expected, differences(full, c), v.name);
         }
     }

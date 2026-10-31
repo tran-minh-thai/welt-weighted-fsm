@@ -1,0 +1,10 @@
+ok   path a-b-a, two vertex orders: got True, want True
+ok   path a-b-a differs from b-a-b: got False, want False
+ok   triangle differs from path: got False, want False
+ok   connected edge subsets of a triangle: got 7, want 7
+ok   triangle: patterns: got 3, want 3
+ok   triangle: (MNI, W) by edge count: got {2: (3, 2.0), 1: (3, 3.0), 3: (3, 1.0)}, want {1: (3, 3.0), 2: (3, 2.0), 3: (3, 1.0)}
+ok   triangle: tau_w equal to a weight keeps the pattern: got 2, want 2
+ok   star: one-edge MNI is the centre's single image, W the heavy edge: got (1, 5.0), want (1, 5.0)
+ok   miner code parsed to the same form: got ((1, 2, 2), ((0, 1), (0, 2))), want ((1, 2, 2), ((0, 1), (0, 2)))
+bruteforce_oracle self-test: OK (9/9)
