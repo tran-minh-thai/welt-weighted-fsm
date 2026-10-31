@@ -200,7 +200,7 @@ def e1(o):
     o.put("e1.equal_sets.compared", len(eq), "B7_equivalence.csv")
     o.put("e1.equal_sets.equal", sum(1 for r in eq if r["sameSet"] == "1"), "B7_equivalence.csv")
     o.need(all(r["sameSet"] == "1" for r in eq) and eq, "B7_equivalence.csv: WeLT and GraMiFilter differ, or no cell")
-    count, ratios, held, checked, scal = collections.Counter(), [], 0, 0, []
+    count, ratios, held, checked, scal, lb = collections.Counter(), [], 0, 0, [], []
     for (dname, s), algos in sorted(d.items()):
         base = f"e1.cell.{dname}.{s}"
         vtx = o.values.get(f"data.{dname}.vertices")
@@ -232,6 +232,11 @@ def e1(o):
             count[v] += 1
         elif sc.ok(w):
             count["only WeLT completes" if g else "GraMiFilter not run"] += 1
+            if g:
+                # GraMiFilter stopped at the limit: the limit over WeLT's time bounds the speed-up from below
+                o.need(g["status"] == "TO", f"{dname} {s}: GraMiFilter status {g['status']} gives no lower bound")
+                lb.append(float(g["limitMs"]) / float(w["totalMs"]))
+                o.put(f"{base}.filter_limit_over_welt", lb[-1], w["_file"])
         else:
             count["WeLT does not complete"] += 1
         sz = sizes.get((dname, s))
@@ -243,6 +248,10 @@ def e1(o):
                  ("WeLT does not complete", "welt_not_complete")):
         o.put(f"e1.count.{n}", count[k], "B1_efficiency.csv")
     o.put("e1.count.cells", sum(count.values()), "B1_efficiency.csv")
+    if lb:
+        o.put("e1.only_welt.lb_ratio.cells", len(lb), "B1_efficiency.csv")
+        o.put("e1.only_welt.lb_ratio.min", min(lb), "B1_efficiency.csv")
+        o.put("e1.only_welt.lb_ratio.max", max(lb), "B1_efficiency.csv")
     if ratios:
         o.put("e1.filter_over_welt.min", min(ratios), "B1_efficiency.csv")
         o.put("e1.filter_over_welt.median", statistics.median(ratios), "B1_efficiency.csv")
