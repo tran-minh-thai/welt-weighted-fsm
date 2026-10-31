@@ -13,7 +13,8 @@ relative to the checkout that holds it, and SHA-256). Sections:
        the mining together, so no search-counter direction is exported for this comparison;
   r5s  the scalability group at a high tau_w (R5_scal_high_tau_w.csv): per cell and algorithm status,
        time, R, N, M, the MNI-frequent patterns seen (at the stop when the run reached the limit), and
-       the smallest ratio of GraMiFilter's limit to WeLT's time where only WeLT completes;
+       the ratio of GraMiFilter's limit to WeLT's time where only WeLT completes, per cell and its
+       range (r5s.lb_ratio.min, r5s.lb_ratio.max);
   val  the public GraMi against GraMiStrategy (R5_grami_*): per cell status, pattern count, GraMi's own
        time (from before reading the graph file to the end of the search) and its spread, the time of
        GraMiStrategy (graph reading excluded), and the pattern-set comparison.
@@ -156,7 +157,7 @@ def r5s(o):
     cells = {}
     for r in rows:
         cells.setdefault((ds(r), int(r["minSup"]), r["minWeight"]), {})[r["algorithm"]] = r
-    only = 0
+    only, lb = 0, []
     dumps = os.listdir(os.path.join(o.camp, "patterns")) if os.path.isdir(os.path.join(o.camp, "patterns")) else []
     for (d, s, tw), al in sorted(cells.items()):
         # the CSV writes tau_w with three decimals; the exact value is in the name of the cell's result-set file
@@ -179,7 +180,8 @@ def r5s(o):
         w, g = al.get("WeLT"), al.get("GraMiFilter")
         if w and g and w["status"] == "OK" and g["status"] == "TO":
             only += 1
-            o.put(base + ".filter_limit_over_welt", float(g["limitMs"]) / float(w["totalMs"]), "R5_scal_high_tau_w.csv")
+            lb.append(float(g["limitMs"]) / float(w["totalMs"]))
+            o.put(base + ".filter_limit_over_welt", lb[-1], "R5_scal_high_tau_w.csv")
     # the frequent patterns seen by GraMiFilter bound |Q| from below at each support (its search does not depend on tau_w)
     for (d, s) in sorted({(c[0], c[1]) for c in cells}):
         seen = [int(al["GraMiFilter"]["frequentSize"]) for c, al in cells.items() if c[:2] == (d, s) and "GraMiFilter" in al]
@@ -187,6 +189,9 @@ def r5s(o):
             o.put(f"r5s.{d}.{s}.Q_at_least", max(seen), "R5_scal_high_tau_w.csv")
     o.put("r5s.count.cells", len(cells), "R5_scal_high_tau_w.csv")
     o.put("r5s.count.only_welt", only, "R5_scal_high_tau_w.csv")
+    if lb:
+        o.put("r5s.lb_ratio.min", min(lb), "R5_scal_high_tau_w.csv")
+        o.put("r5s.lb_ratio.max", max(lb), "R5_scal_high_tau_w.csv")
 
 
 def val(o):
