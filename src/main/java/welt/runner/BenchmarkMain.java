@@ -46,8 +46,9 @@ public final class BenchmarkMain {
     /**
      * Matching-order configuration of each algorithm. WeLT uses {@code WELT_VOTER=α,β,γ} and
      * {@code WELT_WORDER=on|off} (default when unset: (1,1,1) and on; the CSV column
-     * voterSource tells which). The baselines keep the shared default: degree-only
-     * pivot, no weight-aware order.
+     * voterSource tells which); so does WeLT-noTableBuild (WeLT with the per-edge-type bound in
+     * place of the lookup table). The baselines keep the shared default: degree-only pivot, no
+     * weight-aware order.
      */
     /** An on/off environment switch, {@code unset} when the variable is not set. */
     private static boolean onOff(String name, boolean unset) {
@@ -60,7 +61,7 @@ public final class BenchmarkMain {
 
     static RunHarness.Config configure(RunHarness.Config cfg) {
         cfg.liveHeap = onOff("WELT_LIVE_HEAP", false);
-        if (cfg.algo.equals("WeLT")) {
+        if (cfg.algo.equals("WeLT") || cfg.algo.equals("WeLT-noTableBuild")) {
             String v = System.getenv("WELT_VOTER");
             String w = System.getenv("WELT_WORDER");
             cfg.voter = (v == null || v.isBlank()) ? PivotVoter.WELT_DEFAULT : PivotVoter.parse(v);
@@ -77,7 +78,7 @@ public final class BenchmarkMain {
     }
 
     static String voterSource(String algo) {
-        if (!algo.equals("WeLT")) return "baseline";
+        if (!algo.equals("WeLT") && !algo.equals("WeLT-noTableBuild")) return "baseline";
         String v = System.getenv("WELT_VOTER");
         return (v == null || v.isBlank()) ? "default" : "env";
     }
@@ -86,13 +87,14 @@ public final class BenchmarkMain {
     /**
      * Weight semantics of each strategy, recorded as a CSV column so result aggregation never
      * confuses non-comparable result sets: {@code none} (GraMi, unweighted reference),
-     * {@code edge} (EdgeTypeBound, EdgeTypeBound-ungated and WeLT: the same edge-bottleneck
+     * {@code edge} (EdgeTypeBound, EdgeTypeBound-ungated, WeLT and WeLT-noTableBuild: the same edge-bottleneck
      * result set), {@code edge-label} (WEGM: edge weights are pattern labels, a different result
      * set), {@code vertex} (OWGraMi, a different vertex-bottleneck result set).
      */
     static String weightModel(String algo) {
         switch (algo) {
-            case "EdgeTypeBound": case "EdgeTypeBound-ungated": case "GraMiFilter": case "WeLT": return "edge";
+            case "EdgeTypeBound": case "EdgeTypeBound-ungated": case "GraMiFilter": case "WeLT":
+            case "WeLT-noTableBuild": return "edge";
             case "WEGM":    return "edge-label";
             case "OWGraMi": return "vertex";
             default:        return "none";

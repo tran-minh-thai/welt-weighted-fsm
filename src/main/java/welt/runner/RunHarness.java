@@ -204,6 +204,9 @@ public final class RunHarness {
             case "GraMiFilter": strategy = new GraMiFilterStrategy(cfg.minWeight, counter); break;
             case "EdgeTypeBound": strategy = new EdgeTypeBoundStrategy(g, cfg.minWeight, counter, m, true); break;
             case "EdgeTypeBound-ungated": strategy = new EdgeTypeBoundStrategy(g, cfg.minWeight, counter, m, false); break;
+            // WeLT with the lookup table replaced by the per-edge-type bound: the noTableBuild ablation
+            // variant, run as an algorithm of its own (no phase timers)
+            case "WeLT-noTableBuild": strategy = new EdgeTypeBoundStrategy(g, cfg.minWeight, counter, m, cfg.wext); break;
             case "WEGM": strategy = new WEGMStrategy(cfg.minWeight, m); break;
             case "OWGraMi": strategy = new OWGraMiStrategy(g, cfg.minWeight, counter, m); break;
             case "WeLT": {
