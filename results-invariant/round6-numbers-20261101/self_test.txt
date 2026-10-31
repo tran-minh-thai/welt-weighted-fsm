@@ -1,0 +1,14 @@
+ok    faster beyond the tie rule with fewer counters: ('faster', 'marked')
+ok    within three spreads is a tie: ('tie', 'sigma')
+ok    no counter in the direction of the time: ('tie', 'direction')
+ok    the floor applies only to the ablation: ('tie', 'floor')
+ok    without the floor the same pair is marked: ('faster', 'marked')
+ok    the unchanged copy is exported: exported
+ok    a JDK lock other than r2: environment.lock differs from the r2 lock; meta_20261031_181257_prepare.json: JDK or JAVA_OPTS differs from en
+ok    a run record on a modified tree: meta_20261031_181502_r6etb.json: gitTree 'MODIFIED (1 files)'
+ok    counters differ across runs: R6_edge_type_bound.csv: email_eu 20 WeLT-noTableBuild: counters differ across runs
+ok    an ablation variant with another result set: R6_ablation_wext.csv: 10 noWextP2: invariant FAIL
+ok    a result-set size other than WeLT's: email_eu 20 336.0: |R| 999 differs from WeLT's 4
+ok    a pattern missing from a result set: citeseer 100 96.0: result set differs from WeLT's
+ok    a missing file: R6_edge_type_bound.csv: missing
+export_round6_numbers self-test: 13/13
