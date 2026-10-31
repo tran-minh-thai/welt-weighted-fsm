@@ -44,6 +44,8 @@ does less work. Keys, with <c> the cell name with '.' replaced by '_':
                                             that comes from the start of the weight check
   e5x.<c>.{default,<mode>}.nodes.{mni,weight,table}   backtracking nodes of the MNI counts and of the
                                             weight checks of the mining phase, and of the lookup-table build
+  e5x.<c>.single.<a_b_c>.ratio             the same ratio for the single-criterion voters 1,0,0 (domain size),
+                                            0,1,0 (degree) and 0,0,1 (weight); .nodes.{mni,weight} their parts
   e5x.<c>.grid_best.{triple,tied}           the voters of the grid with the fewest controlled nodes (ties listed)
   e5x.<ds>.grid_best_common.{count,triple}  voters best in every cell with controlled work of a dataset
   e5x.<ds>.grid_minimax.{triple,cells,ratio.<cell>}   the voter whose largest ratio over those cells is smallest
@@ -149,6 +151,14 @@ def main():
             keys[f"e5x.{c}.{mk}.nodes.mni"] = st["mining.mni.backtrack"]
             keys[f"e5x.{c}.{mk}.nodes.weight"] = st["mining.weight.backtrack"]
             keys[f"e5x.{c}.{mk}.nodes.table"] = st["table.mni.backtrack"] + st["table.weight.backtrack"]
+        for t, tk in (("1.0,0.0,0.0", "1_0_0"), ("0.0,1.0,0.0", "0_1_0"), ("0.0,0.0,1.0", "0_0_1")):
+            if t not in grid:
+                problems.append(f"{cell}: no run of the single-criterion voter {t}")
+                continue
+            st = grid[t]["stats"]
+            keys[f"e5x.{c}.single.{tk}.ratio"] = share(controlled(grid[t]), base) if base else None
+            keys[f"e5x.{c}.single.{tk}.nodes.mni"] = st["mining.mni.backtrack"]
+            keys[f"e5x.{c}.single.{tk}.nodes.weight"] = st["mining.weight.backtrack"]
         x = f"e5x.{c}"
         ratio = {}
         keys[f"e5x.{c}.default.nodes_per_search"] = share(s["mining.mni.backtrack"], s["mining.mni.searches"])
