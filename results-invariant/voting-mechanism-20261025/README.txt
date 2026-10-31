@@ -26,3 +26,5 @@ every cell returns one result set under all voters and modes). Faults injected i
 (a backtracking count, M, a result-set hash) are caught 3/3; an empty file fails.
 
 numbers.json and summary.md are written by summarise_voting.py; the key list is in its docstring.
+
+Re-summarised at commit a9b7cbe: 171 keys added (e5x.<cell>.single.<a_b_c>.{ratio,nodes.mni,nodes.weight} for the voters 1,0,0, 0,1,0 and 0,0,1 of the grid, 19 cells); no value changed; summary.md unchanged.
