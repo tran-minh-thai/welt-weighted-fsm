@@ -5,10 +5,11 @@
 
 Reads datasets/<name>.lg for the six graphs of the experiments, counts per graph the edge lines, the
 self-loops, the vertex pairs listed more than once (in either direction) and, among them, those whose
-lines carry different weights (the reader keeps the first; see LgGraphReader), and writes
-<out dir>/numbers.json with keys data.<ds>.{edge_lines,self_loops,bidir_pairs,bidir_pairs_diff_weight}.
---self-test changes the weight of one repeated line, and adds a self-loop, in a copy of a graph, and
-requires both counts to change by one.
+lines carry different weights (the reader keeps the first; see LgGraphReader), and, over the edges
+the reader keeps, the largest weight and the share of edges that carry it; writes <out dir>/numbers.json
+with keys data.<ds>.{edge_lines,self_loops,bidir_pairs,bidir_pairs_diff_weight,max_weight,max_weight_edge_share}.
+--self-test changes the weight of one repeated line, adds a self-loop, and gives one more edge the largest
+weight, in a copy of a graph, and requires the three counts to change by one.
 """
 import json
 import shutil
@@ -38,7 +39,9 @@ def facts(path):
                 diff.add(k)
         else:
             first[k] = w
-    return {"edge_lines": lines, "self_loops": loops, "bidir_pairs": len(repeated), "bidir_pairs_diff_weight": len(diff)}
+    top = max(first.values())
+    return {"edge_lines": lines, "self_loops": loops, "bidir_pairs": len(repeated), "bidir_pairs_diff_weight": len(diff),
+            "max_weight": top, "max_weight_edge_share": sum(1 for w in first.values() if w == top) / len(first)}
 
 
 def main():
@@ -72,11 +75,20 @@ def main():
             tt = lines[idx].split()
             lines[idx] = f"e {tt[1]} {tt[2]} {float(tt[3]) + 1}\n"
             lines.append("e 0 0 1\n")
+            for i, l in enumerate(lines):          # one edge below the largest weight gets the largest weight
+                tt = l.split()
+                if tt and tt[0] == "e" and tt[1] != tt[2] and float(tt[3]) < base["max_weight"] and i != idx:
+                    lines[i] = f"e {tt[1]} {tt[2]} {base['max_weight']}\n"
+                    break
             p.write_text("".join(lines), encoding="utf-8")
             got = facts(p)
-        ok = got["bidir_pairs_diff_weight"] == base["bidir_pairs_diff_weight"] + 1 and got["self_loops"] == base["self_loops"] + 1
+        n = round(base["max_weight_edge_share"] * (base["edge_lines"] - base["self_loops"] - base["bidir_pairs"]))
+        top_ok = round(got["max_weight_edge_share"] * (got["edge_lines"] - got["self_loops"] - got["bidir_pairs"])) == n + 1
+        ok = (got["bidir_pairs_diff_weight"] == base["bidir_pairs_diff_weight"] + 1 and got["self_loops"] == base["self_loops"] + 1
+              and top_ok)
         print(f"self-test: {'passed' if ok else 'FAILED'} (diff-weight pairs {base['bidir_pairs_diff_weight']} -> "
-              f"{got['bidir_pairs_diff_weight']}, loops {base['self_loops']} -> {got['self_loops']})")
+              f"{got['bidir_pairs_diff_weight']}, loops {base['self_loops']} -> {got['self_loops']}, "
+              f"edges at the largest weight {n} -> {n + 1 if top_ok else 'unchanged'})")
         sys.exit(0 if ok else 1)
 
 
