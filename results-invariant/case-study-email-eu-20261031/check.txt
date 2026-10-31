@@ -1,0 +1,5 @@
+graph: 677 vertices, 2462 undirected edges, 0 reverse edges with another weight
+patterns: 43; enumeration complete for 43/43
+W recomputed = W of the dump: 43/43
+MNI_G >= 10: 43/43; W >= 336: 43/43
+ALL score >= 10 (pattern kept by ALL): 0/43
