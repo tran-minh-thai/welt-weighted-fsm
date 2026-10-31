@@ -157,7 +157,15 @@ def r5s(o):
     for r in rows:
         cells.setdefault((ds(r), int(r["minSup"]), r["minWeight"]), {})[r["algorithm"]] = r
     only = 0
+    dumps = os.listdir(os.path.join(o.camp, "patterns")) if os.path.isdir(os.path.join(o.camp, "patterns")) else []
     for (d, s, tw), al in sorted(cells.items()):
+        # the CSV writes tau_w with three decimals; the exact value is in the name of the cell's result-set file
+        exact = sorted({f[:-4].rsplit("_", 1)[1] for f in dumps if f.startswith(f"{d}_WeLT_{s}_") and f.endswith(".tsv")
+                        and round(float(f[:-4].rsplit("_", 1)[1]), 3) == round(float(tw), 3)})
+        o.need(len(exact) == 1, f"patterns/: {d} {s}: {len(exact)} result-set files for tau_w {tw} (one expected)")
+        if len(exact) != 1:
+            continue
+        tw = exact[0]
         base = f"r5s.{d}.{s}.{tau_key(tw)}"
         o.put(base + ".tau_w", float(tw), "R5_scal_high_tau_w.csv")
         for a, r in al.items():
