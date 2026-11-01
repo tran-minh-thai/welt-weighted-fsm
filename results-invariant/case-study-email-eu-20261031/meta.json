@@ -8,7 +8,9 @@
  "dataset": "datasets/email_eu.lg sha256 5b413cc05e79da1a2ee70837e1541106254bbc00706e2141c3eb65e36f254278",
  "commands": [
   "DUMP_PATTERNS=<dir> BENCH_CSV=1 BENCH_ALGOS=WeLT java -Xmx8g -cp target/classes welt.runner.BenchmarkMain datasets/email_eu.lg 10 336 0 600000 0 1",
-  "python3 tools/case_study.py datasets/email_eu.lg results-invariant/case-study-email-eu-20261031/patterns/email_eu_WeLT_10_336.0.tsv 336 10 --out results-invariant/case-study-email-eu-20261031/patterns.csv"
+  "python3 tools/case_study.py datasets/email_eu.lg results-invariant/case-study-email-eu-20261031/patterns/email_eu_WeLT_10_336.0.tsv 336 10 --out results-invariant/case-study-email-eu-20261031/patterns.csv",
+  "python3 tools/export_case_study_numbers.py results-invariant/case-study-email-eu-20261031/patterns.csv email_eu --path 4,4,14 --edge 4,4 --out results-invariant/case-study-email-eu-20261031/numbers.json"
  ],
- "created": "2026-10-31T09:48:48Z"
+ "created": "2026-10-31T09:48:48Z",
+ "numbers": "numbers.json: 14 keys case.email_eu.*, written by tools/export_case_study_numbers.py (self-test 8/8; 3 of 3 injected faults caught: path chosen by label multiset, one-image count off, first image count instead of the minimum)"
 }
