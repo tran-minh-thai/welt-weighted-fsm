@@ -15,5 +15,6 @@
   "python3 tools/export_time_spread.py <welt-ds>/results-invariant/campaign-r2-numbers-20261030/numbers.json results-invariant/round6-numbers-20261101/numbers.json results-invariant/round5-numbers-20261031/numbers.json <campaign-revision-r2 checkout>/results/v2_revision/20261021_2047_Admin-PC --out results-invariant/time-spread-20261101/numbers.json"
  ],
  "created": "2026-11-01T04:36:37Z",
- "numbers": "numbers.json: 72 keys ({e1,r5s,e3}.sd_rel.{cells,max,median,max.cell}, e3.<ds>.p<i>.{GraMiFilter,WeLT}.sd_ms); cells e1 104, r5s 12, e3 60; self-test 10/10 (4 injected faults refused)"
+ "numbers": "numbers.json: 81 keys ({e1,r5s,e3}.sd_rel.{cells,max,median,max.cell}, e3.<ds>.p<i>.{GraMiFilter,WeLT}.sd_ms); cells e1 104, r5s 12, e3 60; self-test 12/12 (4 injected faults refused; the 1,000 ms boundary caught a strict comparison and a 100 ms threshold)",
+ "re_export": "2026-11-01, commit 63a514e (tree clean): 9 keys added, <p>.sd_rel.ge1s.{cells,max,max.cell} over the cells whose median is at least 1,000 ms (e1 8, e3 10, r5s 8); the 72 earlier keys keep their values; self-test 12/12"
 }

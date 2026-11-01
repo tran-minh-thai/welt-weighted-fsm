@@ -1,6 +1,8 @@
-ok   denominators: got {'e1': 3, 'r5s': 2, 'e3': 4}, want {'e1': 3, 'r5s': 2, 'e3': 4}
+ok   denominators: got {'e1': 6, 'r5s': 2, 'e3': 4}, want {'e1': 6, 'r5s': 2, 'e3': 4}
 ok   e1: max is GraMi at 0.4: got (0.4, 'a 10 GraMi'), want (0.4, 'a 10 GraMi')
-ok   e1: median of 0.05, 0.4, 0.02: got 0.05, want 0.05
+ok   e1: median of 0.05, 0.4, 0.02, 0.03, 0.09, 0.01: got 0.04, want 0.04
+ok   e1: from 1,000 ms, two cells (999.9 left out), max 0.03: got (2, 0.03, 'a 6 WeLT'), want (2, 0.03, 'a 6 WeLT')
+ok   r5s: no cell from 1,000 ms, no ge1s key: got False, want False
 ok   r5s: equal maxima are both named: got a 10 w5 WEGM; a 10 w5 WeLT, want a 10 w5 WEGM; a 10 w5 WeLT
 ok   e3: max 0.3 at tau_w 2, WEGM row left out: got (0.3, 'a 2 WeLT'), want (0.3, 'a 2 WeLT')
 ok   e3: sd of a point: got 5.0, want 5.0
@@ -8,4 +10,4 @@ ok   a completed cell without sd_ms: refused (e1.cell: completed cells without m
 ok   a CSV median that differs from the exported one: refused (e3.a.p0.WeLT: median 20.5 in the CSV, 20.0 exported)
 ok   an Experiment 3 point without a row: refused (B5_tau_sweep.csv: points without a row: ['e3.a.p0.WeLT'])
 ok   a key in two files: refused (keys present in two data files: e1.cell.a.10.WeLT.ms)
-export_time_spread self-test: OK (10/10)
+export_time_spread self-test: OK (12/12)
