@@ -18,3 +18,8 @@ no code shared with the Java miner). They hold on every machine.
   43/43, `all_score >= 10` for 0/43 (ALL keeps none of the 43). The self-test (`--self-test`, 10 cases on a
   hand-made graph) catches each of three injected faults: `>=` changed to `>`, reverse-edge merging off,
   injectivity off.
+- `numbers.json`: the keys `case.email_eu.*` of three patterns chosen by structure, written by
+  `tools/export_case_study_numbers.py`: the largest pattern (five vertices, labels 4 4 4 21 14), the path whose
+  labels read 4, 4, 14 along it (not the path 4, 14, 4), and the edge with labels 4 and 4. Its self-test (8 cases)
+  catches each of three injected faults: path chosen by label multiset, one-image count off, first image count
+  taken instead of the minimum.

@@ -1,0 +1,18 @@
+{
+ "values": {
+  "case.email_eu.edge.all": 5,
+  "case.email_eu.edge.mni": 35,
+  "case.email_eu.largest.all": 1,
+  "case.email_eu.largest.edge_w_max": 2409.0,
+  "case.email_eu.largest.edge_w_min": 366.0,
+  "case.email_eu.largest.images_heavy_max": 2,
+  "case.email_eu.largest.images_heavy_single": 4,
+  "case.email_eu.largest.mni": 10,
+  "case.email_eu.largest.occurrences": 300,
+  "case.email_eu.largest.vertices": 5,
+  "case.email_eu.path.all": 2,
+  "case.email_eu.path.images_g_min": 19,
+  "case.email_eu.path.images_heavy_max": 3,
+  "case.email_eu.path.mni": 19
+ }
+}

@@ -1,0 +1,9 @@
+{
+ "graphs": 30,
+ "threshold_pairs": 432,
+ "patterns": 5434,
+ "w_equals_tau_w": 3508,
+ "repeated_labels": 5237,
+ "cycles": 2273,
+ "all_three": 1774
+}
