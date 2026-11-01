@@ -1,0 +1,19 @@
+{
+ "kind": "invariant (spread recomputed from the exported medians and standard deviations of the measured runs; nothing timed here)",
+ "machine": "ThaiTMs-MacBook-Pro.local",
+ "os": "Darwin 27.2.0",
+ "python": "3.14.6",
+ "code": "commit 4446133 (branch round5-checks), tree clean",
+ "inputs": {
+  "campaign-r2 numbers (welt-ds results-invariant/campaign-r2-numbers-20261030/numbers.json)": "sha256 fda24f60fb2992388b7f7bc5cb4d03760d1374a5e9879feb5e294c464cb723b1",
+  "results-invariant/round6-numbers-20261101/numbers.json": "sha256 28bbc3d689e32bd27f1a2660abbc4006242458ffa2c23f09ffaa6e1111b66720",
+  "results-invariant/round5-numbers-20261031/numbers.json": "sha256 7a23448cf5e81aa7632c5218854396519b39b86fd08fa3b554b51b27b462dab2",
+  "campaign-revision-r2 3f9783f results/v2_revision/20261021_2047_Admin-PC/B5_tau_sweep.csv": "sha256 9c3d6589572d24fd4d29677eec9934849e6920fd32529cb91a917c1d04602baf"
+ },
+ "commands": [
+  "python3 tools/export_time_spread.py --self-test",
+  "python3 tools/export_time_spread.py <welt-ds>/results-invariant/campaign-r2-numbers-20261030/numbers.json results-invariant/round6-numbers-20261101/numbers.json results-invariant/round5-numbers-20261031/numbers.json <campaign-revision-r2 checkout>/results/v2_revision/20261021_2047_Admin-PC --out results-invariant/time-spread-20261101/numbers.json"
+ ],
+ "created": "2026-11-01T04:36:37Z",
+ "numbers": "numbers.json: 72 keys ({e1,r5s,e3}.sd_rel.{cells,max,median,max.cell}, e3.<ds>.p<i>.{GraMiFilter,WeLT}.sd_ms); cells e1 104, r5s 12, e3 60; self-test 10/10 (4 injected faults refused)"
+}
