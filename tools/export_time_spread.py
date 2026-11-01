@@ -14,7 +14,8 @@ and has no spread.
                 its median must equal the exported one. The shared-table sweep (B5_shared_table.csv)
                 records medians only, so it has no spread to report.
 
-Keys (prefix e1, r5s, e3): <p>.sd_rel.{cells,max,median}, <p>.sd_rel.max.cell ("<ds> <tau_s> <algorithm>",
+Keys (prefix e1, r5s, e3): <p>.sd_rel.{cells,max,median}, <p>.sd_rel.ge1s.{cells,max,max.cell} over the cells whose
+median is at least LONG_MS (1,000 ms; absent when a group has none), <p>.sd_rel.max.cell ("<ds> <tau_s> <algorithm>",
 "<ds> <tau_s> <tau_w> <algorithm>" for r5s, "<ds> <tau_w> <algorithm>" for e3; cells with equal maxima
 joined by "; "), and e3.<ds>.p<i>.<algorithm>.sd_ms for the Experiment 3 rows.
 
@@ -31,6 +32,7 @@ import statistics
 import sys
 
 E3_ALGORITHMS = ("GraMiFilter", "WeLT")
+LONG_MS = 1000.0
 
 
 def values(path):
@@ -63,9 +65,15 @@ def summary(prefix, spread, name):
         sys.exit(f"{prefix}: no completed cell")
     rel = {c: sd / ms for c, (ms, sd) in spread.items()}
     top = max(rel.values())
-    return {f"{prefix}.sd_rel.cells": len(rel), f"{prefix}.sd_rel.max": top,
-            f"{prefix}.sd_rel.median": statistics.median(rel.values()),
-            f"{prefix}.sd_rel.max.cell": "; ".join(sorted(name(c) for c, r in rel.items() if r == top))}
+    out = {f"{prefix}.sd_rel.cells": len(rel), f"{prefix}.sd_rel.max": top,
+           f"{prefix}.sd_rel.median": statistics.median(rel.values()),
+           f"{prefix}.sd_rel.max.cell": "; ".join(sorted(name(c) for c, r in rel.items() if r == top))}
+    long = {c: r for c, r in rel.items() if spread[c][0] >= LONG_MS}
+    if long:
+        top = max(long.values())
+        out.update({f"{prefix}.sd_rel.ge1s.cells": len(long), f"{prefix}.sd_rel.ge1s.max": top,
+                    f"{prefix}.sd_rel.ge1s.max.cell": "; ".join(sorted(name(c) for c, r in long.items() if r == top))})
+    return out
 
 
 def e3_rows(v, rows):
@@ -132,6 +140,9 @@ def self_test():
         fails += 1
 
     camp = {"e1.cell.a.10.WeLT.status": "OK", "e1.cell.a.10.WeLT.ms": 100.0, "e1.cell.a.10.WeLT.sd_ms": 5.0,
+            "e1.cell.a.6.WeLT.status": "OK", "e1.cell.a.6.WeLT.ms": 1000.0, "e1.cell.a.6.WeLT.sd_ms": 30.0,
+            "e1.cell.a.6.GraMi.status": "OK", "e1.cell.a.6.GraMi.ms": 999.9, "e1.cell.a.6.GraMi.sd_ms": 90.0,
+            "e1.cell.a.6.WEGM.status": "OK", "e1.cell.a.6.WEGM.ms": 4000.0, "e1.cell.a.6.WEGM.sd_ms": 40.0,
             "e1.cell.a.10.GraMi.status": "OK", "e1.cell.a.10.GraMi.ms": 10.0, "e1.cell.a.10.GraMi.sd_ms": 4.0,
             "e1.cell.a.8.GraMi.status": "TO", "e1.cell.a.8.GraMi.ms": 3600000.0,      # over the limit: no spread
             "e3.a.points": 2, "e3.a.p0.tau_w": 1.5, "e3.a.p1.tau_w": 2.0,
@@ -148,9 +159,12 @@ def self_test():
             row("GraMiFilter", "1.500", "40.0", "2.0"), row("GraMiFilter", "2.000", "50.0", "5.0"),
             row("WEGM", "1.500", "1.0", "0.9")]                                    # not in the group
     out, n = export(camp, r6, r5, rows)
-    check("denominators", n, {"e1": 3, "r5s": 2, "e3": 4})
+    check("denominators", n, {"e1": 6, "r5s": 2, "e3": 4})
     check("e1: max is GraMi at 0.4", (out["e1.sd_rel.max"], out["e1.sd_rel.max.cell"]), (0.4, "a 10 GraMi"))
-    check("e1: median of 0.05, 0.4, 0.02", out["e1.sd_rel.median"], 0.05)
+    check("e1: median of 0.05, 0.4, 0.02, 0.03, 0.09, 0.01", out["e1.sd_rel.median"], 0.04)
+    check("e1: from 1,000 ms, two cells (999.9 left out), max 0.03",
+          (out["e1.sd_rel.ge1s.cells"], out["e1.sd_rel.ge1s.max"], out["e1.sd_rel.ge1s.max.cell"]), (2, 0.03, "a 6 WeLT"))
+    check("r5s: no cell from 1,000 ms, no ge1s key", any(k.startswith("r5s.sd_rel.ge1s") for k in out), False)
     check("r5s: equal maxima are both named", out["r5s.sd_rel.max.cell"], "a 10 w5 WEGM; a 10 w5 WeLT")
     check("e3: max 0.3 at tau_w 2, WEGM row left out", (out["e3.sd_rel.max"], out["e3.sd_rel.max.cell"]),
           (0.3, "a 2 WeLT"))
@@ -162,7 +176,7 @@ def self_test():
             lambda: export(camp, r6, r5, [dict(rows[0], totalMs="20.5")] + rows[1:]))
     refused("an Experiment 3 point without a row", lambda: export(camp, r6, r5, rows[1:]))
     refused("a key in two files", lambda: export(camp, {**r6, "e1.cell.a.10.WeLT.ms": 1.0}, r5, rows))
-    print(f"export_time_spread self-test: {'OK' if fails == 0 else 'FAILED'} ({10 - fails}/10)")
+    print(f"export_time_spread self-test: {'OK' if fails == 0 else 'FAILED'} ({12 - fails}/12)")
     return 1 if fails else 0
 
 
