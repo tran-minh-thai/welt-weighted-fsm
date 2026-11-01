@@ -1,6 +1,9 @@
 {
  "values": {
   "e1.sd_rel.cells": 104,
+  "e1.sd_rel.ge1s.cells": 8,
+  "e1.sd_rel.ge1s.max": 0.039801148192515796,
+  "e1.sd_rel.ge1s.max.cell": "email_eu 3 noTableBuild",
   "e1.sd_rel.max": 0.8672811059907833,
   "e1.sd_rel.max.cell": "string_ecoli 2000 GraMiFilter",
   "e1.sd_rel.median": 0.19134014485058037,
@@ -65,10 +68,16 @@
   "e3.lastfm.p9.GraMiFilter.sd_ms": 11.911,
   "e3.lastfm.p9.WeLT.sd_ms": 5.193,
   "e3.sd_rel.cells": 60,
+  "e3.sd_rel.ge1s.cells": 10,
+  "e3.sd_rel.ge1s.max": 0.005232618177807201,
+  "e3.sd_rel.ge1s.max.cell": "email_eu 3501.9 GraMiFilter",
   "e3.sd_rel.max": 0.7130410807830162,
   "e3.sd_rel.max.cell": "citeseer 96 GraMiFilter",
   "e3.sd_rel.median": 0.23848458201905917,
   "r5s.sd_rel.cells": 12,
+  "r5s.sd_rel.ge1s.cells": 8,
+  "r5s.sd_rel.ge1s.max": 0.11296819776972991,
+  "r5s.sd_rel.ge1s.max.cell": "github 24000 w47_8261 WeLT",
   "r5s.sd_rel.max": 0.39421491496678757,
   "r5s.sd_rel.max.cell": "string_ecoli 1850 w999 WEGM",
   "r5s.sd_rel.median": 0.04681482513271355
